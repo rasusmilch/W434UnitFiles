@@ -1,0 +1,160 @@
+function get_named_pin_list(FromPin: tpin; ToPin: tpin): string;
+begin
+   // Get only named pins from pin table between FROM and TO inclusive.
+   // Returns a string to convert to list (can't return list?)
+
+   PinDefineList(List, [FromPin]);
+//   PinName = PinGetData(FromPin, PIN_Name);
+//   MiscListFromString(PinName, List, ';');
+
+//   Text = MiscListToString(List, ',');
+//   UIWriteNormal(Text);
+
+   Count = PinsInRange(PinList, FromPin, ToPin, FALSE, TRUE);
+
+   for Index = 1 to Count do
+   begin
+      PinName = PinGetData(PinList[Index], PIN_Name);
+
+      // Does this have a name?
+      IsNull = StrCompare(PinName, '');
+      if (IsNull <> 0)
+      begin
+//         UIWriteNormal(PinName);
+         //UIWriteNormal(PinList[Index]);
+         Pin = PinList[Index];
+         PinDefineList(SinglePinList, [Pin]);
+         MiscAddLists(List, List, SinglePinList);
+      end
+      else
+      begin
+//         UIWriteNormal('No name set');
+      end;
+   end;
+
+   //Count = MiscGetListSize(List);
+   //UIWriteNormal(Count);
+
+   Text = MiscListToString(List, ';');
+   // UIWriteNormal(Text);
+
+   Result = Text;
+
+end;
+
+function transform_pinlist_name_str(PinList: tpinarray): string;
+begin
+   // Transform pins from system addresses (index, 1, 2... 47) into string names
+   NameStr = '';
+
+   Count = MiscGetListSize(PinList);
+   //UIWriteNormal(Count);
+
+   // Seed the string with the first pin
+   if (Count >= 1)
+   begin
+      NameStr = PinGetData(PinList[1], PIN_Name);
+      //UIWriteNormal(NameStr);
+   end;
+
+   // Add ",PINNAME" for all other pins
+   if (Count >= 2)
+   begin
+      for Index = 2 to Count do
+      begin
+         PinName = PinGetData(PinList[Index], PIN_Name);
+         //UIWriteNormal(PinName);
+         NameStr = StrAdd(NameStr, ',');
+         NameStr = StrAdd(NameStr, PinName);
+      end;
+   end;
+
+   Result = NameStr;
+
+end;
+
+function no_conn_db_lists(HighName: string; HighList: tpinarray; LowName: string; LowList: tpinarray): void;
+begin
+   PinDefineList(PinHigh, HighList);
+
+   PinDefineList(PinLow, LowList);
+
+   NoConnGroupDB('NCDB', HighName, PinHigh, LowName, PinLow);
+end;
+
+function nc_db_pin_info_high(PinInfoStr: string; FullPinList: tarray): void;
+begin
+   // Tests pins with PinInfoStr in their PIN_Info field as HIGH and all others
+   // from the list as LOW.
+
+   // Get HIGH pins
+   PinCreateList(HighPinList, PIN_Info, PinInfoStr);
+
+   // Get LOW pins
+   MiscSubtractLists(LowPinList, FullPinList, HighPinList);
+
+   HighNames = transform_pinlist_name_str(HighPinList);
+
+   // Test
+   no_conn_db_lists(HighNames, HighPinList, 'ALL OTHER PINS', LowPinList);
+end;
+
+function nc_db_pin_info_low(PinInfoStr: string; FullPinList: tarray): void;
+begin
+   // Tests pins with PinInfoStr in their PIN_Info field as LOW and all others
+   // from the list as HIGH.
+
+   // Get LOW pins
+   PinCreateList(LowPinList, PIN_Info, PinInfoStr);
+
+   // Get HIGH pins
+   MiscSubtractLists(HighPinList, FullPinList, LowPinList);
+
+   LowNames = transform_pinlist_name_str(LowPinList);
+
+   // Test
+   no_conn_db_lists('ALL OTHER PINS', HighPinList, LowNames, LowPinList);
+end;
+
+function no_conn_hv_lists(HighName: string; HighList: tpinarray; LowName: string; LowList: tpinarray): void;
+begin
+   PinDefineList(PinHigh, HighList);
+
+   PinDefineList(PinLow, LowList);
+
+   NoConnGroupHV('NCHV', HighName, PinHigh, LowName, PinLow);
+end;
+
+function nc_hv_pin_info_high(PinInfoStr: string; FullPinList: tarray): void;
+begin
+   // Tests pins with PinInfoStr in their PIN_Info field as HIGH and all others
+   // from the list as LOW.
+
+   // Get HIGH pins
+   PinCreateList(HighPinList, PIN_Info, PinInfoStr);
+
+   // Get LOW pins
+   MiscSubtractLists(LowPinList, FullPinList, HighPinList);
+
+   HighNames = transform_pinlist_name_str(HighPinList);
+
+   // Test
+   no_conn_hv_lists(HighNames, HighPinList, 'ALL OTHER PINS', LowPinList);
+end;
+
+function nc_hv_pin_info_low(PinInfoStr: string; FullPinList: tarray): void;
+begin
+   // Tests pins with PinInfoStr in their PIN_Info field as LOW and all others
+   // from the list as HIGH.
+
+   // Get LOW pins
+   PinCreateList(LowPinList, PIN_Info, PinInfoStr);
+
+   // Get HIGH pins
+   MiscSubtractLists(HighPinList, FullPinList, LowPinList);
+
+   LowNames = transform_pinlist_name_str(LowPinList);
+
+   // Test
+   no_conn_hv_lists('ALL OTHER PINS', HighPinList, LowNames, LowPinList);
+end;
