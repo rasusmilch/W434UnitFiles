@@ -1,0 +1,858 @@
+constants
+begin
+{
+   For consistency, precise files begin with 'FILE_' whereas templates intended
+   to be transformed into another string by calling StrReplace(); or
+   archive_protocol(); begin with 'TMPL_'.
+}
+   FILE_TIMER_DURATIONS = 'O:\Test Eng\Support_Files\W434\test_durations.ini';
+
+end;
+
+function read_test_duration(Debug: boolean = FALSE): string;
+begin
+   // Opens the test duration ini file ane attempts to fetch the base filename
+   // of the project from the file.
+   //
+   // Returns value found or NULL if not found.
+   ProjectFilename = ProjectGetFilename();
+
+   if (Debug)
+   begin
+     UIWriteWarning(StrAdd('Project filename: ', ProjectFilename));
+   end;
+
+   Handle = FileOpenIni(FILE_TIMER_DURATIONS);
+
+   if (Debug)
+   begin
+      UIWriteWarning(StrAdd('File handle: ', Handle));
+   end;
+
+   if (Handle == 0)
+   begin
+      UIErrorDialog('COULD NOT OPEN TEST DURATION FILE.<BR><BR>CONTACT TEST LAB.');
+   end
+   else
+   begin
+      MiscListFromString(ProjectFilename, PathParts, '\');
+      BaseFileNameIndex = MiscGetListSize(PathParts);
+
+      if (Debug)
+      begin
+         UIWriteWarning(StrAdd('Base filename index: ', BaseFileNameIndex));
+      end;
+
+      MiscListFromString(PathParts[BaseFileNameIndex], RootFilenameList, '.');
+
+      if (MiscGetListSize(RootFilenameList) == 2)
+      begin
+         BaseFileName = StrTrim(RootFilenameList[1]);
+      end
+      else
+      begin
+         UIErrorDialog('Test duration configuration error!<BR><BR>CONTACT TEST LAB.');
+      end;
+
+      if (Debug)
+      begin
+         UIWriteWarning(StrAdd('Base filename: ', BaseFileName));
+      end;
+
+      TestDuration = FileGetIni(Handle, 'Durations', BaseFileName, 'NULL');
+    
+      if (Debug)
+      begin
+         UIWriteWarning(StrAdd('Test Duration: ', TestDuration));
+      end;
+
+   end;
+
+   FileCloseIni(Handle);
+
+   Result = TestDuration;
+end;
+
+function test_db_option(): void;
+begin
+     if (ParamIsCommandGroupAvailable(CMDGRP_DielectricBreakdown) == FALSE)
+     begin
+        UIErrorDialog('THIS MACHINE DOES NOT CURRENTLY SUPPORT A REQUIRED TESTING METHOD (ACDB)<BR>PLEASE TEST ON AN APPROVED AEROSPACE TESTER');
+        MiscAbortTest();
+     end;
+end;
+
+function ui_report_error(Line: string): void;
+begin
+   UIWriteError(Line);
+   ReportWriteError(Line);
+end;
+
+function ui_report_normal(Line: string): void;
+begin
+   UIWriteNormal(Line);
+   ReportWriteNormal(Line);
+end;
+
+function blank_line(Report: boolean): void;
+begin
+   UIWriteNormal(' ');
+
+   if (Report == TRUE)
+   begin
+      ReportWriteNormal(' ');
+   end;
+end;
+
+function report_manual_reading(Line: string; Units: string; MinValue: real; MaxValue: real; Debug: boolean = FALSE): void;
+begin
+
+   blank_line(TRUE);
+
+   MsgText = StrAdd('Enter manual reading:<BR>', Line);
+   MsgText = StrAdd(MsgText, ' (');
+   MsgText = StrAdd(MsgText, Units);
+   MsgText = StrAdd(MsgText, ')');
+
+   InputResult = '0';
+
+   Button = UIEditDialog('Enter Value', MsgText, FALSE, TRUE, InputResult);
+
+   if (Button == DIALOGRESULT_Ok)
+   begin
+      if (Debug)
+      begin
+         UIWriteNormal(StrAdd('Entered value: ', InputResult));
+      end;
+   end
+   else
+   begin
+      UIWriteNormal('Canceled by operator');
+      MiscAbortTest();
+   end;
+
+   ValueEntered = 0.0;
+
+   if (FormatIsInteger(InputResult))
+   begin
+      ValueEntered = InputResult;
+   end;
+
+   if (FormatIsReal(InputResult))
+   begin
+      ValueEntered = InputResult;
+   end;
+
+
+//   UIWriteNormal(StrAdd('Entered and converted: ', ValueEntered));
+
+//   if (ValueEntered == 0)
+//   begin
+//      ui_report_error('Invalid value entered');
+//      MiscAbortTest();
+//   end;
+
+   if (ValueEntered > MaxValue)
+   begin
+      ErrorLine = StrAdd('Value entered above maximum value: ', MaxValue);
+      ErrorLine = StrAdd(ErrorLine, Units);
+      ui_report_error(ErrorLine);
+      MiscAbortTest();
+   end;
+
+   if (ValueEntered < MinValue)
+   begin
+      ErrorLine = StrAdd('Value entered below minimum value: ', MinValue);
+      ErrorLine = StrAdd(ErrorLine, Units);
+      ui_report_error(ErrorLine);
+      MiscAbortTest();
+   end;
+
+   ReportLine = '* ';
+   ReportLine = StrAdd(ReportLine, Line);
+   ReportLine = StrAdd(ReportLine, ' measured value (');
+   ReportLine = StrAdd(ReportLine, MinValue);
+   ReportLine = StrAdd(ReportLine, '-');
+   ReportLine = StrAdd(ReportLine, MaxValue);
+   ReportLine = StrAdd(ReportLine, ' ');
+   ReportLine = StrAdd(ReportLine, Units);
+   ReportLine = StrAdd(ReportLine, '): ');
+   ReportLine = StrAdd(ReportLine, ValueEntered);
+   ReportLine = StrAdd(ReportLine, ' ');
+   ReportLine = StrAdd(ReportLine, Units);
+   ReportLine = StrAdd(ReportLine, ' *');
+
+   StrLen = StrLength(ReportLine);
+
+   BoxTopLen = StrLen;
+
+   StrBoxTop = '';
+
+   for Char = 1 to BoxTopLen do
+   begin
+      StrBoxTop = StrAdd(StrBoxTop, '*');
+   end;
+
+   StrBoxMiddle = '*';
+
+   for Char = 1 to BoxTopLen - 2 do
+   begin
+      StrBoxMiddle = StrAdd(StrBoxMiddle, ' ');
+   end;
+
+   StrBoxMiddle = StrAdd(StrBoxMiddle, '*');
+
+   ui_report_normal(StrBoxTop);
+//   ui_report_normal(StrBoxMiddle);
+   ui_report_normal(ReportLine);
+//   ui_report_normal(StrBoxMiddle);
+   ui_report_normal(StrBoxTop);
+
+   blank_line(TRUE);
+
+end;
+
+function max_real(Var1: real; Var2: real): real;
+begin
+   Result = Var1;
+
+   if (Var2 > Var1) 
+   begin
+      Result = Var2;
+   end;
+end;
+
+function pad_str_char(PadChar: string; Str: string; Length: integer; Debug: boolean = FALSE): string;
+begin
+   StrLen = StrLength(Str);
+
+   LenDiff = Length - StrLen;
+
+   LenSplit = LenDiff / 2;
+
+   Result = PadChar;
+
+   TargetPadding = LenSplit - 1;
+
+   for Count = 1 to TargetPadding do
+   begin
+      Result = StrAdd(Result, ' ');
+   end;
+
+   Result = StrAdd(Result, Str);
+
+   if (ArithOdd(LenDiff))
+   begin
+      TargetPadding = TargetPadding + 1;
+   end;
+
+   for Count = 1 to TargetPadding do
+   begin
+      Result = StrAdd(Result, ' ');
+   end;
+
+   Result = StrAdd(Result, PadChar);
+
+   if (Debug)
+   begin
+      UIWriteNormal(StrAdd('StrLen: ', StrLen));
+      UIWriteNormal(StrAdd('LenDiff: ', LenDiff));
+      UIWriteNormal(StrAdd('LenSplit: ', LenSplit));
+      UIWriteNormal(StrAdd('TargetPadding: ', TargetPadding));
+   end;
+end;
+
+function report_manual_reading_delta(LowerLine: string; UpperLine: string; Units: string; LowerMinValue: real; LowerMaxValue: real; UpperMinValue: real; UpperMaxValue: real; DeltaMin: real; DeltaMax: real; Debug: boolean = FALSE): void;
+begin
+
+   blank_line(TRUE);
+
+   MsgText = StrAdd('Enter manual reading:<BR>', LowerLine);
+   MsgText = StrAdd(MsgText, ' (');
+   MsgText = StrAdd(MsgText, Units);
+   MsgText = StrAdd(MsgText, ')');
+
+   InputResult = '0';
+
+   Button = UIEditDialog('Enter Value', MsgText, FALSE, TRUE, InputResult);
+
+   if (Button == DIALOGRESULT_Ok)
+   begin
+      if (Debug)
+      begin
+         UIWriteNormal(StrAdd('Entered value: ', InputResult));
+      end;
+   end
+   else
+   begin
+      UIWriteNormal('Canceled by operator');
+      MiscAbortTest();
+   end;
+
+   LowerValueEntered = 0.0;
+
+   if (FormatIsInteger(InputResult))
+   begin
+      LowerValueEntered = InputResult;
+   end;
+
+   if (FormatIsReal(InputResult))
+   begin
+      LowerValueEntered = InputResult;
+   end;
+
+
+   if (LowerValueEntered > LowerMaxValue)
+   begin
+      ErrorLine = StrAdd('Value entered above maximum value: ', LowerMaxValue);
+      ErrorLine = StrAdd(ErrorLine, Units);
+      ui_report_error(ErrorLine);
+      MiscAbortTest();
+   end;
+
+   if (LowerValueEntered < LowerMinValue)
+   begin
+      ErrorLine = StrAdd('Value entered below minimum value: ', LowerMinValue);
+      ErrorLine = StrAdd(ErrorLine, Units);
+      ui_report_error(ErrorLine);
+      MiscAbortTest();
+   end;
+
+   // Do upper value now
+   MsgText = StrAdd('Enter manual reading:<BR>', UpperLine);
+   MsgText = StrAdd(MsgText, ' (');
+   MsgText = StrAdd(MsgText, Units);
+   MsgText = StrAdd(MsgText, ')');
+
+   InputResult = '0';
+
+   Button = UIEditDialog('Enter Value', MsgText, FALSE, TRUE, InputResult);
+
+   if (Button == DIALOGRESULT_Ok)
+   begin
+      if (Debug)
+      begin
+         UIWriteNormal(StrAdd('Entered value: ', InputResult));
+      end;
+   end
+   else
+   begin
+      UIWriteNormal('Canceled by operator');
+      MiscAbortTest();
+   end;
+
+   UpperValueEntered = 0.0;
+
+   if (FormatIsInteger(InputResult))
+   begin
+      UpperValueEntered = InputResult;
+   end;
+
+   if (FormatIsReal(InputResult))
+   begin
+      UpperValueEntered = InputResult;
+   end;
+
+
+   if (UpperValueEntered > UpperMaxValue)
+   begin
+      ErrorLine = StrAdd('Value entered above maximum value: ', UpperMaxValue);
+      ErrorLine = StrAdd(ErrorLine, Units);
+      ui_report_error(ErrorLine);
+      MiscAbortTest();
+   end;
+
+   if (UpperValueEntered < UpperMinValue)
+   begin
+      ErrorLine = StrAdd('Value entered below minimum value: ', UpperMinValue);
+      ErrorLine = StrAdd(ErrorLine, Units);
+      ui_report_error(ErrorLine);
+      MiscAbortTest();
+   end;
+
+   Delta = UpperValueEntered - LowerValueEntered;
+
+   if (Delta < DeltaMin)
+   begin
+      ErrorLine = StrAdd('Delta between values lower than limit: ', DeltaMin);
+      ErrorLine = StrAdd(ErrorLine, Units);
+      ui_report_error(ErrorLine);
+      MiscAbortTest();
+   end;
+
+   if (Delta > DeltaMax)
+   begin
+      ErrorLine = StrAdd('Delta between values higher than limit: ', DeltaMax);
+      ErrorLine = StrAdd(ErrorLine, Units);
+      ui_report_error(ErrorLine);
+      MiscAbortTest();
+   end;
+
+   ReportLowerLine = '';
+   ReportLowerLine = StrAdd(ReportLowerLine, LowerLine);
+   ReportLowerLine = StrAdd(ReportLowerLine, ' measured value (');
+   ReportLowerLine = StrAdd(ReportLowerLine, LowerMinValue);
+   ReportLowerLine = StrAdd(ReportLowerLine, '-');
+   ReportLowerLine = StrAdd(ReportLowerLine, LowerMaxValue);
+   ReportLowerLine = StrAdd(ReportLowerLine, ' ');
+   ReportLowerLine = StrAdd(ReportLowerLine, Units);
+   ReportLowerLine = StrAdd(ReportLowerLine, '): ');
+   ReportLowerLine = StrAdd(ReportLowerLine, LowerValueEntered);
+   ReportLowerLine = StrAdd(ReportLowerLine, ' ');
+   ReportLowerLine = StrAdd(ReportLowerLine, Units);
+
+   ReportUpperLine = '';
+   ReportUpperLine = StrAdd(ReportUpperLine, UpperLine);
+   ReportUpperLine = StrAdd(ReportUpperLine, ' measured value (');
+   ReportUpperLine = StrAdd(ReportUpperLine, UpperMinValue);
+   ReportUpperLine = StrAdd(ReportUpperLine, '-');
+   ReportUpperLine = StrAdd(ReportUpperLine, UpperMaxValue);
+   ReportUpperLine = StrAdd(ReportUpperLine, ' ');
+   ReportUpperLine = StrAdd(ReportUpperLine, Units);
+   ReportUpperLine = StrAdd(ReportUpperLine, '): ');
+   ReportUpperLine = StrAdd(ReportUpperLine, UpperValueEntered);
+   ReportUpperLine = StrAdd(ReportUpperLine, ' ');
+   ReportUpperLine = StrAdd(ReportUpperLine, Units);
+
+   ReportDeltaLine = '';
+   ReportDeltaLine = StrAdd(ReportDeltaLine, 'Delta value (');
+   ReportDeltaLine = StrAdd(ReportDeltaLine, DeltaMin);
+   ReportDeltaLine = StrAdd(ReportDeltaLine, '-');
+   ReportDeltaLine = StrAdd(ReportDeltaLine, DeltaMax);
+   ReportDeltaLine = StrAdd(ReportDeltaLine, ' ');
+   ReportDeltaLine = StrAdd(ReportDeltaLine, Units);
+   ReportDeltaLine = StrAdd(ReportDeltaLine, '): ');
+   ReportDeltaLine = StrAdd(ReportDeltaLine, Delta);
+   ReportDeltaLine = StrAdd(ReportDeltaLine, ' ');
+   ReportDeltaLine = StrAdd(ReportDeltaLine, Units);
+
+   StrLenLower = StrLength(ReportLowerLine);
+   StrLenUpper = StrLength(ReportUpperLine);
+   StrLenDelta = StrLength(ReportDeltaLine);
+
+   MaxStrLen = 0;
+
+   MaxStrLen = max_real(MaxStrLen, StrLenLower);
+   MaxStrLen = max_real(MaxStrLen, StrLenUpper);
+   MaxStrLen = max_real(MaxStrLen, StrLenDelta);
+
+   BoxTopLen = MaxStrLen + 4;
+
+   ReportLowerLine = pad_str_char('*', ReportLowerLine, BoxTopLen, FALSE);
+   ReportUpperLine = pad_str_char('*', ReportUpperLine, BoxTopLen, FALSE);
+   ReportDeltaLine = pad_str_char('*', ReportDeltaLine, BoxTopLen, FALSE);
+
+   StrBoxTop = '';
+
+   for Char = 1 to BoxTopLen do
+   begin
+      StrBoxTop = StrAdd(StrBoxTop, '*');
+   end;
+
+   StrBoxMiddle = '*';
+
+   for Char = 1 to BoxTopLen - 2 do
+   begin
+      StrBoxMiddle = StrAdd(StrBoxMiddle, ' ');
+   end;
+
+   StrBoxMiddle = StrAdd(StrBoxMiddle, '*');
+
+   ui_report_normal(StrBoxTop);
+//   ui_report_normal(StrBoxMiddle);
+   ui_report_normal(ReportLowerLine);
+   ui_report_normal(ReportUpperLine);
+   ui_report_normal(ReportDeltaLine);
+//   ui_report_normal(StrBoxMiddle);
+   ui_report_normal(StrBoxTop);
+
+   blank_line(TRUE);
+
+end;
+
+function check_epicor_pn(PartNum: string): void;
+begin
+   InputResult = '';
+   Button = UIEditDialog('Epicor Part Number', 'Scan or enter the Epicor PN from the Traveler', FALSE, TRUE, InputResult);
+   if (Button == DIALOGRESULT_Ok)
+   begin
+      InputResult = StrTrim(InputResult);
+      Result = StrCompare(PartNum, InputResult);
+      if (Result <> 0)
+      begin
+         ui_report_error('*********************************************');
+         ui_report_error('* WRONG PART NUMBER ENTERED FOR THIS TEST!  *');
+         ui_report_error('* PLEASE VERIFY YOU HAVE THE CORRECT TEST   *');
+         ui_report_error('* FOR YOUR PART NUMBER OR CONTACT TEST LAB! *');
+         ui_report_error('*********************************************');
+         MiscAbortTest();
+      end;
+   end
+   else
+   begin
+      ui_report_error('User canceled entering PN');
+      MiscAbortTest();
+   end;
+end;
+
+function ui_info_cancellable(Msg: string): void;
+begin
+
+     Button = UIMessageDialogOkCancel(Msg);
+
+     if (Button == DIALOGRESULT_Cancel)
+     begin
+          MiscAbortTest();
+     end;
+end;
+
+function ui_test_prompt(Seconds: integer = 0; Message: string = 'PRESS SPACEBAR TO START TEST'; Debug: boolean = FALSE): void;
+begin
+   // Sets up the test timer and displays the operator prompt to start test.
+   // Upon operator starting the test, starts the timer.
+   //
+   // If a Seconds value is passed, test timer will use that value.
+   // If Seconds is omitted or zero is passed, looks up test duration in ini file
+
+   if (Seconds <> 0)
+   begin
+     Test_seconds = Seconds;
+   end
+   else
+   begin
+      Test_duration = read_test_duration(Debug);
+      if (Debug)
+      begin
+         UIWriteNormal(StrAdd('Returned test duration: ', Test_duration));
+      end;
+   end;
+
+   if (StrCompare(Test_duration, 'NULL') == 0)
+   begin
+
+      if (Debug)
+      begin
+         UIWriteNormal('Test duration is NULL, setting to ZERO (0) and displaying message');
+      end;
+      Test_seconds = 0;
+
+      timer_disp_str('Unknown', Debug);
+   end;
+
+   ui_info_cancellable(Message);
+
+   GlobalDataRead('MsgPrint', ON);
+
+   if (Test_seconds <> 0)
+   begin
+      timer_start(Debug);
+   end;
+
+   blank_line(TRUE);
+
+end;
+
+function str_sw_two_state(SW1Name: string; SW1State: string; SW2Name: string; SW2State: string): string;
+begin
+   Result = '(';
+   Result = StrAdd(Result, SW1State);
+   Result = StrAdd(Result, ', ');
+   Result = StrAdd(Result, SW2State);
+   Result = StrAdd(Result, ')');
+end;
+
+//function str_sw_three_state(SW1Name: string; SW1State: string; SW2Name: string; SW2State: string; SW3Name: string; SW3State: string): string;
+//begin
+//   Result = StrAdd(SW1Name, ' ');
+//   Result = StrAdd(Result, SW1State);
+//   Result = StrAdd(Result, '/');
+//   Result = StrAdd(Result, SW2Name);
+//   Result = StrAdd(Result, ' ');
+//   Result = StrAdd(Result, SW2State);
+//   Result = StrAdd(Result, '/');
+//   Result = StrAdd(Result, SW3Name);
+//   Result = StrAdd(Result, ' ');
+//   Result = StrAdd(Result, SW3State);
+//end;
+
+function str_sw_three_state(SW1Name: string; SW1State: string; SW2Name: string; SW2State: string; SW3Name: string; SW3State: string): string;
+begin
+   Result = StrAdd('(', SW1State);
+   Result = StrAdd(Result, ', ');
+   Result = StrAdd(Result, SW2State);
+   Result = StrAdd(Result, ', ');
+   Result = StrAdd(Result, SW3State);
+   Result = StrAdd(Result, ')');
+end;
+
+function test_one_switch(SWName: string; Pin1: tpin; Pin2: tpin; NCState: boolean): boolean;
+begin
+   String = 'TESTING SWITCH ';
+
+   String = StrAdd(String, SWName);
+
+   UIWriteNormal(' ');
+   ReportWriteNormal(' ');
+
+   UIWriteNormal(String);
+   ReportWriteNormal(String);
+
+   if (NCState == TRUE)
+   begin
+      // Switch NC
+
+      String = StrAdd(SWName, ' CLOSED');
+
+      ConnectionTest(String, Pin1, Pin2);
+
+      // Now Open
+      String = StrAdd('PRESS AND HOLD ', SWName);
+
+      ui_info_cancellable(String);
+
+      String = StrAdd(SWName, ' OPEN');
+
+      NoConnectionLV(String, Pin1, Pin2);
+   end
+   else
+   begin
+      // Switch NO
+      String = StrAdd(SWName, ' OPEN');
+
+      NoConnectionLV(String, Pin1, Pin2);
+
+      // Now Closed
+
+      ui_info_cancellable(String);
+
+      String = StrAdd(SWName, ' CLOSED');
+
+      ConnectionTest(String, Pin1, Pin2);
+   end;
+
+   ui_info_cancellable('RELEASE ALL SWITCHES');
+
+end;
+
+function test_one_switch_with_override(SWName: string; SWNameOverride: string; Pin1: tpin; Pin2: tpin; NCState: boolean): boolean;
+begin
+   String = 'TESTING SWITCHES ';
+
+   String = StrAdd(String, SWName);
+   String = StrAdd(String, ', ');
+   String = StrAdd(String, SWNameOverride);
+
+   UIWriteNormal(' ');
+   ReportWriteNormal(' ');
+
+   UIWriteNormal(String);
+   ReportWriteNormal(String);
+
+   if (NCState == TRUE)
+   begin
+      // Switch NC
+      // +----+----+
+      // | S1 | OR |
+      // +----+----+
+      // | 1  | 0  |
+      // +----+----+
+
+      String = str_sw_two_state(SWName, 'CLOSED', SWNameOverride, 'OPEN');
+
+      ConnectionTest(String, Pin1, Pin2);
+
+      // +----+----+
+      // | S1 | OR |
+      // +----+----+
+      // | 0  | 0  |
+      // +----+----+
+
+      String = StrAdd('PRESS AND HOLD ', SWName);
+
+      ui_info_cancellable(String);
+
+      String = str_sw_two_state(SWName, 'OPEN', SWNameOverride, 'OPEN');
+
+      NoConnectionLV(String, Pin1, Pin2);
+
+      // +----+----+
+      // | S1 | OR |
+      // +----+----+
+      // | 0  | 1  |
+      // +----+----+
+
+      String = StrAdd('PRESS AND HOLD ', SWNameOverride);
+
+      ui_info_cancellable(String);
+
+      String = str_sw_two_state(SWName, 'OPEN', SWNameOverride, 'CLOSED');
+
+      ConnectionTest(String, Pin1, Pin2);
+
+   end
+   else
+   begin
+      UIInfoDialog('TEST NOT IMPLEMENTED. PLEASE CONTACT TEST DEPARTMENT');
+      MiscAbortTest();
+   end;
+
+   ui_info_cancellable('RELEASE ALL SWITCHES');
+
+end;
+
+function test_two_series(SWName1: string; SWName2: string; Pin1: tpin; Pin2: tpin; NCState: boolean): boolean;
+begin
+   String = 'TESTING SWITCHES ';
+
+   String = StrAdd(String, SWName1);
+   String = StrAdd(String, ', ');
+   String = StrAdd(String, SWName2);
+
+   UIWriteNormal(' ');
+   ReportWriteNormal(' ');
+
+   UIWriteNormal(String);
+   ReportWriteNormal(String);
+
+   if (NCState == TRUE)
+   begin
+      // +----+----+
+      // | S1 | S2 |
+      // +----+----+
+      // | 1  | 1  |
+      // +----+----+
+
+      String = str_sw_two_state(SWName1, 'CLOSED', SWName2, 'CLOSED');
+
+      ConnectionTest(String, Pin1, Pin2);
+
+      // +----+----+
+      // | S1 | S2 |
+      // +----+----+
+      // | 0  | 1  |
+      // +----+----+
+      String = StrAdd('PRESS AND HOLD ', SWName1);
+
+      ui_info_cancellable(String);
+
+      String = str_sw_two_state(SWName1, 'OPEN', SWName2, 'CLOSED');
+
+      NoConnectionLV(String, Pin1, Pin2);
+
+      // +----+----+
+      // | S1 | S2 |
+      // +----+----+
+      // | 1  | 0  |
+      // +----+----+
+      String = StrAdd('RELEASE ', SWName1);
+      String = StrAdd(String, '<BR>PRESS AND HOLD ');
+      String = StrAdd(String, SWName2);
+
+      ui_info_cancellable(String);
+
+      String = str_sw_two_state(SWName1, 'CLOSED', SWName2, 'OPEN');
+
+      NoConnectionLV(String, Pin1, Pin2);
+   end
+   else
+   begin
+      UIInfoDialog('TEST NOT IMPLEMENTED. PLEASE CONTACT TEST DEPARTMENT');
+      MiscAbortTest();
+   end;
+
+   ui_info_cancellable('RELEASE ALL SWITCHES');
+
+end;
+
+function test_two_series_with_override(SW1Name: string; SW2Name: string; SWOverrideName: string; Pin1: tpin; Pin2: tpin; NCState: boolean): boolean;
+begin
+   String = 'TESTING SWITCHES ';
+
+   String = StrAdd(String, SW1Name);
+   String = StrAdd(String, ', ');
+   String = StrAdd(String, SW2Name);
+   String = StrAdd(String, ', ');
+   String = StrAdd(String, SWOverrideName);
+
+   UIWriteNormal(' ');
+   ReportWriteNormal(' ');
+
+   UIWriteNormal(String);
+   ReportWriteNormal(String);
+
+
+   if (NCState == TRUE)
+   begin
+      // +----+----+----+
+      // | S1 | S2 | OR |
+      // +----+----+----+
+      // | 1  | 1  | 0  |
+      // +----+----+----+
+      String = str_sw_three_state(SW1Name, 'CLOSED', SW2Name, 'CLOSED', SWOverrideName, 'OPEN');
+
+      ConnectionTest(String, Pin1, Pin2);
+
+      // +----+----+----+
+      // | S1 | S2 | OR |
+      // +----+----+----+
+      // | 0  | 1  | 0  |
+      // +----+----+----+
+      String = StrAdd('PRESS AND HOLD ', SW1Name);
+
+      ui_info_cancellable(String);
+
+      String = str_sw_three_state(SW1Name, 'OPEN', SW2Name, 'CLOSED', SWOverrideName, 'OPEN');
+
+      NoConnectionLV(String, Pin1, Pin2);
+
+      // +----+----+----+
+      // | S1 | S2 | OR |
+      // +----+----+----+
+      // | 0  | 0  | 0  |
+      // +----+----+----+
+//      String = StrAdd('PRESS AND HOLD ', SW2Name);
+//
+//      ui_info_cancellable(String);
+//
+//      String = str_sw_three_state(SW1Name, 'OPEN', SW2Name, 'OPEN', SWOverrideName, 'OPEN');
+//
+//      NoConnectionLV(String, Pin1, Pin2);
+
+      // +----+----+----+
+      // | S1 | S2 | OR |
+      // +----+----+----+
+      // | 1  | 0  | 0  |
+      // +----+----+----+
+      String = StrAdd('RELEASE ', SW1Name);
+      String = StrAdd(String, '<BR>PRESS AND HOLD ');
+      String = StrAdd(String, SW2Name);
+
+      ui_info_cancellable(String);
+
+      String = str_sw_three_state(SW1Name, 'CLOSED', SW2Name, 'OPEN', SWOverrideName, 'OPEN');
+
+      NoConnectionLV(String, Pin1, Pin2);
+
+      // +----+----+----+
+      // | S1 | S2 | OR |
+      // +----+----+----+
+      // | 1  | 0  | 1  |
+      // +----+----+----+
+      String = StrAdd('PRESS AND HOLD ', SWOverrideName);
+
+      ui_info_cancellable(String);
+
+      String = str_sw_three_state(SW1Name, 'CLOSED', SW2Name, 'OPEN', SWOverrideName, 'CLOSED');
+
+      ConnectionTest(String, Pin1, Pin2);
+
+   end
+   else
+   begin
+      UIInfoDialog('TEST NOT IMPLEMENTED. PLEASE CONTACT TEST DEPARTMENT');
+      MiscAbortTest();
+   end;
+
+   ui_info_cancellable('RELEASE ALL SWITCHES');
+
+end;

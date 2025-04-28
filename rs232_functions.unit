@@ -24,10 +24,10 @@ B9PosY=-1
 Count=0
 
 [Header]
-Name=multipin_highvoltage
+Name=rs232_functions
 CreateName=Test_Admin
-CreateDate=45716.356404294
+CreateDate=45762.3355035069
 ModifyName=Test_Admin
-ModifyDate=45738.4110236227
+ModifyDate=45775.2756027315
 DescriptionLines=1
-D0=Handle multipin lists for testing HV and DB pins
+D0=Functions to discover and communicate over a USB to UART bridge to various devices.

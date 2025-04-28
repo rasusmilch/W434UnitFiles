@@ -1,0 +1,351 @@
+{
+   ORIGINATOR: Philip B.
+   DATE: 2024-08-26
+
+   REV HISTORY  |    REASON FOR CHANGE:              |  BY:  | CHANGE DATE:
+   ------------------------------------------------------------------------
+   0.1            INITIAL VERSION                      PB      2024-08-26
+   0.2            Add function for setting weight      PB      2024-12-17
+   0.3            Add print_stamp_box                  PB      2025-02-14
+   0.4            Add border_box_string                PB      2025-03-11
+}
+
+{
+   ***PROGRAM EDITOR CAUTIONS/ALERTS***
+   ------------------------------------
+}
+
+
+constants
+begin
+   CAL_FILE = 'O:\Test Eng\Support_Files\W434\calibration_data.ini';
+   CUST_FILE = 'O:\Test Eng\Support_Files\W434\customers.ini';
+   COLLINS_FILE = 'O:\Test Eng\Support_Files\W434\collins.ini';
+end;
+
+
+function calibration_isvalid(CalDate: string): boolean;
+begin
+   // Given calibration due date string, will return
+   // True if calibration is good, otherwise False.
+   MiscCreateList(TodayParts, 3);
+   Today = DTDate();
+   TodayParts[1] = DTYear(Today);
+   TodayParts[2] = DTMonth(Today);
+   TodayParts[3] = DTDay(Today);
+
+   if (TodayParts[2] < 10)
+   begin
+      TodayParts[2] = StrAdd('0', TodayParts[2]);
+   end;
+
+   if (TodayParts[3] < 10)
+   begin
+      TodayParts[3] = StrAdd('0', TodayParts[3]);
+   end;
+
+   TodayDate = MiscListToString(TodayParts, '-');
+
+   if (StrCompare(CalDate, TodayDate) > 0)
+   begin
+      Result = TRUE;
+   end
+   else
+   begin
+      Result = FALSE;
+   end;
+end;
+
+
+function read_calibration_data(): void;
+begin
+   Cached = GlobalDataRead('CalCached', FALSE);
+
+   if (Cached)
+   begin
+      // THE DATA ARE ALREADY LOADED, DO NOTHING.
+   end
+   else
+   begin
+      Handle = FileOpenIni(CAL_FILE);
+
+      if (Handle == 0)
+      begin
+         UIErrorDialog('COULD NOT OPEN CONFIGURATION FILE.<BR><BR>CONTACT TEST LAB.');
+         ReportWriteError('ERROR: COULD NOT OPEN CONFIGURATION FILE, TEST AUTOMATICALLY ABORTED.');
+         MiscAbortTest();
+      end;
+
+      StationID = MiscGetTestStationIdentifier();
+      Serial = FileGetIni(Handle, StationID, 'Serial', 'NULL');
+      GlobalDataWrite('TestStation.Serial', Serial);
+      CalDue = FileGetIni(Handle, StationID, 'CalDue', 'NULL');
+      GlobalDataWrite('TestStation.CalDueDate', CalDue);
+      SWVer = FileGetIni(Handle, StationID, 'SWVer', 'NULL');
+      GlobalDataWrite('TestStation.SoftwareVersion', SWVer);
+      FWVer = FileGetIni(Handle, StationID, 'FWVer', 'NULL');
+      GlobalDataWrite('TestStation.FirmwareVersion', FWVer);
+
+      FileCloseIni(Handle);
+
+      GlobalDataWrite('CalCached', TRUE);
+   end;
+end;
+
+
+function check_calibration(): void;
+begin
+   read_calibration_data();
+
+   Serial = GlobalDataRead('TestStation.Serial', 'NULL');
+   CalDue = GlobalDataRead('TestStation.CalDueDate', 'NULL');
+   SWVer = GlobalDataRead('TestStation.SoftwareVersion', 'NULL');
+   FWVer = GlobalDataRead('TestStation.FirmwareVersion', 'NULL');
+
+   if ((StrCompare(Serial, 'NULL') <> 0)
+       AND (StrCompare(CalDue, 'NULL') <> 0)
+       AND (StrCompare(SWVer, 'NULL') <> 0)
+       AND (StrCompare(FWVer, 'NULL') <> 0))
+   begin
+      //print_nortech_header();
+      // VALUES ARE PROPERLY FILLED
+   end
+   else
+   begin
+      UIWriteError('WORKSTATION IMPROPERLY CONFIGURED.<BR><BR>CONTACT TEST LAB.');
+      ReportWriteError('ERROR: WORKSTATION IMPROPERLY CONFIGURED, TEST AUTOMATICALLY ABORTED.');
+      MiscAbortTest();
+   end;
+
+   // CHECK IF CALIBRATION DATE DUE HAS PASSED
+   if (NOT calibration_isvalid(CalDue))
+   begin
+      UIErrorDialog('CALIBRATION OVERDUE.<BR><BR>CONTACT CALIBRATION LAB.');
+      ReportWriteError('ERROR: CALIBRATION OVERDUE, TEST AUTOMATICALLY ABORTED.');
+      MiscAbortTest();
+   end;
+end;
+
+
+function check_collins_operator(): void;
+begin
+   Handle = FileOpenIni(COLLINS_FILE);
+
+   if (Handle == 0)
+   begin
+      UIErrorDialog('COULD NOT OPEN COLLINS CONFIG FILE.<BR><BR>CONTACT TEST LAB.');
+   end
+   else
+   begin
+      Operator = GlobalDataRead('Value1', '', 'TestStart InputData');
+      OperatorName = FileGetIni(Handle, 'operator', Operator, 'NULL');
+
+      if (StrCompare(OperatorName, 'NULL') == 0)
+      begin
+         UIWriteError('OPERATOR ID NOT APPROVED FOR FINAL TESTING TO ATP.<BR><BR>CONTACT TEST LAB.');
+         ReportWriteError('ERROR: OPERATOR ID NOT APPROVED FOR FINAL TESTING TO ATP., TEST AUTOMATICALLY ABORTED.');
+         MiscAbortTest();
+      end;
+   end;
+
+   FileCloseIni(Handle);
+end;
+
+
+// This function should only be used for testing.
+function set_calibration_due_date(InDueDate: string): void;
+begin
+   GlobalDataWrite('TestStation.CalDueDate', InDueDate);
+end;
+
+
+function set_customer(Customer: string): void;
+begin
+   if ((StrCompare(Customer, 'DEFAULT') == 0) OR (StrCompare(Customer, '') == 0))
+   begin
+      ProjectFilename = ProjectGetFilename();
+      MiscListFromString(ProjectFilename, PathParts, '\');
+      Size = MiscGetListSize(PathParts);
+
+      // IF THE TEST IS INSIDE THE TEST LAB FOLDER, SET CUSTOMER TO 'TEST LAB'.
+      IsTestLab = StrPosition('TEST LAB', ProjectFilename);
+      if (IsTestLab)
+      begin
+         Customer = 'TEST LAB';
+      end;
+
+      // IF CUSTOMER WAS NOT SET TO 'TEST LAB', CHECK CUSTOMERS FILE AND ATTEMPT
+      // TO MAP PARENT FOLDER TO CUSTOMER NAME.
+      if (StrCompare(Customer, 'TEST LAB') <> 0)
+      begin
+         // SET TO INDEX OF PARENT DIRECTORY STRING IN PathParts ARRAY
+         Index = Size - 1;
+
+         Handle = FileOpenIni(CUST_FILE);
+
+         if (Handle == 0)
+         begin
+            UIErrorDialog('COULD NOT OPEN CUSTOMERS INDEX FILE.<BR><BR>CONTACT TEST LAB.');
+         end
+         else
+         begin
+            // USE THE PARENT DIRECTORY NAME TO REMAP TO CUSTOMER NAME
+            Customer = FileGetIni(Handle, 'DirectoryMap', PathParts[Index], 'DEFAULT');
+         end;
+
+         FileCloseIni(Handle);
+      end;
+   end;
+   
+   GlobalDataWrite('Customer', Customer);
+end;
+
+
+function read_collins_approved_equipment(InATP: string): void;
+begin
+   Handle = FileOpenIni(COLLINS_FILE);
+
+   if (Handle == 0)
+   begin
+      UIErrorDialog('COULD NOT OPEN COLLINS CONFIG FILE.<BR><BR>CONTACT TEST LAB.');
+   end
+   else
+   begin
+      ATPString = StrAdd('atp-', InATP);
+
+      Scale = FileGetIni(Handle, ATPString, 'Scale', 'NULL');
+      Bondcheck = FileGetIni(Handle, ATPString, 'Bondcheck', 'NULL');
+      DMM = FileGetIni(Handle, ATPString, 'DMM', 'NULL');
+      LCR = FileGetIni(Handle, ATPString, 'LCR', 'NULL');
+      Leaktest = FileGetIni(Handle, ATPString, 'Leaktest', 'NULL');
+      MassSpec = FileGetIni(Handle, ATPString, 'MassSpec', 'NULL');
+
+      if (StrCompare(Scale, 'NULL') <> 0)
+      begin
+         GlobalDataWrite('Collins.Scale', Scale);
+      end;
+
+      if (StrCompare(Bondcheck, 'NULL') <> 0)
+      begin
+         GlobalDataWrite('Collins.Bondcheck', Bondcheck);
+      end;
+
+      if (StrCompare(DMM, 'NULL') <> 0)
+      begin
+         GlobalDataWrite('Collins.DMM', DMM);
+      end;
+
+      if (StrCompare(LCR, 'NULL') <> 0)
+      begin
+         GlobalDataWrite('Collins.LCR', LCR);
+      end;
+
+      if (StrCompare(Leaktest, 'NULL') <> 0)
+      begin
+         GlobalDataWrite('Collins.Leaktest', Leaktest);
+      end;
+
+      if (StrCompare(MassSpec, 'NULL') <> 0)
+      begin
+         GlobalDataWrite('Collins.MassSpec', MassSpec);
+      end;
+   end;
+
+   FileCloseIni(Handle);
+end;
+
+
+function set_collins_atp(InATP: string): void;
+begin
+   GlobalDataWrite('Collins.ATP', InATP);
+   read_collins_approved_equipment(InATP);
+end;
+
+
+function set_collins_partnum(InPartNum: string): void;
+begin
+   GlobalDataWrite('Collins.PartNum', InPartNum);
+end;
+
+
+function set_collins_testrev(InTestRev: string): void;
+begin
+   GlobalDataWrite('Collins.TestRev', InTestRev);
+end;
+
+
+function set_collins_maxweight(InWeight: string): void;
+begin
+     GlobalDataWrite('Collins.MaxWeight', InWeight);
+end;
+
+
+function disable_tsx(): void;
+begin
+   GlobalDataWrite('Nortech.NOTSX', '1');
+end;
+
+
+function abort_special(): void;
+begin
+   UIInfoDialog('You have been chosen!<BR><BR>Bring TA and TWO assemblies to Test Eng.');
+   MiscAbortTest();
+end;
+
+
+function print_stamp_box(): void;
+begin
+   ReportWriteNormal('                    *** REMINDER TO OPERATOR ***                   ');
+   ReportWriteNormal('');
+   ReportWriteNormal('   HIGHLIGHT PASS/FAIL ABOVE AND COMPLETE ALL INFORMATION BELOW    ');
+   ReportWriteNormal('');
+   ReportWriteNormal('*******************************************************************');
+   ReportWriteNormal('*                                                                 *');
+   ReportWriteNormal('*  Operator Name: _____________________________________________   *');
+   ReportWriteNormal('*                                                                 *');
+   ReportWriteNormal('*  Date: ______________________     Stamp: ____________________   *');
+   ReportWriteNormal('*                                                                 *');
+   ReportWriteNormal('*******************************************************************');
+   ReportWriteNormal('');
+   ReportWriteNormal('');
+   ReportWriteNormal('');
+end;
+
+
+function border_box_string(InStr: string; InBoxChar: string; BoolUI: boolean; BoolReport: boolean): void;
+begin
+   if (StrLength(InBoxChar) <> 1)
+   begin
+      InBoxChar = '*';
+   end;
+
+   BoxLen = StrLength(InStr) + 4;
+   BoxTop = '';
+   BoxBegin = InBoxChar + ' ';
+   BoxEnd = ' ' + InBoxChar;
+   BoxMid = StrInsert(BoxEnd, InStr, BoxLen);
+   BoxMid = StrInsert(BoxBegin, BoxMid, 0);
+
+   for Count = 1 to BoxLen do
+   begin
+      BoxTop = BoxTop + InBoxChar;
+   end;
+
+   if (BoolUI)
+   begin
+      UIWriteNormal(' ');
+      UIWriteNormal(BoxTop);
+      UIWriteNormal(BoxMid);
+      UIWriteNormal(BoxTop);
+      UIWriteNormal(' ');
+   end;
+
+   if (BoolReport)
+   begin
+      ReportWriteNormal(' ');
+      ReportWriteNormal(BoxTop);
+      ReportWriteNormal(BoxMid);
+      ReportWriteNormal(BoxTop);
+      ReportWriteNormal(' ');
+   end;
+end;

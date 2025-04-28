@@ -1,0 +1,365 @@
+constants
+begin
+   RS232_RESPONSE = 'Version 1.0,TA-1234';
+   RS232_TIMEOUT_DATA = 0.250;
+   RS232_TIMEOUT_CHAR = 0.05;
+
+end;
+
+// @brief Probes a serial port to check if a specific response is received.
+// This function sets up a timeout for communication on the specified serial port,
+// sends a probe command, and compares the received data with the expected response.
+// If the expected response is received, it returns TRUE, otherwise FALSE.
+//
+// @param Port The serial port number to probe.
+// @param Response The expected response string.
+//
+// @return A boolean indicating whether the expected response was received.
+
+function serial_probe(Port: integer; Response: string; Debug: boolean): boolean;
+begin
+  // Initialize the result to FALSE.
+  Result = FALSE;
+
+  // Initialize the error code to 0.
+  ErrorCode = 0;
+
+  // Initialize the data string to an empty string.
+  Data = '';
+
+  // Set the timeout for the serial port, may need to be adjusted down for speed
+  if (RS232SetTimeout(Port, RS232_TIMEOUT_DATA, RS232_TIMEOUT_CHAR))
+  begin
+    // Notify that the timeout was successfully set.
+    if (Debug)
+    begin
+       UIWriteNormal('Timeout set');
+    end;
+  end
+  else
+  begin
+    // Retrieve the error code if the timeout setting fails.
+    ErrorCode = RS232GetError();
+    // Display the error code.
+    UIWriteNormal(StrAdd('RS232 Timeout Error code: ', ErrorCode));
+  end;
+
+  // Check if no error occurred during timeout setting.
+  if (ErrorCode == RS232_Error_None)
+  begin
+    // Send the probe command string.
+    if (RS232SendString(Port, 'probe;'))
+    begin
+      // Notify that the data was successfully sent.
+      if (Debug)
+      begin
+        UIWriteNormal('Data sent');
+      end;
+    end
+    else
+    begin
+      // Retrieve the error code if sending fails.
+      ErrorCode = RS232GetError();
+      // Display the error code.
+      UIWriteNormal(StrAdd('RS232 Send Error code: ', ErrorCode));
+    end;
+
+    // Check if no error occurred during sending.
+    if (ErrorCode == RS232_Error_None)
+    begin
+      // Attempt to receive the response string.
+      if (RS232ReceiveString(Port, Data))
+      begin
+        // Display the received data.
+        if (Debug)
+        begin
+          UIWriteNormal(StrAdd('Received Data: ', Data));
+        end;
+      end
+      else
+      begin
+        // Retrieve the error code if receiving fails.
+        ErrorCode = RS232GetError();
+        // Display the error code.
+        if (Debug)
+        begin
+          UIWriteNormal(StrAdd('RS232 Receiving Error code: ', ErrorCode));
+        end;
+      end;
+
+      // Compare the received data with the expected response.
+      if (StrCompare(StrTrim(Data), Response) == 0)
+      begin
+        // Notify if the response matches.
+        if (Debug)
+        begin
+          UIWriteNormal('Response good, found comm port!');
+        end;
+        // Set the result to TRUE, indicating success.
+        Result = TRUE;
+      end
+      else
+      begin
+        // Notify if the response does not match.
+        if (Debug)
+        begin
+          UIWriteNormal(StrAdd('Response bad: ', Data));
+        end;
+      end;
+    end;
+  end;
+end;
+
+
+// @brief Discovers a serial port by testing available COM ports.
+// This function attempts to find an available serial port by sequentially testing COM ports
+// from 1 to 8. It tries to open each port with a baud rate of 115200 and specific settings.
+// If a port is successfully opened, it probes the port to check if it responds as expected.
+//
+// @param Response A string that will be used to capture the response from the serial port.
+// @return The COM port number if a working port is found; otherwise, returns 0.
+
+function serial_discover(Response: string; Debug: boolean): integer;
+begin
+  // Initialize SERIAL_PORT to 0, indicating no port is currently found
+  SERIAL_PORT = 0;
+
+  // Initialize SERIAL_TEST to 0, used to test different COM ports
+  SERIAL_TEST = 0;
+
+  // Initialize Return_Code to FALSE, indicating no valid port has been found yet
+  Return_Code = FALSE;
+
+  // Loop to test each COM port from 1 to 8
+  while((SERIAL_PORT == 0) AND (SERIAL_TEST < 8))
+  begin
+    // Increment SERIAL_TEST to test the next COM port
+    SERIAL_TEST = SERIAL_TEST + 1;
+    // Notify user which COM port is being tested
+    if (Debug)
+    begin
+      UIWriteNormal(StrAdd('Testing COM', SERIAL_TEST));
+    end;
+
+    // Attempt to open the current COM port with specified settings
+    if (RS232Open(SERIAL_TEST, 115200, 8, RS232_ParityNone, 1, FALSE, FALSE))
+    begin
+      // If port opens successfully, notify user
+      if (Debug)
+      begin
+        UIWriteNormal(StrAdd(StrAdd('COM', SERIAL_TEST), ' open'));
+      end;
+
+      // Probe the opened port to check if it responds correctly
+      Return_Code = serial_probe(SERIAL_TEST, Response, Debug);
+
+      // If probing is successful, update SERIAL_PORT with the valid port number
+      if (Return_Code == TRUE)
+      begin
+        // Store the valid COM port number in SERIAL_PORT
+        SERIAL_PORT = SERIAL_TEST;
+      end
+      else
+      begin
+        // Close the port if probing fails
+        RS232Close(SERIAL_TEST);
+      end;
+    end
+    else
+    begin
+      // If opening the port fails, get and display the error code
+      ErrorCode = RS232GetError();
+      // Notify user of the error code
+      if (Debug)
+      begin
+        UIWriteNormal(StrAdd('RS232 Error code: ', ErrorCode));
+      end;
+    end;
+  end;
+
+  // Return the found COM port number or 0 if no valid port was found
+  GlobalDataWrite('RS232.PORT', SERIAL_PORT);
+
+  Result = SERIAL_PORT;
+
+end;
+
+function rs232_send_cmd(Cmd: string; Debug: boolean; Reopen: boolean = FALSE): boolean;
+begin
+   if (Reopen)
+   begin
+     Port = 'NULL';
+   end
+   else
+   begin
+     Port = GlobalDataRead('RS232.PORT', 'NULL');
+   end;
+
+   if (StrCompare(Port, 'NULL') <> 0)
+   begin
+     if (RS232SendString(Port, Cmd))
+     begin
+       if (Debug)
+       begin
+          UIWriteNormal('Data sent');
+       end;
+     end
+     else
+     begin
+        if (Debug)
+        begin
+           ErrorCode = RS232GetError();
+           UIWriteNormal(StrAdd('Port Error code: ', ErrorCode));
+        end;
+     end;
+
+     Data = '';
+     if (RS232ReceiveString(Port, Data))
+     begin
+       if (Debug)
+       begin
+          UIWriteNormal(StrAdd('Data: ', Data));
+       end;
+     end
+     else
+     begin
+        if (Debug)
+        begin
+           ErrorCode = RS232GetError();
+           UIWriteNormal(StrAdd('Response Error code: ', ErrorCode));
+        end;
+     end;
+   end
+   else
+   begin
+     if (Debug)
+     begin
+       UIWriteNormal('No port specified!');
+     end;
+   end;
+end;
+
+function timer_discover(Debug: boolean): integer;
+begin
+   Port = serial_discover(RS232_RESPONSE, Debug);
+
+   if (Port == 0)
+   begin
+     if (Debug)
+     begin
+        UIWriteError('Comm port not detected, is RS232 adapter plugged in?');
+     end;
+
+   //MiscAbortTest();
+   end;
+
+   Result = Port;
+
+end;
+
+function timer_send_cmd(Cmd: string; Debug: boolean; Reopen: boolean = FALSE): boolean;
+begin
+   if (Reopen)
+   begin
+     Port = 'NULL';
+   end
+   else
+   begin
+     Port = GlobalDataRead('RS232.PORT', 'NULL');
+   end;
+
+   PortNum = 0;
+
+   if (StrCompare(Port, 'NULL') <> 0)
+   begin
+      if (Debug)
+      begin
+         UIWriteNormal(StrAdd('Port found at ', Port));
+      end;
+
+      rs232_send_cmd(Cmd, Debug);
+   end
+   else
+   begin
+      if (Debug)
+      begin
+         UIWriteNormal('Port needs probing');
+      end;
+
+      PortNum = timer_discover(Debug);
+
+      if (PortNum > 0)
+      begin
+         if (Debug)
+         begin
+           UIWriteNormal(StrAdd('Port needed probing, found at ', PortNum));
+         end;
+
+         rs232_send_cmd(Cmd, Debug);
+      end
+      else
+      begin
+         if (Debug)
+         begin
+            UIWriteNormal('Port NOT FOUND');
+         end;
+      end;
+   end;
+end;
+
+function timer_disp_str(Message: string; Debug: boolean = FALSE): void;
+begin
+   String = 'dispString |';
+   String = StrAdd(String, Message);
+   String = StrAdd(String, '|;');
+
+   if (Debug)
+   begin
+      UIWriteNormal(StrAdd('Sending command: ', String));
+   end;
+
+   timer_send_cmd(String, Debug);
+end;
+
+function timer_set(Seconds: integer; Debug: boolean = FALSE): boolean;
+begin
+   String = '';
+
+   if (Seconds <> 0)
+   begin
+      String = StrAdd('setTimer ', Seconds);
+      String = StrAdd(String, ';');
+
+      if (Debug)
+      begin
+         UIWriteNormal(String);
+      end;
+
+      timer_send_cmd(String, Debug);
+   end
+   else
+   begin
+      timer_disp_str('Invalid', Debug);
+
+      UIWriteError('Invalid timer duration value passed. CONTACT TEST LAB');
+   end;
+
+
+end;
+
+function timer_start(Debug: boolean = FALSE): boolean;
+begin
+   timer_send_cmd('startTimer;', Debug);
+end;
+
+function timer_stop(Debug: boolean = FALSE): boolean;
+begin
+   timer_send_cmd('stopTimer;', Debug);
+end;
+
+function timer_finish(Debug: boolean = FALSE; Reopen: boolean = FALSE): boolean;
+begin
+   // Ports are closed between modules or test sections (those opened during test
+   // must be reopened in TestEnd
+   timer_send_cmd('doneTimer;', Debug, Reopen);
+end;

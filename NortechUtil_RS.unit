@@ -24,10 +24,10 @@ B9PosY=-1
 Count=0
 
 [Header]
-Name=multipin_highvoltage
+Name=NortechUtil_RS
 CreateName=Test_Admin
-CreateDate=45716.356404294
+CreateDate=45728.2773827662
 ModifyName=Test_Admin
-ModifyDate=45738.4110236227
+ModifyDate=45775.2799456829
 DescriptionLines=1
-D0=Handle multipin lists for testing HV and DB pins
+D0=Utility functions created by RS (until we get version control.)

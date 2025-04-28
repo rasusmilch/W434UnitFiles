@@ -1,3 +1,32 @@
+{*
+// Instead of tedious pin group lists, these take a list of pins given a pin_info string
+// and tests them against the remaining pins. Good for chassis tests, 1 or 2 pins tested against
+// all others like Collins.
+//
+// Example usage (similar setup for other functions):
+//    // Initial Setup
+//    // Get list of all pins in string format from pintable (FIRST PIN IN TABLE, LAST PIN IN TABLE)
+//    AllPinsListStr = get_named_pin_list("P1-A", "P2-CASE");
+   
+//    // Convert string to list using ';' as separator
+//    MiscListFromString(AllPinsListStr, ListAllPins, ';');
+
+//    // Get pins that have PIN_INFO set = 'CHASSIS' in pin table and set LOW, then set all
+//    // other pins HIGH and run DB on the grouping.
+//    nc_db_pin_info_low('CHASSIS', ListAllPins);
+//
+// Can also define certain pins as switch or sensitive components and hold them at the same potential:
+//    nc_hv_pin_info_high('SW1', ListAllPins);
+//    nc_hv_pin_info_high('SW2', ListAllPins);
+//    nc_hv_pin_info_high('SW3', ListAllPins);
+//    nc_hv_pin_info_high('SW5', ListAllPins);
+//    nc_hv_pin_info_high('SW7', ListAllPins);
+//    nc_hv_pin_info_high('SW9', ListAllPins);
+//
+// Further examples Collins AS-0191-001, ONBOARD SYSTEMS AS-0192-001 and especially AS-0188-001 for multipins
+// tested against all other pins (switch contacts against all others)
+*}
+
 function get_named_pin_list(FromPin: tpin; ToPin: tpin): string;
 begin
    // Get only named pins from pin table between FROM and TO inclusive.
@@ -101,8 +130,19 @@ end;
 
 function nc_db_pin_info_low(PinInfoStr: string; FullPinList: tarray): void;
 begin
+   {*
    // Tests pins with PinInfoStr in their PIN_Info field as LOW and all others
    // from the list as HIGH.
+
+   // Example usage:
+   //    // Get list of all pins in string format from pintable (FIRST PIN IN TABLE, LAST PIN IN TABLE)
+   //    AllPinsListStr = get_named_pin_list("P1-A", "P2-CASE");
+   
+   //    // Convert string to list
+   //    MiscListFromString(AllPinsListStr, ListAllPins, ';');
+   //    // Get pins that have PIN_INFO set in pin table and set LOW
+   //    nc_db_pin_info_low('CHASSIS', ListAllPins);
+   *}
 
    // Get LOW pins
    PinCreateList(LowPinList, PIN_Info, PinInfoStr);
@@ -157,4 +197,34 @@ begin
 
    // Test
    no_conn_hv_lists('ALL OTHER PINS', HighPinList, LowNames, LowPinList);
+end;
+
+function no_conn_lv_abort(Description: string; PinList: tpinarray): void;
+begin
+   AllPassed = TRUE;
+
+   Count = MiscGetListSize(PinList);
+   //UIWriteNormal(Count);
+
+   // Add ",PINNAME" for all other pins
+   if (Count >= 1)
+   begin
+      for Index = 1 to Count do
+      begin
+         PinName = PinGetData(PinList[Index], PIN_Name);
+//         UIWriteNormal(PinName);
+         Result = NoConnAllLV(Description, PinList[Index]);
+         if (Result == FALSE)
+         begin
+            AllPassed = FALSE;
+         end;
+      end;
+   end;
+
+   if (AllPassed == FALSE)
+   begin
+      UIWriteError('LOW VOLTAGE ISOLATION TEST FAILED, ABORTING TEST');
+      ReportWriteError('LOW VOLTAGE ISOLATION TEST FAILED, ABORTING TEST');
+      MiscAbortTest();
+   end;
 end;
