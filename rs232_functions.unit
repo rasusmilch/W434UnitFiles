@@ -28,6 +28,6 @@ Name=rs232_functions
 CreateName=Test_Admin
 CreateDate=45762.3355035069
 ModifyName=Test_Admin
-ModifyDate=45775.2756027315
+ModifyDate=45775.3483547454
 DescriptionLines=1
 D0=Functions to discover and communicate over a USB to UART bridge to various devices.

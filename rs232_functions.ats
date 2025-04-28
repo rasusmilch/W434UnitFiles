@@ -307,7 +307,7 @@ begin
    end;
 end;
 
-function timer_disp_str(Message: string; Debug: boolean = FALSE): void;
+function timer_disp_str(Message: string; Debug: boolean = FALSE; Reopen: boolean = FALSE): void;
 begin
    String = 'dispString |';
    String = StrAdd(String, Message);
@@ -318,7 +318,7 @@ begin
       UIWriteNormal(StrAdd('Sending command: ', String));
    end;
 
-   timer_send_cmd(String, Debug);
+   timer_send_cmd(String, Debug, Reopen);
 end;
 
 function timer_set(Seconds: integer; Debug: boolean = FALSE): boolean;
@@ -347,19 +347,19 @@ begin
 
 end;
 
-function timer_start(Debug: boolean = FALSE): boolean;
+function timer_start(Debug: boolean = FALSE; Reopen: boolean = FALSE): boolean;
 begin
-   timer_send_cmd('startTimer;', Debug);
+   timer_send_cmd('startTimer;', Debug, Reopen);
 end;
 
-function timer_stop(Debug: boolean = FALSE): boolean;
+function timer_stop(Debug: boolean = FALSE; Reopen: boolean = FALSE): boolean;
 begin
-   timer_send_cmd('stopTimer;', Debug);
+   timer_send_cmd('stopTimer;', Debug, Reopen);
 end;
 
 function timer_finish(Debug: boolean = FALSE; Reopen: boolean = FALSE): boolean;
 begin
    // Ports are closed between modules or test sections (those opened during test
-   // must be reopened in TestEnd
+   // must be reopened in TestEnd)
    timer_send_cmd('doneTimer;', Debug, Reopen);
 end;
