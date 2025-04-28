@@ -535,8 +535,8 @@ begin
          UIWriteNormal('Test duration is NULL, setting to ZERO (0) and displaying message');
       end;
       Test_seconds = 0;
-
-      timer_disp_str('Unknown', Debug);
+      timer_stop(Debug);
+      timer_disp_str('None', Debug);
    end;
 
    ui_info_cancellable(Message);
