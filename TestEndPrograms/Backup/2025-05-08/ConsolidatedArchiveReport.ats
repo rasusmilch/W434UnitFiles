@@ -25,11 +25,15 @@
 *                and moved durations to a subfolder for ATS_scanner
 *   By: RS
 *
-* - Rev: (next version)
-*   Cust Doc Rev: (next revision)
-*   Date: YYYY-MM-DD
-*   Description: (description of change)
-*   By: (author initials)
+* - Test Rev: 3.2
+*   Date: 2025-05-08
+*   Description: Added get_path(), get_local_path() and get_path_config()
+*                that opens path ini locally to get the various paths.
+*                This allows each machine to be individually maintained and updated
+*                Updated CUP section to fetch python path and use that instead
+*                hardcoding path.
+*                Updated all code to use get_path.
+*   By: RS
 *
 * DOCUMENT HISTORY
 * - Date: (next update)
@@ -49,26 +53,73 @@ begin
    to be transformed into another string by calling StrReplace(); or
    archive_protocol(); begin with 'TMPL_'.
 }
-   FILE_CUSTOMERS = 'O:\Test Eng\Support_Files\W434\customers.ini';
-   TMPL_DURATION = 'O:\Test Eng\Support_Files\W434\durations\$STATION$.txt';
 
-   FILE_REPORT_TXT_BJI = 'C:\Users\Public\Documents\CEETIS\Temp\Reports\DefaultReport_txt.txt';
-   TMPL_ARCHIVE_TXT_BJI = 'O:\Test Eng\DATA\W434\<Year>\$CUST$\<ProjectName>\<ProjectName>-<SerialNumber>-<Year><Month><Day>-<Hour><Minute><Second>.txt';
+   FILE_PATHS = 'C:\Users\Public\Documents\CEETIS\Config\paths.ini';
+   FILE_LOCAL_PATHS = 'C:\Users\Public\Documents\CEETIS\Config_Local\local_paths.ini';
 
-   TMPL_REPORT_HTML_COLLINS = 'C:\Users\Public\Documents\CEETIS\Temp\Reports\ATP-$ATPNUM$_html.html';
-   TMPL_REPORT_PDF_COLLINS = 'C:\REX\output\ATP-$ATPNUM$.pdf';
-   TMPL_ARCHIVE_HTML_COLLINS = 'O:\Test Eng\DATA\W434\<Year>\COLLINS_HTML\<ProjectName>\<ProjectName>-<SerialNumber>-<Year><Month><Day>-<Hour><Minute><Second>.html';
-   TMPL_ARCHIVE_PDF_COLLINS = 'O:\Test Eng\DATA\W434\<Year>\COLLINS_PDF\<ProjectName>\<ProjectName>-<SerialNumber>-<Year><Month><Day>-<Hour><Minute><Second>.pdf';
-
-   PYTHON_EXE = 'C:\Python\python.exe';
-   //PYTHON_EXE = 'C:\Users\pbarton\scoop\apps\python\current\python.exe'; // For local testing
-   TMPL_REX_PARAMS = 'C:\REX\rex.py -m atp$ATPNUM$ -r ATP-$ATPNUM$_html.html -o ATP-$ATPNUM$.pdf -n';
-
-   // TSX report is the same as FILE_REPORT_TXT_BJI until a custom TSX format is final.
-   FILE_REPORT_TXT_TSX = 'C:\Users\Public\Documents\CEETIS\Temp\Reports\DefaultReport_txt.txt';
-   TMPL_ARCHIVE_TXT_TSX = '\\az-fs1\chksmPBI\Weetech Reports\Bemidji\<ProjectName>-<SerialNumber>-<Year><Month><Day>-<Hour><Minute><Second>.txt';
 end;
 
+function get_path_config(PathKey: string; ConfigPath: string; Debug: boolean = FALSE): string;
+begin
+   // Opens the paths ini file and attempts to fetch the path given by the
+   // PathKey string.
+   //
+   // Returns value found or NULL if not found.
+
+   if (Debug)
+   begin
+      String = StrAdd('Fetching path for: ', PathKey);
+      String = StrAdd(String, ' from file: ');
+      String = StrAdd(String, ConfigPath);
+      UIWriteWarning(String);
+   end;
+
+   Handle = FileOpenIni(ConfigPath);
+
+   if (Debug)
+   begin
+      UIWriteWarning(StrAdd('File handle: ', Handle));
+   end;
+
+   if (Handle == 0)
+   begin
+      UIErrorDialog('COULD NOT OPEN PATH CONFIGURATION FILE.<BR><BR>CONTACT TEST LAB.');
+   end
+   else
+   begin
+      PathKeyUpper = StrUpperCase(PathKey);
+
+      FetchedPath = FileGetIni(Handle, 'Path', PathKeyUpper, 'NULL');
+
+      if (Debug)
+      begin
+         UIWriteWarning(StrAdd('Fetched path: ', FetchedPath));
+      end;
+
+      // We need this path in order to run. If we can't find it testing is a
+      // waste of time due to erroring out AFTER a potentially (hours) long test!
+      if (StrCompare(FetchedPath, 'NULL') == 0)
+      begin
+         UIWriteError(StrAdd(PathKey, ' path not found! Contact test department!'));
+         UIErrorDialog(StrAdd(PathKey, ' path not found!<BR>Contact test department!'));
+      end;
+
+   end;
+
+   FileCloseIni(Handle);
+
+   Result = FetchedPath;
+end;
+
+function get_path(PathKey: string; Debug: boolean = FALSE): string;
+begin
+   Result = get_path_config(PathKey, FILE_PATHS, Debug);
+end;
+
+function get_local_path(PathKey: string; Debug: boolean = FALSE): string;
+begin
+   Result = get_path_config(PathKey, FILE_LOCAL_PATHS, Debug);
+end;
 
 function record_duration(): void;
 begin
@@ -79,7 +130,8 @@ begin
    calling this function, although the function does not care.
 }
    TestStationID = MiscGetTestStationIdentifier();
-   DurationFile = StrReplace(TMPL_DURATION, '$STATION$', TestStationID, FALSE);
+   DurationTemplatePath = get_local_path('TMPL_DURATION');
+   DurationFile = StrReplace(DurationTemplatePath, '$STATION$', TestStationID, FALSE);
    Handle = FileOpenText(DurationFile);
 
    if (Handle <> 0)
@@ -109,7 +161,6 @@ begin
 
    FileCloseText(Handle);
 end;
-
 
 function resolve_customer_name(): string;
 begin
@@ -141,7 +192,8 @@ begin
       end
       else
       begin
-         Handle = FileOpenIni(FILE_CUSTOMERS);
+         CustomerFilePath = get_local_path('FILE_CUSTOMERS');
+         Handle = FileOpenIni(CustomerFilePath);
 
          if (Handle == 0)
          begin
@@ -183,15 +235,23 @@ begin
 
    if (IsPretest == 0)
    begin
-      // Execute external util for processing of report & forced print.
-      Params = StrReplace(TMPL_REX_PARAMS, '$ATPNUM$', ATPNum, TRUE);
-      CUPExecuteCommand('CEETIS_CUP_001', 'run program', [PYTHON_EXE, Params], 30s, ResultData);
+      PythonPath = get_local_path('FILE_PYTHON');
+      FILE_REX = get_local_path('FILE_REX');
+      TMPL_REX_PARAMS = get_path('TMPL_REX_PARAMS');
 
+      // Execute external util for processing of report & forced print.
+      TMPL_REX_PARAMS = StrReplace(TMPL_REX_PARAMS, '$REX$', FILE_REX, TRUE);
+      Params = StrReplace(TMPL_REX_PARAMS, '$ATPNUM$', ATPNum, TRUE);
+      CUPExecuteCommand('CEETIS_CUP_001', 'run program', [PythonPath, Params], 30s, ResultData);
+
+      TMPL_REPORT_PDF_COLLINS = get_path('TMPL_REPORT_PDF_COLLINS');
+      TMPL_REPORT_PDF_COLLINS = StrReplace(TMPL_REPORT_PDF_COLLINS, '$REX$', FILE_REX, FALSE);
       CollinsPDFReport = StrReplace(TMPL_REPORT_PDF_COLLINS, '$ATPNUM$', ATPNum, FALSE);
       UIWriteNormal(CollinsPDFReport);
 
       if (FileExists(CollinsPDFReport))
       begin
+         TMPL_ARCHIVE_PDF_COLLINS = get_path('TMPL_ARCHIVE_PDF_COLLINS');
          archive_protocol(CollinsPDFReport, TMPL_ARCHIVE_PDF_COLLINS, TRUE, FALSE, FALSE);
          FileDelete(CollinsPDFReport);
       end;
@@ -251,7 +311,10 @@ begin
    Customer = resolve_customer_name();
 
    // ARCHIVE FOR BJI IN ALL PASS/FAIL CIRCUMSTANCES
+   TMPL_ARCHIVE_TXT_BJI = get_path('TMPL_ARCHIVE_TXT_BJI');
    BJIArchive = StrReplace(TMPL_ARCHIVE_TXT_BJI, '$CUST$', Customer, FALSE);
+
+   FILE_REPORT_TXT_BJI = get_path('FILE_REPORT_TXT_BJI');
    archive_protocol(FILE_REPORT_TXT_BJI, BJIArchive, TRUE, TRUE, FALSE);
 
    // ARCHIVE & PROCESSING RULES FOR SPECIFIC CUSTOMERS
@@ -264,6 +327,9 @@ begin
 
          if (StrCompare(ATPNum, 'NULL') <> 0)
          begin
+            TMPL_REPORT_HTML_COLLINS = get_path('TMPL_REPORT_HTML_COLLINS');
+            TMPL_ARCHIVE_HTML_COLLINS = get_path('TMPL_ARCHIVE_HTML_COLLINS');
+
             CollinsReport = StrReplace(TMPL_REPORT_HTML_COLLINS, '$ATPNUM$', ATPNum, FALSE);
             archive_protocol(CollinsReport, TMPL_ARCHIVE_HTML_COLLINS, TRUE, TRUE, FALSE);
 
@@ -285,6 +351,9 @@ begin
    No_TSX = GlobalDataRead('Nortech.NOTSX', '0');
    if (StrCompare(No_TSX, '1') <> 0)
    begin
+      FILE_REPORT_TXT_TSX = get_path('FILE_REPORT_TXT_TSX');
+      TMPL_ARCHIVE_TXT_TSX = get_path('TMPL_ARCHIVE_TXT_TSX');
+
       archive_protocol(FILE_REPORT_TXT_TSX, TMPL_ARCHIVE_TXT_TSX, TRUE, TRUE, FALSE);
    end;
 
