@@ -1,0 +1,37 @@
+//Main routine
+function main(): void;
+begin
+   //If printing is allowed
+   if (print_allowed())
+   begin
+      //Print reports
+      PrintAllReports();
+   end;
+   //Get test result
+   UserBreak = FALSE;
+   Passed = FALSE;
+   TestEndGetTestResult(UserBreak, Passed);
+   ArchiveTestResult();
+   if (UserBreak)
+   begin
+      //Show only a short message if the test was aborted by the user
+      UIWriteNormal('');
+      Text = '----- ';
+      Text = StrAdd(Text, LocalText('49#Aborted by user'));
+      Text = StrAdd(Text, ' -----');
+      UIWriteWarning(Text);
+   end
+   else
+   begin
+      //Show the test result if the test passed or failed
+      UITestResult(Passed, UserBreak, TRUE, .5s);
+      unplug_check();
+   end;
+
+   // see disciption in the attached Unit: "ArchiveFunctions.unit"
+   archive_protocol('C:\Users\Public\Documents\CEETIS\Temp\Reports\DefaultReport_txt.txt', 'O:\Test Eng\DATA\W434\<Year>\TEST LAB\<ProjectName>\<ProjectName>-<SerialNumber>-<Year><Month><Day>-<Hour><Minute><Second>.txt', TRUE, FALSE, FALSE);
+
+   // display pass/fail dialog
+   UITestResult(Passed, UserBreak, TRUE, 0s);
+end;
+

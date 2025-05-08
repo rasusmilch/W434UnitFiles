@@ -1,0 +1,217 @@
+//function output_line_int(Line: string; Value: integer): void;
+//begin
+//   UIWriteNormal(StrAdd(Line, Value));
+//end;
+
+function output_char_line(Char: string; Length: integer): void;
+begin
+
+   BorderLine = '';
+   for Count = 0 to Length do
+   begin
+      BorderLine = StrAdd(BorderLine, Char);
+   end;
+
+   UIWriteNormal(BorderLine);
+   ReportWriteNormal(BorderLine);
+
+end;
+
+function longest_line(Line1: string; Line2: string; Line3: string; Line4: string): integer;
+begin
+   Result = 0;
+
+   if (StrLength(Line1) > Result)
+   begin
+      Result = StrLength(Line1);
+   end;
+
+   if (StrLength(Line2) > Result)
+   begin
+      Result = StrLength(Line2);
+   end;
+
+   if (StrLength(Line3) > Result)
+   begin
+      Result = StrLength(Line3);
+   end;
+
+   if (StrLength(Line4) > Result)
+   begin
+      Result = StrLength(Line4);
+   end;
+
+end;
+
+function pad_box_line_char(Line: string; BorderChar: string; TargetLength: integer): string;
+begin
+   CurrentLength = StrLength(Line);
+
+   LengthDifference = TargetLength - CurrentLength;
+   CenteringLength = ArithDiv(LengthDifference, 2);
+
+   if (CenteringLength == 0)
+   begin
+      Result = StrAdd(BorderChar, Line);
+      Result = StrAdd(Result, BorderChar);
+   end
+   else
+   begin
+      Result = '*';
+
+      for Count = 1 to CenteringLength do
+      begin
+         Result = StrAdd(Result, ' ');
+      end;
+
+      Result = StrAdd(Result, Line);
+
+      LengthLeft = TargetLength - StrLength(Result);
+
+      for Count = 1 to LengthLeft do
+      begin
+         Result = StrAdd(Result, ' ');
+      end;
+
+      Result = StrAdd(Result, BorderChar);
+   end;
+end;
+
+function border_box_string(Line: string; BorderChar: string): string;
+begin
+   CurrentLength = StrLength(Line);
+
+   BoxWidth = CurrentLength + 3;
+
+   // UIWriteNormal(StrAdd('Boxwidth: ', BoxWidth));
+
+   output_char_line('*', BoxWidth);
+
+   LengthDifference = BoxWidth - CurrentLength;
+   CenteringLength = ArithDiv(LengthDifference, 2);
+
+   if (CenteringLength == 0)
+   begin
+      Result = StrAdd(BorderChar, Line);
+      Result = StrAdd(Result, BorderChar);
+   end
+   else
+   begin
+      Result = '*';
+
+      for Count = 1 to CenteringLength do
+      begin
+         Result = StrAdd(Result, ' ');
+      end;
+
+      Result = StrAdd(Result, Line);
+
+      LengthLeft = BoxWidth - StrLength(Result);
+
+      for Count = 1 to LengthLeft do
+      begin
+         Result = StrAdd(Result, ' ');
+      end;
+
+      Result = StrAdd(Result, BorderChar);
+   end;
+
+   output_char_line('*', BoxWidth);
+   
+end;
+
+function adjust_db_leakage(OffsetReal: tcurrent; OffsetImaginary: tcurrent; MaxRealCurrent: tcurrent; MaxImaginaryCurrent: tcurrent): boolean;
+begin
+   UIWriteNormal('');
+   ReportWriteNormal('');
+   UIWriteNormal('');
+   ReportWriteNormal('');
+
+   CompReal = MaxRealCurrent + OffsetReal;
+   CompImaginary = MaxImaginaryCurrent + OffsetImaginary;
+
+   Line1 = 'Adjusting REAL leakage current to compensate for harness offset!';
+   Line2 = StrAdd('Max ATP real leakage (', FormatCurrent(MaxRealCurrent));
+   Line2 = StrAdd(Line2, ') + measured compensation (');
+   Line2 = StrAdd(Line2, FormatCurrent(OffsetReal));
+   Line2 = StrAdd(Line2, ') = ');
+   Line2 = StrAdd(Line2, FormatCurrent(CompReal));
+
+   Line3 = 'Adjusting IMAGINARY leakage current to compensate for harness offset!';
+   Line4 = StrAdd('Max ATP imaginary leakage (', FormatCurrent(MaxImaginaryCurrent));
+   Line4 = StrAdd(Line4, ') + measured compensation (');
+   Line4 = StrAdd(Line4, FormatCurrent(OffsetImaginary));
+   Line4 = StrAdd(Line4, ') = ');
+   Line4 = StrAdd(Line4, FormatCurrent(CompImaginary));
+
+   BoxWidth = longest_line(Line1, Line2, Line3, Line4) + 3;
+
+   // UIWriteNormal(StrAdd('Boxwidth: ', BoxWidth));
+
+   Line1 = pad_box_line_char(Line1, '*', BoxWidth);
+   Line2 = pad_box_line_char(Line2, '*', BoxWidth);
+
+   MidBlank = pad_box_line_char('', '*', BoxWidth);
+
+   Line3 = pad_box_line_char(Line3, '*', BoxWidth);
+   Line4 = pad_box_line_char(Line4, '*', BoxWidth);
+
+   output_char_line('*', BoxWidth);
+   
+   UIWriteNormal(Line1);
+   ReportWriteNormal(Line1);
+
+   UIWriteNormal(Line2);
+   ReportWriteNormal(Line2);
+
+   if (CompReal > 0.5mA)
+   begin
+      CompReal = 0.5mA;
+      LimitRealStr = 'LIMITING TO TESTER MAXIMUM 0.5mA';
+      LimitRealStr = pad_box_line_char(LimitRealStr, '*', BoxWidth);
+      UIWriteNormal(LimitRealStr);
+      ReportWriteNormal(LimitRealStr);
+   end;
+
+   UIWriteNormal(MidBlank);
+   ReportWriteNormal(MidBlank);
+
+   UIWriteNormal(Line3);
+   ReportWriteNormal(Line3);
+
+   UIWriteNormal(Line4);
+   ReportWriteNormal(Line4);
+
+   if (CompImaginary > 3.2mA)
+   begin
+      CompImaginary = 3.2mA;
+      LimitImaginaryStr = 'LIMITING TO TESTER MAXIMUM 3.2mA';
+      LimitImaginaryStr = pad_box_line_char(LimitImaginaryStr, '*', BoxWidth);
+      UIWriteNormal(LimitImaginaryStr);
+      ReportWriteNormal(LimitImaginaryStr);
+   end;
+
+   output_char_line('*', BoxWidth);
+
+   UIWriteNormal('');
+   ReportWriteNormal('');
+
+   ParamDielectricBreakdown(PARAM_DontChange, PARAM_DontChange, PARAM_DontChange, PARAM_DontChange, PARAM_DontChange, PARAM_DontChange, PARAM_DontChange, CompReal, CompImaginary);
+
+   UIWriteNormal('');
+   ReportWriteNormal('');
+   UIWriteNormal('');
+   ReportWriteNormal('');
+end;
+
+function compensate_leakage_file(File: string): void;
+begin
+   Handle = FileOpenIni(File);
+   ReadRealValue = FileGetIni(Handle, 'LeakageCompensation', 'Real', '0');
+   ReadImaginaryValue = FileGetIni(Handle, 'LeakageCompensation', 'Imaginary', '0');
+   FileCloseIni(Handle);
+   UIWriteNormal(ReadRealValue);
+   UIWriteNormal(ReadImaginaryValue);
+
+   adjust_db_leakage(ReadRealValue, ReadImaginaryValue, 0.5mA, 2mA);
+end;

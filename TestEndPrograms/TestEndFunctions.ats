@@ -1,0 +1,56 @@
+function print_allowed(): boolean;
+begin
+   Result = PrintingAllowed();
+   if (Result)
+   begin
+      ConfirmPrint = ProjectGetTestEndSettings(TESTEND_ConfirmReportPrint);
+      if (ConfirmPrint)
+      begin
+         Button = UIMessageDialogYesNo(LocalText('92#Print report?'));
+         if (Button == DIALOGRESULT_Yes)
+         begin
+            Result = TRUE;
+         end
+         else
+         begin
+            Result = FALSE;
+         end;
+      end;
+   end;
+end;
+
+function unplug_check(AllowAbort: boolean = FALSE): boolean;
+begin
+   UnplugCheckEnabled = ProjectGetTestEndSettings(TESTEND_UnplugCheck);
+   if (UnplugCheckEnabled)
+   begin
+      do
+      begin
+         if (AllowAbort)
+         begin
+            //show Ok/Cancel dialog
+            Button = UIMessageDialogOkCancel(LocalText('136#Remove UUT'));
+            RunCheck = (Button == DIALOGRESULT_Ok);
+         end
+         else
+         begin
+            UIInfoDialog(LocalText('136#Remove UUT'));
+            RunCheck = TRUE;
+         end;
+         if (RunCheck)
+         begin
+            Unplugged = UnplugCheck(UNPLUGCHECK_All);
+         end
+         else
+         begin
+            Unplugged = TRUE;
+         end;
+      end
+      while (NOT Unplugged);
+      Result = Unplugged;
+   end
+   else
+   begin
+      Result = TRUE;
+   end;
+end;

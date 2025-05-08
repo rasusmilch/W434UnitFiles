@@ -1,0 +1,143 @@
+// This special function unit is made to apply to all of the Rosemount 9007-3230-xxx and their armored clones.
+// Questions contact: Roger Anderson- Nortech- Bemidji MN              Functions unit is Rev.1    R.A.10/28/16
+
+function header(Text:string):void ;
+  begin
+    UIWriteNormal('');
+    UIWriteNormal(Text);
+    UIWriteNormal('');
+    ReportWriteNormal('', TRUE);
+    ReportWriteNormal(Text, TRUE);
+    ReportWriteNormal('', TRUE);
+  end;
+
+function rlc_serial_resistance_inductance_and_ratio(Name:string; Pinl:tpin; Pin2:tpin; ResMin:tresistance;
+                                                    ResMax:tresistance; IndMin:tinductance; IndMax:tinductance;
+                                                    RatMin:real; RatMax:real):boolean; tests rlccombinations ;
+  begin
+// function template : rlc serial resistance inductance and ratio( '<Name>' , "<Pin1>", "<Pin2>", <Minimum>Ohm, <Maximum>Ohm, <Minimum>mH, <Maxi.mum>mH '<RatioMin> <RatHax>) .
+    MeasureRLC(Name, Pinl, Pin2, ResultValues);
+    Pins = StrAdd(FormatAlignLeft(PinGetData(Pinl, PIN_AnyName ), 20, ' '),
+                  FormatAlignLeft(PinGetData(Pin2, PIN_AnyName ), 20, ' '));
+    ResText = StrAdd(FormatAlignLeft(StrAdd(Name, '-SerRes '), 15, ' '), Pins);
+      if (StrCompare(ResultValues[RLC_RserPrefix], ' % ') == 0)
+        begin
+          Line = StrAdd(FormatAlignLeft('Invalid ', 10, ' '), ResText);
+          UIWriteError(Line);
+          ReportWriteError(Line);
+        end
+        else
+        begin
+          if (ResultValues[RLC_Rser] < ResMin)
+            begin	
+              Line = StrAdd(StrAdd(FormatAlignLeft('Too low ', 10, ' '), ResText),
+                     StrAdd(ResultValues[RLC_RserPrefix ], FormatResistance(ResultValues[RLC_Rser])));
+              UIWriteError(Line);
+              ReportWriteError (Line);
+            end
+            else
+            begin
+              if (ResultValues[RLC_Rser] > ResMax)
+                begin
+                  Line = StrAdd(StrAdd(FormatAlignLeft('Too high ', 10, ' '), ResText),
+                         StrAdd(ResultValues[RLC_RserPrefix ], FormatResistance(ResultValues[RLC_Rser])));
+                  UIWriteError (Line);
+                  ReportWriteError (Line);
+                end
+                else
+                begin
+                  Line = StrAdd(StrAdd(FormatAlignLeft('Pass ', 10, ' '), ResText),
+                         StrAdd(ResultValues[RLC_RserPrefix], FormatResistance(ResultValues[RLC_Rser])));
+                  UIWriteNormal(Line);
+                  ReportWriteNormal(Line);
+                end;
+            end;
+        end;
+        //Next line sets a 2uH offset to allow for Inductance found in the tester and fixturing.
+        //This is the average value found on the W434 testers in BMJ, which are configured same as MAS and SZ.
+        //Appended 12/07/16 with larger sample size. Was originally set to 2.5 uH when first copied to SZ.R.A.
+        ResultSerInd = ((ResultValues[RLC_Lser]) - 0.000002);
+        IndText = StrAdd(FormatAlignLeft(StrAdd (Name , '-1kHz SerInd'), 15, ' '), Pins);
+          if (StrCompare(ResultValues[RLC_LserPrefix], ' % ') == 0)
+            begin
+              Line = (StrAdd(FormatAlignLeft('Invalid ', 10, ' '), IndText));
+              UIWriteError(Line);
+              ReportWriteError(Line);
+            end
+            else
+            begin
+              //if (ResultValues[RLC_Lser] < IndMin)
+              if (ResultSerInd < IndMin)
+                begin
+                  {Line = StrAdd(StrAdd(FormatAlignLeft('Too low ', 10, ' '), IndText),
+                         StrAdd(ResultValues[RLC_LserPrefix], FormatInductance(ResultValues[RLC_Lser])));}
+                  Line = StrAdd(StrAdd(FormatAlignLeft('Too low ', 10, ' '), IndText),
+                         StrAdd(ResultValues[RLC_LserPrefix], FormatInductance(ResultSerInd)));
+                  UIWriteError(Line);	
+                  ReportWriteError(Line);
+                end
+                else
+                begin
+                  //if (ResultValues[RLC_Lser] > IndMax)
+                  if (ResultSerInd > IndMax)
+                    begin
+                      {Line = StrAdd(StrAdd(FormatAlignLeft('Too high ', 10, ' '), IndText),
+                             StrAdd (ResultValues[RLC LserPrefix], FormatInductance(ResultValues[RLC_Lser])));}
+                      Line = StrAdd(StrAdd(FormatAlignLeft('Too high ', 10, ' '), IndText),
+                             StrAdd (ResultValues[RLC LserPrefix], FormatInductance(ResultSerInd)));
+                      UIWriteError(Line);
+                      ReportWriteError(Line);
+                    end
+                    else
+                    begin
+                      {Line = StrAdd(StrAdd(FormatAlignLeft('Pass ', 10, ' '), IndText),
+                             StrAdd (ResultValues[RLC_LserPrefix], FormatInductance(ResultValues[RLC_Lser])));}
+                      Line = StrAdd(StrAdd(FormatAlignLeft('Pass ', 10, ' '), IndText),
+                             StrAdd (ResultValues[RLC_LserPrefix], FormatInductance(ResultSerInd)));
+                      UIWriteNormal(Line);
+                      ReportWriteNormal(Line);
+                    end;	
+                  end;
+              end;
+              //Next line reformats inductance value to a whole number to use in the L/R ration calculation.
+              //Otherwise result will appear as an e- number, and our acceptance range is 1 thru 5. So it won't work.
+              ResultSerIndMath = (ResultSerInd * 1e6);
+              RatText = StrAdd(FormatAlignLeft(StrAdd(Name , '-L/R Ratio'), 15, ' '), Pins);
+              if ((StrCompare(ResultValues[RLC_LserPrefix], ' % ') == 0) OR
+                  (StrCompare(ResultValues[RLC_RserPrefix], ' % ') == 0))
+                begin	
+                  Line = StrAdd(FormatAlignLeft('Invalid ', 10, ' '), RatText);
+                  UIWriteError(Line);
+                  ReportWriteError(Line);
+                  FailCounterCount(FAILCOUNTER_Others);
+                end
+                else
+                begin
+                  //Ratio = (ResultValues[RLC_Lser] made whole / ResultValues[RLC_Rser]);
+                  Ratio = (ResultSerIndMath / ResultValues[RLC_Rser]);
+                    if (Ratio < RatMin)
+                      begin
+                        Line = StrAdd(StrAdd(FormatAlignLeft('Too low ', 10, ' '), RatText ), Ratio);
+                        UIWriteError(Line);
+                        ReportWriteError(Line);
+                        FailCounterCount(FAILCOUNTER_Others);
+                      end
+                      else
+                      begin
+                        if (Ratio > RatMax)
+                          begin
+                            Line = StrAdd (StrAdd(FormatAlignLeft('Too high ', 10, ' '), RatText ), Ratio);
+                            UIWriteError(Line);
+	                         ReportWriteError (Line);
+                            FailCounterCount(FAILCOUNTER_Others);
+                          end
+	                       else
+	                       begin
+                      	    Line = StrAdd(StrAdd(FormatAlignLeft('Pass ', 10, ' '), RatText), Ratio);
+                      	    UIWriteNormal(Line);
+                        ReportWriteNormal(Line);
+                          end;
+                      end;
+                end;
+  end;
+

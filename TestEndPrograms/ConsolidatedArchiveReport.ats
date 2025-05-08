@@ -1,0 +1,385 @@
+{******************************************************************************
+* Script Name: ConsolidatedArchiveReport
+* Test Purpose:   Test End Program
+*
+* VERSION CONTROL
+* - Test Rev: 1.0
+*   Date: 2025-04-15
+*   Description: Let's make this official.
+*   By: PB
+*
+* - Test Rev: 2.0
+*   Date: 2025-04-16
+*   Description: Refactored. Added Customer switch/case block. Pulled templates
+                 out to constants block. Commented for clarity.
+*   By: PB
+*
+* - Test Rev: 3.0
+*   Date: 2025-04-24
+*   Description: Added timer_finish to end of test to clear timer
+*   By: RS
+*
+* - Test Rev: 3.1
+*   Date: 2025-04-28
+*   Description: Changed timer_finish to timer_stop and timer_disp PASS of FAIL
+*                and moved durations to a subfolder for ATS_scanner
+*   By: RS
+*
+* - Test Rev: 3.2
+*   Date: 2025-05-08
+*   Description: Added get_path(), get_local_path() and get_path_config()
+*                that opens path ini locally to get the various paths.
+*                This allows each machine to be individually maintained and updated
+*                Updated CUP section to fetch python path and use that instead
+*                hardcoding path.
+*                Updated all code to use get_path.
+*   By: RS
+*
+* DOCUMENT HISTORY
+* - Date: (next update)
+*   Description: (description of update)
+*   By: (author initials)
+*
+* ADDITIONAL NOTES
+* - [Additional references or notes]
+*
+******************************************************************************}
+
+
+constants
+begin
+{
+   For consistency, precise files begin with 'FILE_' whereas templates intended
+   to be transformed into another string by calling StrReplace(); or
+   archive_protocol(); begin with 'TMPL_'.
+}
+
+   FILE_PATHS = 'C:\Users\Public\Documents\CEETIS\Config\paths.ini';
+   FILE_LOCAL_PATHS = 'C:\Users\Public\Documents\CEETIS\Config_Local\local_paths.ini';
+
+end;
+
+function get_path_config(PathKey: string; ConfigPath: string; Debug: boolean = FALSE): string;
+begin
+   // Opens the paths ini file and attempts to fetch the path given by the
+   // PathKey string.
+   //
+   // Returns value found or NULL if not found.
+
+   if (Debug)
+   begin
+      String = StrAdd('Fetching path for: ', PathKey);
+      String = StrAdd(String, ' from file: ');
+      String = StrAdd(String, ConfigPath);
+      UIWriteWarning(String);
+   end;
+
+   Handle = FileOpenIni(ConfigPath);
+
+   if (Debug)
+   begin
+      UIWriteWarning(StrAdd('File handle: ', Handle));
+   end;
+
+   if (Handle == 0)
+   begin
+      UIErrorDialog('COULD NOT OPEN PATH CONFIGURATION FILE.<BR><BR>CONTACT TEST LAB.');
+   end
+   else
+   begin
+      PathKeyUpper = StrUpperCase(PathKey);
+
+      FetchedPath = FileGetIni(Handle, 'Path', PathKeyUpper, 'NULL');
+
+      if (Debug)
+      begin
+         UIWriteWarning(StrAdd('Fetched path: ', FetchedPath));
+      end;
+
+      // We need this path in order to run. If we can't find it testing is a
+      // waste of time due to erroring out AFTER a potentially (hours) long test!
+      if (StrCompare(FetchedPath, 'NULL') == 0)
+      begin
+         UIWriteError(StrAdd(PathKey, ' path not found! Contact test department!'));
+         UIErrorDialog(StrAdd(PathKey, ' path not found!<BR>Contact test department!'));
+      end;
+
+   end;
+
+   FileCloseIni(Handle);
+
+   Result = FetchedPath;
+end;
+
+function get_path(PathKey: string; Debug: boolean = FALSE): string;
+begin
+   Result = get_path_config(PathKey, FILE_PATHS, Debug);
+end;
+
+function get_local_path(PathKey: string; Debug: boolean = FALSE): string;
+begin
+   Result = get_path_config(PathKey, FILE_LOCAL_PATHS, Debug);
+end;
+
+function record_duration(): void;
+begin
+{
+   Write test durations out to a file unique to the test station.
+
+   It will generally make sense to ensure a test is passing before
+   calling this function, although the function does not care.
+}
+   TestStationID = MiscGetTestStationIdentifier();
+   DurationTemplatePath = get_local_path('TMPL_DURATION');
+   DurationFile = StrReplace(DurationTemplatePath, '$STATION$', TestStationID, FALSE);
+   Handle = FileOpenText(DurationFile);
+
+   if (Handle <> 0)
+   begin
+      Assembly = ProjectGetFilename();
+
+      StartTime = DTGetTestDateTime();
+      EndTime = DTNow();
+      Duration = EndTime - StartTime;
+
+      Hours = DTHour(Duration);
+      Minutes = DTMinute(Duration);
+      Seconds = DTSecond(Duration);
+
+      HoursInSeconds = Hours * 3600;
+      MinutesInSeconds = Minutes * 60;
+
+      TotalSeconds = HoursInSeconds + MinutesInSeconds + Seconds;
+      TotalSeconds = StrAdd(TotalSeconds, 's');
+
+      Line = StrAdd(Assembly, '|');
+      Line = StrAdd(Line, TotalSeconds);
+
+      FileAddText(Handle, Line);
+      FileSaveText(Handle);
+   end;
+
+   FileCloseText(Handle);
+end;
+
+function resolve_customer_name(): string;
+begin
+{
+   Infer the customer name.
+
+   Start by checking global data, which could be set via
+   set_customer('CUST_NAME') in NortechUtil.unit, or could also have been set
+   directly. If no value is set in global data, use the parent directory in
+   conjunction with the mapping file. This allows us to map things like 'GE_C8'
+   to 'GEHC', or 'NORTHROP' to 'NORTHROP GRUMMAN'. If no customer mapping is
+   found, just use the parent directory.
+}
+   Customer = GlobalDataRead('Customer', 'DEFAULT');
+
+   // IF NOT SPECIFIED, USE PARENT DIRECTORY TO INFER CUSTOMER WHEN POSSIBLE
+   // ADD NEW CUSTOMER DEFINITIONS WITHIN THE CUSTOMERS FILE SPECIFIED AT THE
+   // TOP OF THIS SOURCE CODE FILE.
+   if (StrCompare(Customer, 'DEFAULT') == 0)
+   begin
+      ProjectFilename = ProjectGetFilename();
+
+      // IF THE TEST IS INSIDE THE TEST LAB FOLDER, SET CUSTOMER TO 'TEST LAB'.
+      IsTestLab = StrPosition('TEST LAB', ProjectFilename);
+
+      if (IsTestLab)
+      begin
+         Customer = 'TEST LAB';
+      end
+      else
+      begin
+         CustomerFilePath = get_local_path('FILE_CUSTOMERS');
+         Handle = FileOpenIni(CustomerFilePath);
+
+         if (Handle == 0)
+         begin
+            UIErrorDialog('COULD NOT OPEN CUSTOMERS INDEX FILE.<BR><BR>CONTACT TEST LAB.');
+         end
+         else
+         begin
+            // USE THE PARENT DIR NAME TO REMAP TO CUSTOMER NAME, ELSE USE
+            // PARENT DIR NAME
+            MiscListFromString(ProjectFilename, PathParts, '\');
+            Size = MiscGetListSize(PathParts);
+            ParentIndex = Size - 1;
+
+            Customer = FileGetIni(Handle, 'DirectoryMap', PathParts[ParentIndex], Customer);
+         end;
+
+         FileCloseIni(Handle);
+      end;
+   end;
+
+   Result = Customer;
+end;
+
+
+function archive_collins_atp_pass(ATPNum: string): void;
+begin
+{
+   Use CEETIS CUP to run Python for Collins data sheet generation.
+
+   ATPNum: This value should map to a defined REX ATP module, so a value of
+           '2723' will map to the REX module 'atp2723.py'.
+
+   Checks to ensure the test is not a PRETEST. Uses CUP to launch Python with
+   parameters matching the test. Cleans up after itself so we don't
+   accidentally resuse the generated PDF.
+}
+   ProjectFilename = ProjectGetFilename();
+   IsPretest = StrPosition('PRE', ProjectFilename);
+
+   if (IsPretest == 0)
+   begin
+      PythonPath = get_local_path('FILE_PYTHON');
+      FILE_REX = get_local_path('FILE_REX');
+      TMPL_REX_PARAMS = get_path('TMPL_REX_PARAMS');
+
+      // Execute external util for processing of report & forced print.
+      TMPL_REX_PARAMS = StrReplace(TMPL_REX_PARAMS, '$REX$', FILE_REX, TRUE);
+      Params = StrReplace(TMPL_REX_PARAMS, '$ATPNUM$', ATPNum, TRUE);
+      CUPExecuteCommand('CEETIS_CUP_001', 'run program', [PythonPath, Params], 30s, ResultData);
+
+      TMPL_REPORT_PDF_COLLINS = get_path('TMPL_REPORT_PDF_COLLINS');
+      TMPL_REPORT_PDF_COLLINS = StrReplace(TMPL_REPORT_PDF_COLLINS, '$REX$', FILE_REX, FALSE);
+      CollinsPDFReport = StrReplace(TMPL_REPORT_PDF_COLLINS, '$ATPNUM$', ATPNum, FALSE);
+      UIWriteNormal(CollinsPDFReport);
+
+      if (FileExists(CollinsPDFReport))
+      begin
+         TMPL_ARCHIVE_PDF_COLLINS = get_path('TMPL_ARCHIVE_PDF_COLLINS');
+         archive_protocol(CollinsPDFReport, TMPL_ARCHIVE_PDF_COLLINS, TRUE, FALSE, FALSE);
+         FileDelete(CollinsPDFReport);
+      end;
+   end;
+end;
+
+
+function main(): void;
+begin
+   if (print_allowed())
+   begin
+      PrintAllReports();
+   end;
+
+   // Get test result
+   UserBreak = FALSE;
+   Passed = FALSE;
+   TestEndGetTestResult(UserBreak, Passed);
+   ArchiveTestResult();
+
+   if (Passed)
+   begin
+      record_duration();
+   end
+   else
+   begin
+      // Brief message if aborted by user
+      if (UserBreak)
+      begin
+         UIWriteNormal('');
+         Text = '----- ';
+         Text = StrAdd(Text, LocalText('49#Aborted by user'));
+         Text = StrAdd(Text, ' -----');
+         UIWriteWarning(Text);
+      end
+      else
+      begin
+         unplug_check();
+      end;
+   end;
+
+
+{******************************************************************************
+*   ARCHIVING SECTION REFERENCE
+*   archive_protocol(SOURCE, DEST, PASS, FAIL, ABORT);
+*      SOURCE (String): Full path to source report.
+*      DEST (String): Destination string as template.
+*      PASS (Boolean): Archive passing test.
+*      FAIL (Boolean): Archive failing test.
+*      ABORT (Boolean): Archive aborted test.
+*
+*   First archive all BJI reports (passing & failing, no aborts).
+*   Second, check for additional customer-specific requirements.
+*   Third, archvie all TSX reports (passing & failing, no aborts).
+******************************************************************************}
+
+   Customer = resolve_customer_name();
+
+   // ARCHIVE FOR BJI IN ALL PASS/FAIL CIRCUMSTANCES
+   TMPL_ARCHIVE_TXT_BJI = get_path('TMPL_ARCHIVE_TXT_BJI');
+   BJIArchive = StrReplace(TMPL_ARCHIVE_TXT_BJI, '$CUST$', Customer, FALSE);
+
+   FILE_REPORT_TXT_BJI = get_path('FILE_REPORT_TXT_BJI');
+   archive_protocol(FILE_REPORT_TXT_BJI, BJIArchive, TRUE, TRUE, FALSE);
+
+   // ARCHIVE & PROCESSING RULES FOR SPECIFIC CUSTOMERS
+   switch (Customer)
+   begin
+      case 'COLLINS':
+      begin
+         // Only do extra work if covered by an ATP.
+         ATPNum = GlobalDataRead('Collins.ATP', 'NULL');
+
+         if (StrCompare(ATPNum, 'NULL') <> 0)
+         begin
+            TMPL_REPORT_HTML_COLLINS = get_path('TMPL_REPORT_HTML_COLLINS');
+            TMPL_ARCHIVE_HTML_COLLINS = get_path('TMPL_ARCHIVE_HTML_COLLINS');
+
+            CollinsReport = StrReplace(TMPL_REPORT_HTML_COLLINS, '$ATPNUM$', ATPNum, FALSE);
+            archive_protocol(CollinsReport, TMPL_ARCHIVE_HTML_COLLINS, TRUE, TRUE, FALSE);
+
+            // When passing, create the Collins data sheet PDF
+            if (Passed)
+            begin
+               archive_collins_atp_pass(ATPNum);
+            end;
+         end;
+      end;
+      case 'TEST LAB':
+      begin
+         // Never write a TSX report for TEST LAB tests
+         GlobalDataWrite('Nortech.NOTSX', '1');
+      end;
+   end;
+
+   // LASTLY ARCHIVE FOR TSX IF THIS IS A NON-TEST LAB TEST RESULT
+   No_TSX = GlobalDataRead('Nortech.NOTSX', '0');
+   if (StrCompare(No_TSX, '1') <> 0)
+   begin
+      FILE_REPORT_TXT_TSX = get_path('FILE_REPORT_TXT_TSX');
+      TMPL_ARCHIVE_TXT_TSX = get_path('TMPL_ARCHIVE_TXT_TSX');
+
+      archive_protocol(FILE_REPORT_TXT_TSX, TMPL_ARCHIVE_TXT_TSX, TRUE, TRUE, FALSE);
+   end;
+
+   timer_stop(FALSE, TRUE);
+
+   if (UserBreak)
+   begin
+      timer_disp_str('ABORT', FALSE, FALSE);
+   end
+   else
+   begin
+      if (Passed)
+      begin
+         timer_disp_str('PASS', FALSE, FALSE);
+      end
+      else
+      begin
+         timer_disp_str('FAIL', FALSE, FALSE);
+      end;
+   end;
+
+   // Show the test result if the test passed or failed
+   UITestResult(Passed, UserBreak, TRUE, 600s);
+
+   // If global data is not cleared, Operator ID will be preserved between
+   // unrelated tests. Last verified in CEETIS 4.13-08.
+   GlobalDataClear();
+end;
+

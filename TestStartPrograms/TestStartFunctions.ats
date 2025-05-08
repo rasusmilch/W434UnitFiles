@@ -1,0 +1,107 @@
+function serialnumber(): boolean;
+begin
+   InputResult = '';
+   //show edit dialog
+   Button = UIEditDialog(LocalText('88#Serial number'),
+               LocalText('89#Enter serial number'), FALSE, TRUE, InputResult);
+   if (Button == DIALOGRESULT_Ok)
+   begin
+      //write to Global Data for later use in the report
+      GlobalDataSetSerialNumber(InputResult);
+      Result = TRUE;
+   end
+   else
+   begin
+      Result = FALSE;
+   end;
+end;
+
+function inputdata(): boolean;
+begin
+   Result = TRUE;
+   Index = 1;
+   while ((Index <= 6) AND Result)
+   begin
+      //Get the text from the settings
+      Text = ProjectGetTestStartSettings(TESTSTART_InputData, Index);
+      if (StrCompare(Text, '') <> 0)
+      begin
+         InputResult = '';
+         //show edit dialog
+         Button = UIEditDialog(Text, Text, FALSE, TRUE, InputResult);
+         if (Button == DIALOGRESULT_Ok)
+         begin
+            //write to Global Data for later use in the report
+            GlobalDataWrite(StrAdd('Text', Index), Text, 'TestStart InputData');
+            GlobalDataWrite(StrAdd('Value', Index), InputResult, 'TestStart InputData');
+            Result = TRUE;
+         end
+         else
+         begin
+            Result = FALSE;
+         end;
+      end;
+      Index = Index + 1;
+   end;
+end;
+
+constants
+begin
+   SerialNumberFile = '.\UserSettings\SerialNumber.ini';
+end;
+
+function serialnumber_save(): boolean;
+begin
+   InputResult = FileReadIni(SerialNumberFile, 'Data',
+                  'SerialNumber', '');
+   //show edit dialog
+   Button = UIEditDialog(LocalText('88#Serial number'),
+               LocalText('89#Enter serial number'), FALSE, TRUE, InputResult);
+   if (Button == DIALOGRESULT_Ok)
+   begin
+      //write to Global Data for later use in the report
+      GlobalDataSetSerialNumber(InputResult);
+      FileWriteIni(SerialNumberFile, 'Data',
+         'SerialNumber', InputResult);
+      Result = TRUE;
+   end
+   else
+   begin
+      Result = FALSE;
+   end;
+end;
+
+function inputdata_save(): boolean;
+begin
+   Result = TRUE;
+   Index = 1;
+   while ((Index <= 6) AND Result)
+   begin
+      //Get the text from the settings
+      Text = ProjectGetTestStartSettings(TESTSTART_InputData, Index);
+      if (StrCompare(Text, '') <> 0)
+      begin
+         InputResult = FileReadIni(SerialNumberFile,
+                          StrAdd('TestStart InputData', Index), 'Value', '');
+         //show edit dialog
+         Button = UIEditDialog(Text, Text, FALSE, TRUE, InputResult);
+         if (Button == DIALOGRESULT_Ok)
+         begin
+            //write to Global Data for later use in the report
+            GlobalDataWrite(StrAdd('Text', Index), Text, 'TestStart InputData');
+            GlobalDataWrite(StrAdd('Value', Index), InputResult, 'TestStart InputData');
+            FileWriteIni(SerialNumberFile, StrAdd('TestStart InputData', Index),
+               'Text', Text);
+            FileWriteIni(SerialNumberFile,
+               StrAdd('TestStart InputData', Index), 'Value', InputResult);
+            Result = TRUE;
+         end
+         else
+         begin
+            Result = FALSE;
+         end;
+      end;
+      Index = Index + 1;
+   end;
+end;
+

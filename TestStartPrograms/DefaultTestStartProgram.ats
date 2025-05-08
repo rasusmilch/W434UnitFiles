@@ -1,0 +1,36 @@
+// ATTENTION                                                                   |
+// This program will be overwritten when installing a software-update.         |
+// Don't change this file.                                                     |
+// Make a copy of this file ("File->Save Program as" and customize the copy.   |
+//                                                                             |
+// ACHTUNG                                                                     |
+// Dieses Programm wird mit der nächsten Installation eines Softwareupdates    |
+// überschrieben. Ändern Sie nichts in dieser Datei.                           |
+// Erstellen Sie eine Kopie des Programmes ("Datei->Programm speichern unter"  |
+// und führen Sie die Änderungen in dieser Kopie durch.                        |
+
+
+//Main function
+function main(): void;
+begin
+   UIClearScreen();
+   CanStartTest = TRUE;
+
+   //Prompt for serial number if enabled
+   SerialNumber = ProjectGetTestStartSettings(TESTSTART_SerialNumber);
+   if (SerialNumber)
+   begin
+      CanStartTest = serialnumber();
+   end;
+   
+   //Prompt for additional input data
+   if (CanStartTest)
+   begin
+      CanStartTest = inputdata();
+   end;
+
+   if (NOT CanStartTest)
+   begin
+      TestStartSetNextStep(STEP_WaitForTeststart);
+   end;
+end;

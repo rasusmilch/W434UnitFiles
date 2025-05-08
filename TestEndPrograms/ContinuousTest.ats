@@ -1,0 +1,29 @@
+//Test end program for continuous testing
+
+//Main routine
+function main(): void;
+begin
+   //Print reports
+   PrintAllReports();
+   //Get test result
+   UserBreak = FALSE;
+   Passed = FALSE;
+   TestEndGetTestResult(UserBreak, Passed);
+   ArchiveTestResult();
+   if (UserBreak)
+   begin
+      //If test was aborted by user show only a short message
+      UIWriteNormal('');
+      Text = '----- ';
+      Text = StrAdd(Text, LocalText('49#Aborted by user'));
+      Text = StrAdd(Text, ' -----');
+      UIWriteWarning(Text);
+   end
+   else
+   begin
+      //If test passed or failed show the test result
+      UITestResult(Passed, UserBreak, TRUE, 100ms);
+      TestEndSetNextStep(STEP_Test);
+   end;
+
+end;

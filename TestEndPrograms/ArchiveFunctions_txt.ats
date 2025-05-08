@@ -1,0 +1,482 @@
+{
+
+   This unit contains functions to archive the test protocols generated as follows.
+   
+   archive_protocol(SourceFilename, DestinationFilename, Pass, Fail, Abort);
+   create_cumultative_txt_protocol(SourceFilename, DestinationFilename, Pass, Fail, Abort);
+   
+      - txt-files can be archived separately or appended into one file.
+      - html-files can be archived separately.
+      - pdf-files can be archived separately,
+        pdf-files have to be print out by an pdf printer automatically first.
+        Path and filename of the pdf has be known by the CEETIS programmer.
+         
+
+   Proceed as follows to get the archiving work
+     1. Replace "SourceFilename" by the reports name which has to be archived
+        !!! You will find all possible reports after running a test in
+        "Public Documents" in the sub-folder:
+        .\CEETIS\Temp\Reports\
+        
+     2. Replace "DestinationFilename" by the desired archive name.
+        You can use static strings like "C:\WEETECH_Reports\etc."  or dynamic
+        placeholders as follows:
+
+        <CEETISfolder>
+        <ProjectFilename>
+        <ProjectName>
+        <TestResult>
+        <UserName>
+        <UserFullName>
+        <SerialNumber>
+        <OrderNumber>
+        <InputData1>
+        <InputData2>
+        <Year>
+        <Month>
+        <Day>
+        <Hour>
+        <Minute>
+        <Second>
+
+         All placeholders above will be replaced automatically by
+         regarding data received from the test
+            
+         EXAMPLE:
+         archive_protocol('c:\Users\Public\Documents\CEETIS\Temp\Reports\DefaultReport_txt.txt',
+                          'c:\WEETECH_Archive\<ProgramName>\<SerialNumber>\<TestResult>\<SerialNumber><Year><Month><Day>-<Hour><Minute><Second>.txt',
+                           Pass, Fail, Abort);
+        
+     3. "Pass", "Fail" and "Abort" stand for the test result and have to be
+        replaced by "TRUE" or "FALSE".
+        Replaced by "TRUE" will cause that the mentioned report will be archived
+        by this test result.
+        Example:
+        Protocol shall be archived in case of "Pass" and "Fail" but not "Abort".
+        The modification has to be as follows
+        archive_protocol('c:\Users\Public\Documents\CEETIS\Temp\Reports\DefaultReport_txt.txt',
+                         'c:\WEETECH_Archive\<ProgramName>\<SerialNumber>\<TestResult>\<SerialNumber><Year><Month><Day>-<Hour><Minute><Second>.txt',
+                         TRUE, TRUE, FALSE);
+
+ 
+
+}
+
+
+constants
+begin
+// !!! Please translate the string modules (in RED) below if you are intended to run the test in another language !!!
+ErrorMessage =            'ARCHIVE ERROR<BR>See details on screen!';
+Underline =               '----------------------------------------------------------------------------------------------';
+FailHeader =              'A R C H I V E   E R R O R';
+CouldNotArchived =        'Protocol as follows could not be archived:';
+NotFound =                'Protocol not found:';
+FormatsNotCompatible =    'Required formats are not compatible:';
+SouceFormat =             'Source protocol format      : ';
+DestinationFormat =       'Destination protocol format : ';
+TrianglesUnequal =        'Required destination filename contains unequal amount of opening and closing triangle brackets';
+NotAllowedCharacter =     'Required destination filename contains not allowed character';
+Character =               'Character: "';
+NotAllowed =              '" is not allowed';
+UnvalidPlaceholder =      'Required destination filename contains unvalid placeholder';
+PlaceholderString =       'Placeholder: "';
+NotKnown =                '" is not known';
+RelPathFound =            'Protocols to be archived must not contain relative paths';
+ChangeIntoAbsolute =      'Please change the relative paths in the Report Generation into absolute paths';
+Appendix =                'txt reports only can be appended in a cumultative report';
+AccessDenied =            'Access to Destination as follows has been denied';
+CorrectInTestEnd =        'Please correct in Test End Program';
+CheckSettings =           'or check protocol settings in the Project Properties!';
+ArchivedUnder =           'Report has been archived under :   ';
+end;
+
+function test_result(var ResultString:string):string;
+begin
+UserBreak = FALSE;
+Passed = FALSE;
+TestEndGetTestResult(UserBreak, Passed);
+   ResultString  =  LocalText('2178#Fail');
+   Result = 0;
+      if (Passed)
+      begin
+      ResultString = LocalText('2177#Pass');
+      Result = 1;
+      end;
+      if (UserBreak)
+      begin
+      ResultString = LocalText('7#Abort');
+      Result = 2;
+      end;
+end;
+
+function extension_check(SourceFilename:string; DestinationFilename:string):boolean;
+begin
+Result = FALSE;
+SourceExtension = StrLowerCase(FileExtractExtension(SourceFilename));
+DestinationExtension = StrLowerCase(FileExtractExtension(DestinationFilename));
+   if (StrCompare(SourceExtension, DestinationExtension) == 0)
+   begin
+   Result = TRUE;
+   end
+   else
+   begin
+      if ((StrCompare(SourceExtension, 'txt') == 0) AND (StrCompare(DestinationExtension, 'csv') == 0))
+      begin
+      Result = TRUE;
+      end
+      else
+      begin
+      UIWriteError(FailHeader);
+      UIWriteError(Underline);
+      UIWriteError(FormatsNotCompatible);
+      UIWriteError(StrAdd(SouceFormat, SourceExtension));
+      UIWriteError(StrAdd(DestinationFormat, DestinationExtension));
+      UIWriteError(CorrectInTestEnd);
+      UIWriteError(Underline);
+      UIWriteNormal('');
+      UIErrorDialog(ErrorMessage);
+      end;
+   end;
+end;
+
+function triangle_brackets_check(SourceFilename:string; EditingText:string):boolean;
+begin
+Result = FALSE;
+EditingTextTemp = EditingText;
+   BeginValue = 0;
+      do
+      begin
+      BeginValue = BeginValue + 1;
+      Begin = StrPosition('<', EditingTextTemp);
+      EditingTextTemp = StrDelete(EditingTextTemp, Begin, 1);
+      end
+      while (Begin > 0);
+   EndValue = 0;
+      do
+      begin
+      EndValue = EndValue + 1;
+      End = StrPosition('>', EditingTextTemp);
+      EditingTextTemp = StrDelete(EditingTextTemp, End, 1);
+      end
+      while (End > 0);
+   if (BeginValue == EndValue)
+   begin
+   Result = TRUE;
+   end
+   else
+   begin
+   UIWriteError(FailHeader);
+   UIWriteError(Underline);
+   UIWriteError(CouldNotArchived);
+   UIWriteError(SourceFilename);
+   UIWriteError(TrianglesUnequal);
+   UIWriteError(EditingText);
+   UIWriteError(CorrectInTestEnd);
+   UIWriteError(Underline);
+   UIWriteNormal('');
+   UIErrorDialog(ErrorMessage);
+   end;
+end;
+
+function not_allowed_character_check (SourceFilename:string; EditingText:string):boolean;
+begin
+Result = TRUE;
+// Colon is only allowed if it is positioned infront of first backslash
+Colon = StrPosition(':', EditingText);
+   if (Colon > 0)
+   begin
+   Backslash = StrPosition('\', EditingText);
+      if (Colon < Backslash)
+      begin
+      EditingText = StrDelete(EditingText, Colon, 1);
+      end;
+   end;
+//ShortCut for "Not allowed character" : NAC
+NACs = '*:?"<>|/';
+NACnumber = StrLength(NACs);
+
+   for NAC = 1 to NACnumber do
+   begin
+   Reference = StrCopy(NACs, NAC, 1);
+      if (StrPosition(Reference, EditingText) > 0)
+      begin
+      Result = FALSE;
+         UIWriteError(FailHeader);
+         UIWriteError(Underline);
+         UIWriteError(CouldNotArchived);
+         UIWriteError(SourceFilename);
+         UIWriteError(NotAllowedCharacter);
+         UIWriteError(EditingText);
+         UIWriteError(StrAdd(StrAdd(Character, Reference),  NotAllowed));
+         UIWriteError(CorrectInTestEnd);
+         UIWriteError(Underline);
+         UIWriteNormal('');
+         UIErrorDialog(ErrorMessage);
+      end;
+   end;
+
+end;
+
+
+function convert_placeholders(SourceFilename:string; var EditingText:string):boolean;
+begin
+TestResultString = ''; test_result(TestResultString);
+SerialNumber = GlobalDataGetSerialNumber();  if (StrCompare(SerialNumber, '') == 0) begin SerialNumber = 'NoSerialNumber'; end;
+OrderNumber = GlobalDataGetOrderNumber();    if (StrCompare(OrderNumber, '') == 0) begin OrderNumber = 'NoOrderNumber'; end;
+Filename = ProjectGetFilename();
+Length = StrLength(Filename);
+CEETISbegin = StrPosition('CEETIS', Filename);
+CEETISend =  CEETISbegin + 6;
+CEETISfolder = StrDelete(Filename, CEETISend, 100);
+
+
+Variety = 16;
+MiscCreateList(Placeholders, Variety);
+
+   Placeholders[1]  = '<CEETISfolder>';
+   Placeholders[2]  = '<ProjectFilename>';
+   Placeholders[3]  = '<ProjectName>';
+   Placeholders[4]  = '<TestResult>';
+   Placeholders[5]  = '<UserName>';
+   Placeholders[6]  = '<UserFullName>';
+   Placeholders[7]  = '<SerialNumber>';
+   Placeholders[8]  = '<OrderNumber>';
+   Placeholders[9]  = '<InputData1>';
+   Placeholders[10] = '<InputData2>';
+   Placeholders[11] = '<Year>';
+   Placeholders[12] = '<Month>';
+   Placeholders[13] = '<Day>';
+   Placeholders[14] = '<Hour>';
+   Placeholders[15] = '<Minute>';
+   Placeholders[16] = '<Second>';
+
+MiscCreateList(Replacements, Variety);
+   Replacements[1]  = CEETISfolder;
+   Replacements[2]  = FileChangeExt(ProjectGetFilename(), '');
+   Replacements[3]  = ProjectGetName();
+   Replacements[4]  = TestResultString;
+   Replacements[5]  = UserManagementGetUsername();
+   Replacements[6]  = UserManagementGetFullUsername();
+   Replacements[7]  = SerialNumber;
+   Replacements[8]  = OrderNumber;
+   Replacements[9]  = GlobalDataRead('Value1', 'NoInputData1', 'TestStart InputData');
+   Replacements[10] = GlobalDataRead('Value2', 'NoInputData2', 'TestStart InputData');
+   Replacements[11] = DTYear(DTGetTestDateTime());
+   Replacements[12] = FormatAlignLeft(DTMonth(DTGetTestDateTime()), 2, '0');
+   Replacements[13] = FormatAlignLeft(DTDay(DTGetTestDateTime()), 2, '0');
+   Replacements[14] = FormatAlignLeft(DTHour(DTGetTestDateTime()), 2, '0');
+   Replacements[15] = FormatAlignLeft(DTMinute(DTGetTestDateTime()), 2, '0');
+   Replacements[16] = FormatAlignLeft(DTSecond(DTGetTestDateTime()), 2, '0');
+   
+   do
+   begin
+   Result = FALSE;
+   Begin = StrPosition('<', EditingText);
+   End = StrPosition('>', EditingText);
+   
+      if ((Begin == 0) AND (End == 0))  // No further placeholder has been found
+      begin
+      Result = TRUE;
+      end;
+   
+      if (End < Begin)   // Incorrect Placeholder: It has been introduced by a < but not finished with a >
+      begin
+      Begin = 0;
+      end;
+      
+      if (Begin < End)    // Placeholder found will be edited
+      begin
+      Length = End - Begin + 1;
+      Placeholder = StrCopy(EditingText, Begin, Length);
+         for Number = 1 to Variety do
+         begin
+            if (StrCompare(Placeholder, Placeholders[Number]) == 0)
+            begin
+            EditingText = StrDelete(EditingText, Begin, Length);
+            EditingText = StrInsert(Replacements[Number], EditingText, Begin);
+            Number = Variety;
+            Result = TRUE;
+            end;
+         end;
+         if (Result == FALSE)
+         begin
+         Begin = 0;
+         UIWriteError(FailHeader);
+         UIWriteError(Underline);
+         UIWriteError(CouldNotArchived);
+         UIWriteError(SourceFilename);
+         UIWriteError(UnvalidPlaceholder);
+         UIWriteError(EditingText);
+         UIWriteError(StrAdd(StrAdd(PlaceholderString, Placeholder), NotKnown));
+         UIWriteError(CorrectInTestEnd);
+         UIWriteError(Underline);
+         UIWriteNormal('');
+         UIErrorDialog(ErrorMessage);
+         end;
+      end;
+   end
+   while (Begin > 0);
+end;
+
+function html_relative_path_check (SourceFilename:string):boolean;
+begin
+Result = TRUE;
+Extension = FileExtractExtension(SourceFilename);
+   if (StrCompare(Extension, 'html') == 0)
+   begin
+   RelPathString = '..\';
+   RelPathLength = StrLength(RelPathString);
+   Handle = FileOpenText(SourceFilename);
+   LineCount = FileGetTextLineCount(Handle);
+      for Count = 1 to LineCount do
+      begin
+      Line = FileGetText(Handle, Count);
+      RelPathPos = StrPosition(RelPathString, Line);
+         if (RelPathPos > 0)
+         begin
+         Count = LineCount;
+         Result = FALSE;
+         UIWriteError(FailHeader);
+         UIWriteError(Underline);
+         UIWriteError(CouldNotArchived);
+         UIWriteError(SourceFilename);
+         UIWriteError(RelPathFound);
+         UIWriteError(ChangeIntoAbsolute);
+         UIWriteError(Underline);
+         UIWriteNormal('');
+         UIErrorDialog(ErrorMessage);
+         end;
+      end;
+   FileCloseText(Handle);
+   end;
+end;
+
+function syntax_check(SourceFilename:string; var DestinationFilename:string):boolean;
+begin
+Result = FALSE;
+   if (extension_check(SourceFilename, DestinationFilename))                                         begin
+   if (html_relative_path_check (SourceFilename))                                                    begin
+   if (triangle_brackets_check(SourceFilename, DestinationFilename))                                 begin
+   if (convert_placeholders(SourceFilename, DestinationFilename))                                    begin
+   if (not_allowed_character_check (SourceFilename, DestinationFilename))                            begin
+      Result = TRUE;
+   end; end; end; end; end;
+end;
+
+function archive_protocol(SourceFilename:string; DestinationFilename:string; Pass:boolean = TRUE; Fail:boolean=FALSE; Abort:boolean=FALSE):boolean;
+begin
+DummyText = '';
+TestResult = test_result(DummyText);
+   if (syntax_check(SourceFilename, DestinationFilename))
+   begin
+      if (((Pass  AND TestResult == 1)  OR
+           (Fail  AND TestResult == 0)) OR
+           (Abort AND TestResult == 2))
+      begin
+         if (NOT FileExists(SourceFilename))
+         begin
+         UIWriteError(FailHeader);
+         UIWriteError(Underline);
+         UIWriteError(NotFound);
+         UIWriteError(SourceFilename);
+         UIWriteError(CorrectInTestEnd);
+         UIWriteError(CheckSettings);
+         UIWriteError(Underline);
+         UIWriteNormal('');
+         UIErrorDialog(ErrorMessage);
+         end
+         else
+         begin
+            if (NOT FileCopy(SourceFilename, DestinationFilename))
+            begin
+            UIWriteError(FailHeader);
+            UIWriteError(Underline);
+            UIWriteError(CouldNotArchived);
+            UIWriteError(SourceFilename);
+            UIWriteError(AccessDenied);
+            UIWriteError(StrAdd('   ', DestinationFilename));
+            UIWriteError(Underline);
+            UIWriteNormal('');
+            UIErrorDialog(ErrorMessage);
+            end
+            else
+            begin
+            UIWriteNormal(StrAdd(ArchivedUnder,  DestinationFilename));
+            end;
+         end;
+      end;
+   end;
+end;
+
+
+function create_cumultative_txt_protocol(SourceFilename:string; DestinationFilename:string; Pass:boolean = TRUE; Fail:boolean=FALSE; Abort:boolean=FALSE):boolean;
+begin
+DummyText = '';
+TestResult = test_result(DummyText);
+   if (syntax_check(SourceFilename, DestinationFilename))
+   begin
+      if (((Pass  AND TestResult == 1)  OR
+           (Fail  AND TestResult == 0)) OR
+           (Abort AND TestResult == 2))
+      begin
+         if (NOT FileExists(SourceFilename))
+         begin
+         UIWriteError(FailHeader);
+         UIWriteError(Underline);
+         UIWriteError(NotFound);
+         UIWriteError(SourceFilename);
+         UIWriteError(CorrectInTestEnd);
+         UIWriteError(CheckSettings);
+         UIWriteError(Underline);
+         UIWriteNormal('');
+         UIErrorDialog(ErrorMessage);
+         end
+         else
+         begin
+            if (StrCompare(FileExtractExtension(SourceFilename), 'txt') <> 0)
+            begin
+                  UIWriteError(FailHeader);
+                  UIWriteError(Underline);
+                  UIWriteError(CouldNotArchived);
+                  UIWriteError(SourceFilename);
+                  UIWriteError(Appendix);
+                  UIWriteError(CorrectInTestEnd);
+                  UIWriteError(Underline);
+                  UIWriteNormal('');
+                  UIErrorDialog(ErrorMessage);
+            end
+            else
+            begin
+               if (NOT  FileAppendFile(SourceFilename, DestinationFilename))
+               begin
+               UIWriteError(FailHeader);
+               UIWriteError(Underline);
+               UIWriteError(CouldNotArchived);
+               UIWriteError(SourceFilename);
+               UIWriteError(AccessDenied);
+               UIWriteError(StrAdd('   ', DestinationFilename));
+               UIWriteError(Underline);
+               UIWriteNormal('');
+               UIErrorDialog(ErrorMessage);
+               end
+               else
+               begin
+               Handle = FileOpenText(DestinationFilename);
+                  for Count = 1 to 10 do
+                  begin
+                  Line = ' ';
+                  FileAddText(Handle, Line);
+                  end;
+               FileSaveText(Handle);
+               FileCloseText(Handle);
+               UIWriteNormal(StrAdd(ArchivedUnder,  DestinationFilename));
+               end;
+            end;
+         end;
+      end;
+   end;
+end;
+
+
+
+

@@ -1,0 +1,47 @@
+//Main routine
+function main(): void;
+begin
+   //If printing is allowed
+   if (print_allowed())
+   begin
+      //Print reports
+      PrintAllReports();
+   end;
+   //Get test result
+   UserBreak = FALSE;
+   Passed = FALSE;
+   TestEndGetTestResult(UserBreak, Passed);
+   ArchiveTestResult();
+   if (UserBreak)
+   begin
+      //Show only a short message if the test was aborted by the user
+      UIWriteNormal('');
+      Text = '----- ';
+      Text = StrAdd(Text, LocalText('49#Aborted by user'));
+      Text = StrAdd(Text, ' -----');
+      UIWriteWarning(Text);
+   end
+   else
+   begin
+      //Show the test result if the test passed or failed
+      UITestResult(Passed, UserBreak, TRUE, 1s);
+      unplug_check();
+   end;
+//------------------------------------------------------------------------------
+//                    ! ! ! A R C H I V I N G ! ! !
+//------------------------------------------------------------------------------
+
+//   see also disciption in the attached Unit: "ArchiveFunctions.unit"
+   
+//   To archive the protocols delete "//" in next line and modify as required. Repeat this command by different modification if more than one protocol has to be archived
+archive_protocol('C:\Users\Public\Documents\CEETIS\Temp\Reports\DefaultReport_txt.txt', 'O:\Test Eng\DATA\W434\<Year>\NXTHERA\<ProjectName>\<ProjectName>-<SerialNumber>-<Year><Month><Day>-<Hour><Minute><Second>.txt', TRUE, TRUE, FALSE);
+archive_protocol('C:\Users\Public\Documents\CEETIS\Temp\Reports\DefaultReport_txt.txt', '\\az-fs1\chksmPBI\Weetech Reports\<ProjectName>-<SerialNumber>-<Year><Month><Day>-<Hour><Minute><Second>.txt', TRUE, TRUE, FALSE);
+
+//   To archive the TXT protocols into ONE CUMULTATIVE report delete "//" in next line and modify as required. Repeat this command by different modification if more than one protocol has to be archived
+//   create_cumultative_txt_protocol(SourceFilename, DestinationFilename, Pass, Fail, Abort);
+//create_cumultative_txt_protocol('c:\Users\Public\Documents\CEETIS\Temp\Reports\DefaultReport_txt.txt', 'c:\Users\Public\Documents\CEETIS\NewReports\CumultativeReport.txt', TRUE, TRUE, TRUE);
+
+//Show the test result if the test passed or failed.Display until operator acknowledges result.
+      UITestResult(Passed, UserBreak, TRUE, 1s);
+end;
+
