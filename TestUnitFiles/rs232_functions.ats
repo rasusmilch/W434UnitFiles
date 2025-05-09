@@ -321,7 +321,7 @@ begin
    timer_send_cmd(String, Debug, Reopen);
 end;
 
-function timer_set(Seconds: integer; Debug: boolean = FALSE): boolean;
+function timer_set(Seconds: integer; Debug: boolean = FALSE; Reopen: boolean = FALSE): boolean;
 begin
    String = '';
 
@@ -335,11 +335,11 @@ begin
          UIWriteNormal(String);
       end;
 
-      timer_send_cmd(String, Debug);
+      timer_send_cmd(String, Debug, Reopen);
    end
    else
    begin
-      timer_disp_str('Invalid', Debug);
+      timer_disp_str('Invalid', Debug, Reopen);
 
       UIWriteError('Invalid timer duration value passed. CONTACT TEST LAB');
    end;

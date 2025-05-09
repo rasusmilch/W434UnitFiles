@@ -21,4 +21,7 @@ S=0
 Count=0
 
 [EditorLastOpenFiles]
-Count=0
+Count=2
+0=TestStartFunctions.unit
+1=.\TestUnitFiles\rs232_functions.unit
+2=.\TestUnitFiles\NortechUtil_RS.unit

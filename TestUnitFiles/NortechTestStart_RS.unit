@@ -24,10 +24,9 @@ B9PosY=-1
 Count=0
 
 [Header]
-Name=rs232_functions
+Name=NortechTestStart_RS
 CreateName=Test_Admin
-CreateDate=45762.3355035069
+CreateDate=45786.2810431366
 ModifyName=Test_Admin
-ModifyDate=45784.4184265393
-DescriptionLines=1
-D0=Functions to discover and communicate over a USB to UART bridge to various devices.
+ModifyDate=45786.2817616667
+DescriptionLines=0
