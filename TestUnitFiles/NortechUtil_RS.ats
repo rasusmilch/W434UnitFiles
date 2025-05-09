@@ -74,126 +74,126 @@ begin
    Result = TestDuration;
 end;
 
-// function check_job_whitelist(Debug: boolean = FALSE): string;
-// begin
-//    // Opens the job whitelist ini file and attempts to fetch the base filename
-//    // of the project from the file and any job numbers. If it is found, prompts
-//    // the operator for the job number and compares. Only on a valid match will
-//    // the test proceed.
-//    //
-//    // Returns value found or NULL if not found.
+function check_job_whitelist(Debug: boolean = FALSE): string;
+begin
+   // Opens the job whitelist ini file and attempts to fetch the base filename
+   // of the project from the file and any job numbers. If it is found, prompts
+   // the operator for the job number and compares. Only on a valid match will
+   // the test proceed.
+   //
+   // Returns value found or NULL if not found.
 
-//    ProjectFilename = ProjectGetFilename();
+   ProjectFilename = ProjectGetFilename();
 
-//    if (Debug)
-//    begin
-//      UIWriteWarning(StrAdd('Job whitelist project filename: ', ProjectFilename));
-//    end;
+   if (Debug)
+   begin
+     UIWriteWarning(StrAdd('Job whitelist project filename: ', ProjectFilename));
+   end;
 
-//    Handle = FileOpenIni(FILE_JOB_WHITELIST);
+   Handle = FileOpenIni(FILE_JOB_WHITELIST);
 
-//    if (Debug)
-//    begin
-//       UIWriteWarning(StrAdd('Job whitelist file handle: ', Handle));
-//    end;
+   if (Debug)
+   begin
+      UIWriteWarning(StrAdd('Job whitelist file handle: ', Handle));
+   end;
 
-//    if (Handle == 0)
-//    begin
-//       UIErrorDialog('COULD NOT OPEN JOB WHITELIST FILE.<BR><BR>CONTACT TEST LAB.');
-//    end
-//    else
-//    begin
-//       MiscListFromString(ProjectFilename, PathParts, '\');
-//       BaseFileNameIndex = MiscGetListSize(PathParts);
+   if (Handle == 0)
+   begin
+      UIErrorDialog('COULD NOT OPEN JOB WHITELIST FILE.<BR><BR>CONTACT TEST LAB.');
+   end
+   else
+   begin
+      MiscListFromString(ProjectFilename, PathParts, '\');
+      BaseFileNameIndex = MiscGetListSize(PathParts);
 
-//       if (Debug)
-//       begin
-//          UIWriteWarning(StrAdd('Job whitelist base filename index: ', BaseFileNameIndex));
-//       end;
+      if (Debug)
+      begin
+         UIWriteWarning(StrAdd('Job whitelist base filename index: ', BaseFileNameIndex));
+      end;
 
-//       MiscListFromString(PathParts[BaseFileNameIndex], RootFilenameList, '.');
+      MiscListFromString(PathParts[BaseFileNameIndex], RootFilenameList, '.');
 
-//       if (MiscGetListSize(RootFilenameList) == 2)
-//       begin
-//          BaseFileName = StrTrim(RootFilenameList[1]);
-//       end
-//       else
-//       begin
-//          UIErrorDialog('Job whitelist file configuration error!<BR><BR>CONTACT TEST LAB.');
-//       end;
+      if (MiscGetListSize(RootFilenameList) == 2)
+      begin
+         BaseFileName = StrTrim(RootFilenameList[1]);
+      end
+      else
+      begin
+         UIErrorDialog('Job whitelist file configuration error!<BR><BR>CONTACT TEST LAB.');
+      end;
 
-//       if (Debug)
-//       begin
-//          UIWriteWarning(StrAdd('Job whitelist base filename: ', BaseFileName));
-//       end;
+      if (Debug)
+      begin
+         UIWriteWarning(StrAdd('Job whitelist base filename: ', BaseFileName));
+      end;
 
-//       JobWhitelist = FileGetIni(Handle, 'Whitelist', BaseFileName, 'NULL');
+      JobWhitelist = FileGetIni(Handle, 'Whitelist', BaseFileName, 'NULL');
 
-//       if (Debug)
-//       begin
-//          UIWriteWarning(StrAdd('Jobs in whitelist: ', JobWhitelist));
-//       end;
+      if (Debug)
+      begin
+         UIWriteWarning(StrAdd('Jobs in whitelist: ', JobWhitelist));
+      end;
 
-//    end;
+   end;
 
-//    FileCloseIni(Handle);
+   FileCloseIni(Handle);
 
-//    if (StrCompare(JobWhitelist, 'NULL') <> 0)
-//    begin
-//       // We found a match, prompt operator
-//       InputResult = '';
-//       Button = UIEditDialog('Job number', 'Enter the current job number', FALSE, TRUE, InputResult);
-//       if (Button == DIALOGRESULT_Ok)
-//       begin
-//          if (Debug)
-//          begin
-//             UIWriteWarning(StrAdd('Job number: ', InputResult));
-//          end;
+   if (StrCompare(JobWhitelist, 'NULL') <> 0)
+   begin
+      // We found a match, prompt operator
+      InputResult = '';
+      Button = UIEditDialog('Job number', 'Enter the current job number', FALSE, TRUE, InputResult);
+      if (Button == DIALOGRESULT_Ok)
+      begin
+         if (Debug)
+         begin
+            UIWriteWarning(StrAdd('Job number: ', InputResult));
+         end;
 
-//          InputJobLower = StrLowerCase(StrTrim(InputResult));
+         InputJobLower = StrLowerCase(StrTrim(InputResult));
 
 
-//          Count = MiscListFromString(JobWhitelist, ListJobs, ',');
+         Count = MiscListFromString(JobWhitelist, ListJobs, ',');
 
-//          if (Debug)
-//          begin
-//             UIWriteWarning(StrAdd('Number of found jobs in whitelist: ', Count));
-//          end;
+         if (Debug)
+         begin
+            UIWriteWarning(StrAdd('Number of found jobs in whitelist: ', Count));
+         end;
 
-//          JobFound = FALSE;
+         JobFound = FALSE;
 
-//          for Index = 1 to Count do
-//          begin
-//             JobLower = StrLowerCase(StrTrim(ListJobs[Index]));
+         for Index = 1 to Count do
+         begin
+            JobLower = StrLowerCase(StrTrim(ListJobs[Index]));
 
-//             if (StrCompare(InputJobLower, JobLower) == 0)
-//             begin
-//                JobFound = TRUE;
+            if (StrCompare(InputJobLower, JobLower) == 0)
+            begin
+               JobFound = TRUE;
 
-//                if (Debug)
-//                begin
-//                   UIWriteWarning(StrAdd('Job found: ', InputJobLower));
-//                end;
-//             end;
-//          end;
+               if (Debug)
+               begin
+                  UIWriteWarning(StrAdd('Job found: ', InputJobLower));
+               end;
+            end;
+         end;
 
-//          if (JobFound == FALSE)
-//          begin
-//             UIWriteError(StrAdd(InputJobLower, ' did not match whitelisted job list. Check job number or contact test lab.'));
-//             UIErrorDialog(StrAdd(InputJobLower, ' did not match whitelisted job list<BR>Check job number or contact test lab.'));
-//             MiscAbortTest();
-//          end;
-//       end
-//       else
-//       begin
-//          UIWriteError('Operator did not enter a required job number');
-//          MiscAbortTest();
-//       end;
+         if (JobFound == FALSE)
+         begin
+            UIWriteError(StrAdd(InputJobLower, ' did not match whitelisted job list. Check job number or contact test lab.'));
+            UIErrorDialog(StrAdd(InputJobLower, ' did not match whitelisted job list<BR>Check job number or contact test lab.'));
+            MiscAbortTest();
+         end;
+      end
+      else
+      begin
+         UIWriteError('Operator did not enter a required job number');
+         MiscAbortTest();
+      end;
 
-//    end;
+   end;
 
-//    Result = JobWhitelist;
-// end;
+   Result = JobWhitelist;
+end;
 
 function test_db_option(): void;
 begin
@@ -202,6 +202,11 @@ begin
         UIErrorDialog('THIS MACHINE DOES NOT CURRENTLY SUPPORT A REQUIRED TESTING METHOD (ACDB)<BR>PLEASE TEST ON AN APPROVED AEROSPACE TESTER');
         MiscAbortTest();
      end;
+end;
+
+function fail_count_other_increase(): void;
+begin
+   FailCounterCount(FAILCOUNTER_Others);
 end;
 
 function ui_report_error(Line: string): void;
@@ -226,8 +231,53 @@ begin
    end;
 end;
 
+function msg_box_border(ReportLine: string; BorderChar: string; Error: boolean = FALSE): void;
+begin
+   StrBoxChar = StrCopy(BorderChar, 1, 1);
+
+   String = StrAdd(StrBoxChar, ' ');
+   String = StrAdd(String, ReportLine);
+   String = StrAdd(String, ' ');
+   String = StrAdd(String, StrBoxChar);
+
+   StrLen = StrLength(String);
+
+   BoxTopLen = StrLen;
+
+   StrBoxTop = '';
+
+   for Char = 1 to BoxTopLen do
+   begin
+      StrBoxTop = StrAdd(StrBoxTop, StrBoxChar);
+   end;
+
+   StrBoxMiddle = StrBoxChar;
+
+   for Char = 1 to BoxTopLen - 2 do
+   begin
+      StrBoxMiddle = StrAdd(StrBoxMiddle, ' ');
+   end;
+
+   StrBoxMiddle = StrAdd(StrBoxMiddle, StrBoxChar);
+
+   if (Error)
+   begin
+      ui_report_error(StrBoxTop);
+      ui_report_error(String);
+      ui_report_error(StrBoxTop);
+   end
+   else
+   begin
+      ui_report_normal(StrBoxTop);
+      ui_report_normal(String);
+      ui_report_normal(StrBoxTop);
+   end;
+end;
+
 function report_manual_reading(Line: string; Units: string; MinValue: real; MaxValue: real; Debug: boolean = FALSE): void;
 begin
+
+   Error = FALSE;
 
    blank_line(TRUE);
 
@@ -250,7 +300,9 @@ begin
    else
    begin
       UIWriteNormal('Canceled by operator');
-      MiscAbortTest();
+      Error = TRUE;
+//      MiscAbortTest();
+      fail_count_other_increase();
    end;
 
    ValueEntered = 0.0;
@@ -279,7 +331,9 @@ begin
       ErrorLine = StrAdd('Value entered above maximum value: ', MaxValue);
       ErrorLine = StrAdd(ErrorLine, Units);
       ui_report_error(ErrorLine);
-      MiscAbortTest();
+//      MiscAbortTest();
+      Error = TRUE;
+      fail_count_other_increase();
    end;
 
    if (ValueEntered < MinValue)
@@ -287,10 +341,12 @@ begin
       ErrorLine = StrAdd('Value entered below minimum value: ', MinValue);
       ErrorLine = StrAdd(ErrorLine, Units);
       ui_report_error(ErrorLine);
-      MiscAbortTest();
+//      MiscAbortTest();
+      Error = TRUE;
+      fail_count_other_increase();
    end;
 
-   ReportLine = '* ';
+   ReportLine = '';
    ReportLine = StrAdd(ReportLine, Line);
    ReportLine = StrAdd(ReportLine, ' measured value (');
    ReportLine = StrAdd(ReportLine, MinValue);
@@ -302,33 +358,80 @@ begin
    ReportLine = StrAdd(ReportLine, ValueEntered);
    ReportLine = StrAdd(ReportLine, ' ');
    ReportLine = StrAdd(ReportLine, Units);
-   ReportLine = StrAdd(ReportLine, ' *');
 
-   StrLen = StrLength(ReportLine);
+   msg_box_border(ReportLine, '*', Error);
 
-   BoxTopLen = StrLen;
+   blank_line(TRUE);
 
-   StrBoxTop = '';
+end;
 
-   for Char = 1 to BoxTopLen do
+function ui_dialog_operator_true_false(Title: string; Message: string; SuccessFlag: boolean; Debug: boolean = FALSE): void;
+begin
+   // Asks the operator a TRUE or FALSE question and prints the result
+
+   ReportLine = '';
+   OperatorResult = FALSE;
+   Error = FALSE;
+
+   Button = UIMessageDialogCustom(Title, Message, ['Cancel', 'True', 'False']);
+   switch(Button)
    begin
-      StrBoxTop = StrAdd(StrBoxTop, '*');
+      case DIALOGRESULT_Closed:
+      begin
+         UIWriteError('Operator closed dialog box!');
+         Error = TRUE;
+         fail_count_other_increase();
+      end;
+      case DIALOGRESULT_Button1:
+      begin
+         UIWriteError('Operator canceled dialog box!');
+         Error = TRUE;
+         fail_count_other_increase();
+      end;
+      case DIALOGRESULT_Button2:
+      begin
+         OperatorResult = TRUE;
+      end;
+      case DIALOGRESULT_Button3:
+      begin
+         OperatorResult = FALSE;
+      end;
    end;
 
-   StrBoxMiddle = '*';
-
-   for Char = 1 to BoxTopLen - 2 do
+   if (SuccessFlag)
    begin
-      StrBoxMiddle = StrAdd(StrBoxMiddle, ' ');
+      if (OperatorResult)
+      begin
+         ReportLine = StrAdd(Message, ': PASS');
+      end
+      else
+      begin
+         ReportLine = StrAdd(Message, ': FAIL');
+         if (NOT Error)
+         begin
+            fail_count_other_increase();
+         end;
+         Error = TRUE;
+      end;
+   end
+   else
+   begin
+      if (OperatorResult)
+      begin
+         ReportLine = StrAdd(Message, ': FAIL');
+         if (NOT Error)
+         begin
+            fail_count_other_increase();
+         end;
+         Error = TRUE;
+      end
+      else
+      begin
+         ReportLine = StrAdd(Message, ': PASS');
+      end;
    end;
 
-   StrBoxMiddle = StrAdd(StrBoxMiddle, '*');
-
-   ui_report_normal(StrBoxTop);
-//   ui_report_normal(StrBoxMiddle);
-   ui_report_normal(ReportLine);
-//   ui_report_normal(StrBoxMiddle);
-   ui_report_normal(StrBoxTop);
+   msg_box_border(ReportLine, '*', Error);
 
    blank_line(TRUE);
 
