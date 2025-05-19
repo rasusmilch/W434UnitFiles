@@ -28,11 +28,12 @@ Name=NortechTestStartProgram
 CreateName=Admin
 CreateDate=39626.5302274769
 ModifyName=Test_Admin
-ModifyDate=45786.2708240046
+ModifyDate=45786.2810662847
 DescriptionLines=1
 D0=Default program for teststart
 
 [Units]
-Count=2
+Count=3
 0=TestStartFunctions.unit
 1=.\TestUnitFiles\rs232_functions.unit
+2=.\TestUnitFiles\NortechTestStart_RS.unit

@@ -9,6 +9,8 @@
    0.3            Add print_stamp_box                  PB      2025-02-14
    0.4            Add border_box_string                PB      2025-03-11
    0.5            Add wait();                          PB      2025-04-21
+   0.6            Add set_customer_pn(); to eventually
+                  replace set_collins_partnum();       PB      2025-05-19
 }
 
 {
@@ -202,6 +204,29 @@ begin
 end;
 
 
+function set_customer_pn(InPartNum: string): void;
+begin
+   // use this in favor of set_collins_partnum(), then phase out set_collins_partnum
+   Customer = GlobalDataRead('Customer', '');
+
+   if (StrCompare(Customer, 'COLLINS') <> 0)
+   begin
+      // a little bit hacky, as this runs the risk of overwriting an
+      // existing value.
+      // this will force 'Customer PN: #####' into the report header
+      GlobalDataWrite('Text6', 'Customer PN', 'TestStart InputData');
+      GlobalDataWrite('Value6', InPartNum, 'TestStart InputData');
+      // this is future planning
+      GlobalDataWrite('Customer.PN', InPartNum);
+   end
+   else
+   begin
+      // if customer is Collins, be backwards compat for now.
+      GlobalDataWrite('Collins.PartNum', InPartNum);
+   end;
+end;
+
+
 function read_collins_approved_equipment(InATP: string): void;
 begin
    Handle = FileOpenIni(COLLINS_FILE);
@@ -265,6 +290,7 @@ end;
 
 function set_collins_partnum(InPartNum: string): void;
 begin
+   // TODO: identify all tests which use this and switch to set_customer_pn()
    GlobalDataWrite('Collins.PartNum', InPartNum);
 end;
 

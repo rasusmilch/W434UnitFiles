@@ -760,8 +760,8 @@ begin
             UIWriteNormal('Test duration is NULL, setting to ZERO (0) and displaying message');
          end;
          Test_seconds = 0;
-         timer_stop(Debug);
-         timer_disp_str('None', Debug);
+         timer_stop(Debug, TRUE);
+         timer_disp_str('None', Debug, TRUE);
       end
       else
       begin
@@ -776,7 +776,7 @@ begin
 
    if (Test_seconds <> 0)
    begin
-      timer_set(Test_seconds, Debug);
+      timer_set(Test_seconds, Debug, TRUE);
    end;
 
    ui_info_cancellable(Message);
