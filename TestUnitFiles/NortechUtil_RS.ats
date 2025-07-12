@@ -1,3 +1,83 @@
+{
+  read_test_duration(Debug: boolean = FALSE): string
+  //   Retrieve the test duration for the current project from FILE_TIMER_DURATIONS, or return "NULL" if not found.
+
+  check_job_whitelist(Debug: boolean = FALSE): string
+  //   Load the project’s job whitelist from FILE_JOB_WHITELIST, prompt and verify the operator’s job number, returning the raw whitelist or "NULL".
+
+  test_db_option(): void
+  //   Ensure the dielectric breakdown command group is supported and enabled, aborting the test if not.
+
+  fail_count_other_increase(): void
+  //   Increment the “Others” failure counter.
+
+  ui_report_error(Line: string): void
+  //   Write an error message to both the UI and the test report.
+
+  ui_report_normal(Line: string): void
+  //   Write a normal message to both the UI and the test report.
+
+  blank_line(Report: boolean = TRUE): void
+  //   Insert a blank line in the UI and optionally in the report.
+
+  msg_box_border(ReportLine: string; BorderChar: string; Error: boolean = FALSE): void
+  //   Display ReportLine inside a BorderChar frame, reporting via error or normal output based on Error.
+
+  report_manual_reading(Line: string; Units: string; MinValue: real; MaxValue: real; Debug: boolean = FALSE): void
+  //   Prompt for and validate a manual measurement, then display it in a bordered report.
+
+  ui_dialog_operator_true_false(Title: string; Message: string; SuccessFlag: boolean; Debug: boolean = FALSE): boolean
+  //   Show a True/False dialog, compare the response to SuccessFlag, log the result, and return whether an error occurred.
+
+  max_real(Var1: real; Var2: real): real
+  //   Return the greater of two real values.
+
+  pad_str_char(PadChar: string; Str: string; Length: integer; Debug: boolean = FALSE): string
+  //   Center Str within a field of given Length padded by spaces and bordered by PadChar.
+
+  report_manual_reading_delta(LowerLine: string; UpperLine: string; Units: string; LowerMinValue: real; LowerMaxValue: real; UpperMinValue: real; UpperMaxValue: real; DeltaMin: real; DeltaMax: real; Debug: boolean = FALSE): void
+  //   Prompt for two measurements, validate each and their difference, and display all three in a bordered summary.
+
+  check_epicor_pn(PartNum: string): void
+  //   Prompt for the Epicor part number and abort the test if it does not match the expected PartNum.
+
+  ui_info_cancellable(Msg: string): void
+  //   Show an informational OK/Cancel dialog that aborts the test if the operator cancels.
+
+  timer_check_fails(Debug: boolean = FALSE): void
+  //   Retrieve the main failure count and forward it to the timer error handler with optional debug logging.
+
+  ui_test_prompt(Seconds: integer = 0; Message: string = 'PRESS SPACEBAR TO START TEST'; Debug: boolean = FALSE): void
+  //   Initialize the test timer duration, display a start prompt, and start the timer.
+
+  str_sw_two_state(SW1Name: string; SW1State: string; SW2Name: string; SW2State: string): string
+  //   Return a string in the format "(SW1State, SW2State)" representing two switch states.
+
+  str_sw_three_state(SW1Name: string; SW1State: string; SW2Name: string; SW2State: string; SW3Name: string; SW3State: string): string
+  //   Return a string in the format "(SW1State, SW2State, SW3State)" representing three switch states.
+
+  test_one_switch(SWName: string; Pin1: tpin; Pin2: tpin; NCState: boolean): boolean
+  //   Perform NC/NO continuity tests on a single switch according to NCState order.
+
+  test_one_switch_with_override(SWName: string; SWNameOverride: string; Pin1: tpin; Pin2: tpin; NCState: boolean): boolean
+  //   Test a primary switch and its override through predefined states, aborting if NCState = FALSE.
+
+  test_two_series(SWName1: string; SWName2: string; Pin1: tpin; Pin2: tpin; NCState: boolean): boolean
+  //   Perform series continuity tests on two switches in three phases when NCState = TRUE.
+
+  test_two_series_with_override(SW1Name: string; SW2Name: string; SWOverrideName: string; Pin1: tpin; Pin2: tpin; NCState: boolean): boolean
+  //   Perform series continuity tests on two switches plus an override switch through multiple phases when NCState = TRUE.
+
+  rcl_test_cap_report(CapAvg: real; TolPercent: integer): void
+  //   Calculate and report the upper and lower tolerance bounds for a given average capacitance.
+
+  rcl_test_cap(Name: string; FromPin: tpin; ToPin: tpin; CapAvg: real; TolPercent: integer; ReportTol: boolean = FALSE): boolean
+  //   Verify the electrical components group is active, optionally report tolerances, and execute an RLC capacitance test.
+
+  operator_name_from_id(): string
+  //   Lookup and return the operator’s name based on the current operator ID from FILE_OPERATOR_ID_MAP, aborting on error.
+}
+
 constants
 begin
 {
@@ -10,210 +90,267 @@ begin
    FILE_OPERATOR_ID_MAP = 'O:\Test Eng\Support_Files\W434\operator_id_mapping.ini';
 end;
 
+{**
+  @brief   Open the test-duration INI file and retrieve the duration for the current project.
+  @details
+    1. Fetches the project filename via `ProjectGetFilename()`.
+    2. Opens the INI file defined by `FILE_TIMER_DURATIONS`.
+    3. Parses the project path to determine the base filename (without extension).
+    4. Reads the corresponding duration from the `[Durations]` section.
+    5. Displays error dialogs on failure to open the file or parse the filename.
+    6. Logs intermediate values when `Debug` is TRUE.
+  @param   Debug  Optional flag to enable debug logging (default: FALSE).
+  @return  The test duration string from the INI file, or `"NULL"` if not found.
+**}
 function read_test_duration(Debug: boolean = FALSE): string;
 begin
-   // Opens the test duration ini file ane attempts to fetch the base filename
-   // of the project from the file.
-   //
-   // Returns value found or NULL if not found.
+   // Retrieve the full project filename
    ProjectFilename = ProjectGetFilename();
 
-   if (Debug)
+   if (Debug)  // log the project filename when debugging
    begin
      UIWriteWarning(StrAdd('Project filename: ', ProjectFilename));
    end;
 
+   // Open the INI file containing test durations
    Handle = FileOpenIni(FILE_TIMER_DURATIONS);
 
-   if (Debug)
+   if (Debug)  // log the file handle returned
    begin
       UIWriteWarning(StrAdd('File handle: ', Handle));
    end;
 
-   if (Handle == 0)
+   if (Handle == 0)  // check for failure to open file
    begin
       UIErrorDialog('COULD NOT OPEN TEST DURATION FILE.<BR><BR>CONTACT TEST LAB.');
    end
    else
    begin
+      // Split the project path into parts using backslash
       MiscListFromString(ProjectFilename, PathParts, '\');
       BaseFileNameIndex = MiscGetListSize(PathParts);
 
-      if (Debug)
+      if (Debug)  // log the index of the base filename in the path parts
       begin
          UIWriteWarning(StrAdd('Base filename index: ', BaseFileNameIndex));
       end;
 
+      // Isolate the filename and split on '.' to separate root name and extension
       MiscListFromString(PathParts[BaseFileNameIndex], RootFilenameList, '.');
 
-      if (MiscGetListSize(RootFilenameList) == 2)
+      if (MiscGetListSize(RootFilenameList) == 2)  // expect exactly [name, extension]
       begin
-         BaseFileName = StrTrim(RootFilenameList[1]);
+         BaseFileName = StrTrim(RootFilenameList[1]);  // trimmed root name
       end
-      else
+      else  // malformed filename
       begin
          UIErrorDialog('Test duration configuration error!<BR><BR>CONTACT TEST LAB.');
       end;
 
-      if (Debug)
+      if (Debug)  // log the determined base filename
       begin
          UIWriteWarning(StrAdd('Base filename: ', BaseFileName));
       end;
 
+      // Read the duration value from the INI under section "Durations"
       TestDuration = FileGetIni(Handle, 'Durations', BaseFileName, 'NULL');
-    
-      if (Debug)
+
+      if (Debug)  // log the retrieved test duration
       begin
          UIWriteWarning(StrAdd('Test Duration: ', TestDuration));
       end;
-
    end;
 
-   FileCloseIni(Handle);
-
-   Result = TestDuration;
+   FileCloseIni(Handle);             // close the INI file handle
+   Result = TestDuration;            // return the duration (or "NULL")
 end;
 
+
+{**
+  @brief   Load and validate the job whitelist for the current project, prompting the operator as needed.
+  @details
+    1. Retrieves the current project filename.
+    2. Opens the INI file defined by FILE_JOB_WHITELIST.
+    3. Parses the project path to determine the base filename (without extension).
+    4. Reads the comma-separated whitelist of job numbers from the [Whitelist] section.
+    5. If a whitelist is found, prompts the operator to enter a job number and compares it (case-insensitive) against the list.
+    6. Aborts the test if the operator cancels or enters a non-whitelisted job.
+  @param   Debug  Optional flag to enable debug logging (default FALSE).
+  @return  The raw whitelist string from the INI file, or "NULL" if not found.
+**}
 function check_job_whitelist(Debug: boolean = FALSE): string;
 begin
-   // Opens the job whitelist ini file and attempts to fetch the base filename
-   // of the project from the file and any job numbers. If it is found, prompts
-   // the operator for the job number and compares. Only on a valid match will
-   // the test proceed.
-   //
-   // Returns value found or NULL if not found.
-
+   // Get the full project filename
    ProjectFilename = ProjectGetFilename();
 
-   if (Debug)
+   if (Debug)                        // optionally log the filename
    begin
      UIWriteWarning(StrAdd('Job whitelist project filename: ', ProjectFilename));
    end;
 
+   // Open the whitelist INI file
    Handle = FileOpenIni(FILE_JOB_WHITELIST);
 
-   if (Debug)
+   if (Debug)                        // optionally log the file handle
    begin
       UIWriteWarning(StrAdd('Job whitelist file handle: ', Handle));
    end;
 
-   if (Handle == 0)
+   if (Handle == 0)                  // check for failure to open
    begin
       UIErrorDialog('COULD NOT OPEN JOB WHITELIST FILE.<BR><BR>CONTACT TEST LAB.');
    end
    else
    begin
+      // Split path into components by '\'
       MiscListFromString(ProjectFilename, PathParts, '\');
       BaseFileNameIndex = MiscGetListSize(PathParts);
 
-      if (Debug)
+      if (Debug)                     // optionally log which part is the filename
       begin
          UIWriteWarning(StrAdd('Job whitelist base filename index: ', BaseFileNameIndex));
       end;
 
+      // Isolate the filename and split on '.' to separate name and extension
       MiscListFromString(PathParts[BaseFileNameIndex], RootFilenameList, '.');
 
-      if (MiscGetListSize(RootFilenameList) == 2)
+      if (MiscGetListSize(RootFilenameList) == 2)  // ensure one dot present
       begin
-         BaseFileName = StrTrim(RootFilenameList[1]);
+         BaseFileName = StrTrim(RootFilenameList[1]);  // trimmed root name
       end
-      else
+      else                                // configuration error if unexpected format
       begin
          UIErrorDialog('Job whitelist file configuration error!<BR><BR>CONTACT TEST LAB.');
       end;
 
-      if (Debug)
+      if (Debug)                         // optionally log the determined base filename
       begin
          UIWriteWarning(StrAdd('Job whitelist base filename: ', BaseFileName));
       end;
 
+      // Read the whitelist entry (comma-separated) or "NULL" if missing
       JobWhitelist = FileGetIni(Handle, 'Whitelist', BaseFileName, 'NULL');
 
-      if (Debug)
+      if (Debug)                         // optionally log the raw whitelist
       begin
          UIWriteWarning(StrAdd('Jobs in whitelist: ', JobWhitelist));
       end;
-
    end;
 
-   FileCloseIni(Handle);
+   FileCloseIni(Handle);                // always close the INI handle
 
-   if (StrCompare(JobWhitelist, 'NULL') <> 0)
+   if (StrCompare(JobWhitelist, 'NULL') <> 0)  // if a whitelist was found
    begin
-      // We found a match, prompt operator
-      InputResult = '';
+      InputResult = '';                 // prepare to capture operator input
+      // Prompt operator for current job number
       Button = UIEditDialog('Job number', 'Enter the current job number', FALSE, TRUE, InputResult);
-      if (Button == DIALOGRESULT_Ok)
+
+      if (Button == DIALOGRESULT_Ok)    // operator provided an entry
       begin
-         if (Debug)
+         if (Debug)                     // optionally log the entered job
          begin
             UIWriteWarning(StrAdd('Job number: ', InputResult));
          end;
 
+         // Normalize input for comparison
          InputJobLower = StrLowerCase(StrTrim(InputResult));
 
-
+         // Split the whitelist string into individual jobs
          Count = MiscListFromString(JobWhitelist, ListJobs, ',');
 
-         if (Debug)
+         if (Debug)                     // optionally log how many jobs found
          begin
             UIWriteWarning(StrAdd('Number of found jobs in whitelist: ', Count));
          end;
 
-         JobFound = FALSE;
+         JobFound = FALSE;              // assume not found until matched
 
+         // Iterate through each whitelisted job
          for Index = 1 to Count do
          begin
-            JobLower = StrLowerCase(StrTrim(ListJobs[Index]));
-
-            if (StrCompare(InputJobLower, JobLower) == 0)
+            JobLower = StrLowerCase(StrTrim(ListJobs[Index]));  // normalize list entry
+            if (StrCompare(InputJobLower, JobLower) == 0)       // match found?
             begin
                JobFound = TRUE;
-
-               if (Debug)
+               if (Debug)                                       // optionally log the match
                begin
                   UIWriteWarning(StrAdd('Job found: ', InputJobLower));
                end;
             end;
          end;
 
-         if (JobFound == FALSE)
+         if (JobFound == FALSE)        // no match in whitelist
          begin
             UIWriteError(StrAdd(InputJobLower, ' did not match whitelisted job list. Check job number or contact test lab.'));
             UIErrorDialog(StrAdd(InputJobLower, ' did not match whitelisted job list<BR>Check job number or contact test lab.'));
-            MiscAbortTest();
+            MiscAbortTest();           // abort the test run
          end;
       end
-      else
+      else                            // operator canceled entry dialog
       begin
          UIWriteError('Operator did not enter a required job number');
-         MiscAbortTest();
+         MiscAbortTest();             // abort the test run
       end;
-
    end;
 
-   Result = JobWhitelist;
+   Result = JobWhitelist;             // return the raw whitelist or "NULL"
 end;
 
+
+{**
+  @brief   Ensure the dielectric breakdown test option is supported and enabled.
+  @details
+    1. Verifies that the machine supports the dielectric breakdown (ACDB) command group.
+    2. Verifies that the ACDB command group is currently active/enabled.
+    If either check fails, an error dialog is shown and the test is aborted.
+  @return  void
+**}
 function test_db_option(): void;
 begin
-     if (ParamIsCommandGroupAvailable(CMDGRP_DielectricBreakdown) == FALSE)
-     begin
-        UIErrorDialog('THIS MACHINE DOES NOT CURRENTLY SUPPORT A REQUIRED TESTING METHOD (ACDB)<BR>PLEASE TEST ON AN APPROVED AEROSPACE TESTER');
-        MiscAbortTest();
-     end;
+   // Check if the dielectric breakdown command group is available
+   if (ParamIsCommandGroupAvailable(CMDGRP_DielectricBreakdown) == FALSE)
+   begin
+      // Display an error dialog instructing use of an approved tester
+      UIErrorDialog('THIS MACHINE DOES NOT CURRENTLY SUPPORT A REQUIRED TESTING METHOD (ACDB)<BR>PLEASE TEST ON AN APPROVED AEROSPACE TESTER');
+      // Abort the current test sequence
+      MiscAbortTest();
+   end;
+
+   // Check if the dielectric breakdown command group is active/enabled
+   if (ParamIsCommandGroupActive(CMDGRP_DielectricBreakdown) == FALSE)
+   begin
+      // Display an error dialog indicating the command group is not enabled
+      UIErrorDialog('THIS TEST DOES NOT HAVE THE REQUIRED DIELECTRIC BREAKDOWN COMMAND GROUP ENABLED!<BR>CONTACT TEST DEPARTMENT');
+      // Abort the current test sequence
+      MiscAbortTest();
+   end;
 end;
 
+{**
+  @brief   Increment the failure counter for non-specific (other) errors.
+  @details Calls `FailCounterCount` with the `FAILCOUNTER_Others` identifier to log an
+           occurrence of an "other" type failure.
+  @return  void
+**}
 function fail_count_other_increase(): void;
 begin
+   // Increment the 'Others' failure counter
    FailCounterCount(FAILCOUNTER_Others);
 end;
 
+{**
+  @brief   Write an error message to both the UI and the report log.
+  @param   Line  The error message to display and record.
+  @return  void
+**}
 function ui_report_error(Line: string): void;
 begin
+   // Output the error to the user interface
    UIWriteError(Line);
+   // Log the error in the test report
    ReportWriteError(Line);
 end;
+
 
 function ui_report_normal(Line: string): void;
 begin
@@ -231,35 +368,46 @@ begin
    end;
 end;
 
+{**
+  @brief   Display a text line within a character border, reporting as error or normal.
+  @details Constructs a top/bottom border and middle line by surrounding @p ReportLine
+           with the single character @p BorderChar.  If @p Error is TRUE, routes output
+           via @c ui_report_error; otherwise via @c ui_report_normal.
+  @param   ReportLine   The text to display inside the border.
+  @param   BorderChar   The character used to draw the border (only the first character is used).
+  @param   Error        Optional; when TRUE, report as error (default FALSE).
+**}
 function msg_box_border(ReportLine: string; BorderChar: string; Error: boolean = FALSE): void;
 begin
+   // Extract the first character of BorderChar for drawing
    StrBoxChar = StrCopy(BorderChar, 1, 1);
 
+   // Build the middle line: "<border> <ReportLine> <border>"
    String = StrAdd(StrBoxChar, ' ');
    String = StrAdd(String, ReportLine);
    String = StrAdd(String, ' ');
    String = StrAdd(String, StrBoxChar);
 
+   // Determine total length for top/bottom borders
    StrLen = StrLength(String);
-
    BoxTopLen = StrLen;
 
+   // Construct the top/bottom border of repeated border characters
    StrBoxTop = '';
-
    for Char = 1 to BoxTopLen do
    begin
       StrBoxTop = StrAdd(StrBoxTop, StrBoxChar);
    end;
 
+   // Construct the middle border line with spaces inside
    StrBoxMiddle = StrBoxChar;
-
    for Char = 1 to BoxTopLen - 2 do
    begin
       StrBoxMiddle = StrAdd(StrBoxMiddle, ' ');
    end;
-
    StrBoxMiddle = StrAdd(StrBoxMiddle, StrBoxChar);
 
+   // Output the boxed lines as either error or normal report
    if (Error)
    begin
       ui_report_error(StrBoxTop);
@@ -274,24 +422,44 @@ begin
    end;
 end;
 
+
+{**
+  @brief   Prompt operator for a manual measurement, validate and report the result.
+  @details
+    Displays an input dialog asking the operator to enter a value for @p Line in @p Units.
+    Validates the entry format (integer or real), checks against @p MinValue and @p MaxValue,
+    reports errors via @c ui_report_error and increments the failure counter if out of range
+    or canceled.  Finally, displays the measured value in a bordered message box.
+  @param   Line      Description of the measurement prompt.
+  @param   Units     Units to display alongside the prompt and result.
+  @param   MinValue  Minimum allowable numeric value.
+  @param   MaxValue  Maximum allowable numeric value.
+  @param   Debug     Optional flag to enable debug logging (default FALSE).
+  @return  void
+**}
 function report_manual_reading(Line: string; Units: string; MinValue: real; MaxValue: real; Debug: boolean = FALSE): void;
 begin
-
+   // Initialize error flag
    Error = FALSE;
 
+   // Insert a blank line before prompting
    blank_line(TRUE);
 
+   // Build the input prompt text
    MsgText = StrAdd('Enter manual reading:<BR>', Line);
    MsgText = StrAdd(MsgText, ' (');
    MsgText = StrAdd(MsgText, Units);
    MsgText = StrAdd(MsgText, ')');
 
+   // Default input result
    InputResult = '0';
 
+   // Prompt the operator for a value
    Button = UIEditDialog('Enter Value', MsgText, FALSE, TRUE, InputResult);
 
    if (Button == DIALOGRESULT_Ok)
    begin
+      // Log the entered value if debugging
       if (Debug)
       begin
          UIWriteNormal(StrAdd('Entered value: ', InputResult));
@@ -299,53 +467,49 @@ begin
    end
    else
    begin
+      // Operator canceled input
       UIWriteNormal('Canceled by operator');
       Error = TRUE;
-//      MiscAbortTest();
+      // Record a generic failure
       fail_count_other_increase();
    end;
 
+   // Initialize numeric conversion
    ValueEntered = 0.0;
 
+   // Convert if integer format
    if (FormatIsInteger(InputResult))
    begin
       ValueEntered = InputResult;
    end;
 
+   // Convert if real format
    if (FormatIsReal(InputResult))
    begin
       ValueEntered = InputResult;
    end;
 
-
-//   UIWriteNormal(StrAdd('Entered and converted: ', ValueEntered));
-
-//   if (ValueEntered == 0)
-//   begin
-//      ui_report_error('Invalid value entered');
-//      MiscAbortTest();
-//   end;
-
+   // Validate against maximum
    if (ValueEntered > MaxValue)
    begin
       ErrorLine = StrAdd('Value entered above maximum value: ', MaxValue);
       ErrorLine = StrAdd(ErrorLine, Units);
       ui_report_error(ErrorLine);
-//      MiscAbortTest();
       Error = TRUE;
       fail_count_other_increase();
    end;
 
+   // Validate against minimum
    if (ValueEntered < MinValue)
    begin
       ErrorLine = StrAdd('Value entered below minimum value: ', MinValue);
       ErrorLine = StrAdd(ErrorLine, Units);
       ui_report_error(ErrorLine);
-//      MiscAbortTest();
       Error = TRUE;
       fail_count_other_increase();
    end;
 
+   // Build the result report line
    ReportLine = '';
    ReportLine = StrAdd(ReportLine, Line);
    ReportLine = StrAdd(ReportLine, ' measured value (');
@@ -359,82 +523,103 @@ begin
    ReportLine = StrAdd(ReportLine, ' ');
    ReportLine = StrAdd(ReportLine, Units);
 
+   // Display the bordered report
    msg_box_border(ReportLine, '*', Error);
 
+   // Insert a blank line after reporting
    blank_line(TRUE);
-
 end;
 
-function ui_dialog_operator_true_false(Title: string; Message: string; SuccessFlag: boolean; Debug: boolean = FALSE): void;
+
+{*
+ * @brief   Display a TRUE/FALSE prompt to the operator, log the choice, and report pass/fail.
+ *
+ * Presents a dialog titled @p Title with the question @p Message and three buttons:
+ * "Cancel", "True", and "False".  Compares the operator’s choice against @p SuccessFlag:
+ * if they match, the test passes; otherwise it fails.  Any cancellation or mismatch
+ * increments the failure counter and records an error message.  Finally, draws a
+ * bordered report line and returns the error status.
+ *
+ * @param   Title         The caption text for the dialog window.
+ * @param   Message       The prompt or question displayed to the operator.
+ * @param   SuccessFlag   If TRUE, selecting "True" is a pass; if FALSE, selecting "False" is a pass.
+ * @param   Debug         Optional flag to enable extra debug output (default is FALSE).
+ * @return  Returns TRUE if an error or test failure occurred, FALSE on a successful pass.
+ *}
+function ui_dialog_operator_true_false(Title: string; Message: string; SuccessFlag: boolean; Debug: boolean = FALSE): boolean;
 begin
-   // Asks the operator a TRUE or FALSE question and prints the result
 
-   ReportLine = '';
-   OperatorResult = FALSE;
-   Error = FALSE;
+   // Initialize report line and status flags
+   ReportLine = '';            // text to display in the report box
+   OperatorResult = FALSE;     // operator’s True/False choice
+   Error = FALSE;              // tracks whether an error/failure occurred
 
+   // Show a custom dialog with Cancel, True, False buttons
    Button = UIMessageDialogCustom(Title, Message, ['Cancel', 'True', 'False']);
    switch(Button)
    begin
       case DIALOGRESULT_Closed:
       begin
-         UIWriteError('Operator closed dialog box!');
+         UIWriteError('Operator closed dialog box!');  // log error on close
          Error = TRUE;
-         fail_count_other_increase();
+         fail_count_other_increase();                  // increment failure counter
       end;
       case DIALOGRESULT_Button1:
       begin
-         UIWriteError('Operator canceled dialog box!');
+         UIWriteError('Operator canceled dialog box!'); // log error on cancel
          Error = TRUE;
-         fail_count_other_increase();
+         fail_count_other_increase();                   // increment failure counter
       end;
       case DIALOGRESULT_Button2:
       begin
-         OperatorResult = TRUE;
+         OperatorResult = TRUE;                         // operator chose TRUE
       end;
       case DIALOGRESULT_Button3:
       begin
-         OperatorResult = FALSE;
+         OperatorResult = FALSE;                        // operator chose FALSE
       end;
    end;
 
+   // Evaluate operator choice against expected success flag
    if (SuccessFlag)
    begin
       if (OperatorResult)
       begin
-         ReportLine = StrAdd(Message, ': PASS');
+         ReportLine = StrAdd(Message, ': PASS');      // correct choice ? pass
       end
       else
       begin
-         ReportLine = StrAdd(Message, ': FAIL');
+         ReportLine = StrAdd(Message, ': FAIL');      // incorrect ? fail
          if (NOT Error)
          begin
-            fail_count_other_increase();
+            fail_count_other_increase();              // count failure if not already error
          end;
-         Error = TRUE;
+         Error = TRUE;                                // mark as error/failure
       end;
    end
    else
    begin
       if (OperatorResult)
       begin
-         ReportLine = StrAdd(Message, ': FAIL');
+         ReportLine = StrAdd(Message, ': FAIL');      // should have been False ? fail
          if (NOT Error)
          begin
-            fail_count_other_increase();
+            fail_count_other_increase();              // count failure
          end;
-         Error = TRUE;
+         Error = TRUE;                                // mark as error/failure
       end
       else
       begin
-         ReportLine = StrAdd(Message, ': PASS');
+         ReportLine = StrAdd(Message, ': PASS');      // correct choice ? pass
       end;
    end;
 
-   msg_box_border(ReportLine, '*', Error);
+   // Display the result in a bordered message box
+   msg_box_border(ReportLine, '*', Error);           // use '*' border, indicate error if any
 
-   blank_line(TRUE);
+   blank_line(TRUE);                                 // add a blank line for readability
 
+   Result = Error;                                   // return TRUE on error/failure, FALSE on pass
 end;
 
 function max_real(Var1: real; Var2: real): real;
@@ -448,86 +633,134 @@ begin
    end;
 end;
 
+{**
+  @brief   Frame and center-pad a string with spaces between border characters.
+  @details Calculates the number of spaces needed on each side of @p Str so that the total
+           inside width equals @p Length, then surrounds the result with @p PadChar.
+           If the padding difference is odd, the extra space is added to the right side.
+  @param   PadChar  A single-character string used as the left and right border.
+  @param   Str      The text to be padded.
+  @param   Length   The target length of the text area (excluding the two border characters).
+  @param   Debug    Optional flag; when TRUE, outputs intermediate values for debugging.
+  @return  The resulting string, padded and bounded by @p PadChar.
+**}
 function pad_str_char(PadChar: string; Str: string; Length: integer; Debug: boolean = FALSE): string;
 begin
+   // Get the current length of the input string
    StrLen = StrLength(Str);
 
+   // Determine how many total padding spaces are needed
    LenDiff = Length - StrLen;
 
+   // Split the padding roughly evenly between left and right
    LenSplit = LenDiff / 2;
 
+   // Start building result with left border character
    Result = PadChar;
 
+   // Compute how many spaces to add on the left side (excluding one taken by border)
    TargetPadding = LenSplit - 1;
 
+   // Add left-side spaces
    for Count = 1 to TargetPadding do
    begin
       Result = StrAdd(Result, ' ');
    end;
 
+   // Insert the original string
    Result = StrAdd(Result, Str);
 
+   // If total padding is odd, add one extra space on the right
    if (ArithOdd(LenDiff))
    begin
       TargetPadding = TargetPadding + 1;
    end;
 
+   // Add right-side spaces
    for Count = 1 to TargetPadding do
    begin
       Result = StrAdd(Result, ' ');
    end;
 
+   // Append the right border character
    Result = StrAdd(Result, PadChar);
 
+   // Output debug information if requested
    if (Debug)
    begin
-      UIWriteNormal(StrAdd('StrLen: ', StrLen));
-      UIWriteNormal(StrAdd('LenDiff: ', LenDiff));
-      UIWriteNormal(StrAdd('LenSplit: ', LenSplit));
-      UIWriteNormal(StrAdd('TargetPadding: ', TargetPadding));
+      UIWriteNormal(StrAdd('StrLen: ', StrLen));          // length of original string
+      UIWriteNormal(StrAdd('LenDiff: ', LenDiff));        // total padding needed
+      UIWriteNormal(StrAdd('LenSplit: ', LenSplit));      // half of padding
+      UIWriteNormal(StrAdd('TargetPadding: ', TargetPadding)); // final per-side padding
    end;
 end;
 
+
+{**
+  @brief   Prompt for two manual readings, validate each against individual ranges and their difference, and display results.
+  @details
+    1. Displays an input dialog for the lower measurement described by @p LowerLine in units @p Units.
+    2. Validates the lower value against [@p LowerMinValue, @p LowerMaxValue]; aborts on cancel or out-of-range.
+    3. Repeats steps 1–2 for the upper measurement described by @p UpperLine and bounds [@p UpperMinValue, @p UpperMaxValue].
+    4. Computes the delta = upper – lower, validates it against [@p DeltaMin, @p DeltaMax]; aborts on failure.
+    5. Constructs and displays a bordered summary of the lower, upper, and delta values.
+  @param   LowerLine      Text describing the lower measurement prompt.
+  @param   UpperLine      Text describing the upper measurement prompt.
+  @param   Units          Units label shown alongside prompts and results.
+  @param   LowerMinValue  Minimum allowable lower reading.
+  @param   LowerMaxValue  Maximum allowable lower reading.
+  @param   UpperMinValue  Minimum allowable upper reading.
+  @param   UpperMaxValue  Maximum allowable upper reading.
+  @param   DeltaMin       Minimum allowable difference (upper minus lower).
+  @param   DeltaMax       Maximum allowable difference (upper minus lower).
+  @param   Debug          Optional flag to enable debug logging (default FALSE).
+  @return  void
+**}
 function report_manual_reading_delta(LowerLine: string; UpperLine: string; Units: string; LowerMinValue: real; LowerMaxValue: real; UpperMinValue: real; UpperMaxValue: real; DeltaMin: real; DeltaMax: real; Debug: boolean = FALSE): void;
 begin
-
+   // Insert blank line before first prompt
    blank_line(TRUE);
 
+   // Build prompt message for lower value
    MsgText = StrAdd('Enter manual reading:<BR>', LowerLine);
    MsgText = StrAdd(MsgText, ' (');
    MsgText = StrAdd(MsgText, Units);
    MsgText = StrAdd(MsgText, ')');
 
+   // Initialize input result
    InputResult = '0';
 
+   // Show input dialog for lower measurement
    Button = UIEditDialog('Enter Value', MsgText, FALSE, TRUE, InputResult);
 
+   // Handle lower value entry or cancellation
    if (Button == DIALOGRESULT_Ok)
    begin
       if (Debug)
       begin
+         // Debug: log the raw entered string
          UIWriteNormal(StrAdd('Entered value: ', InputResult));
       end;
    end
    else
    begin
+      // Operator canceled lower input ? abort test
       UIWriteNormal('Canceled by operator');
       MiscAbortTest();
    end;
 
+   // Convert lower input to numeric form
    LowerValueEntered = 0.0;
-
    if (FormatIsInteger(InputResult))
    begin
       LowerValueEntered = InputResult;
    end;
-
    if (FormatIsReal(InputResult))
    begin
       LowerValueEntered = InputResult;
    end;
 
-
+   // Validate lower value range
    if (LowerValueEntered > LowerMaxValue)
    begin
       ErrorLine = StrAdd('Value entered above maximum value: ', LowerMaxValue);
@@ -535,7 +768,6 @@ begin
       ui_report_error(ErrorLine);
       MiscAbortTest();
    end;
-
    if (LowerValueEntered < LowerMinValue)
    begin
       ErrorLine = StrAdd('Value entered below minimum value: ', LowerMinValue);
@@ -544,42 +776,43 @@ begin
       MiscAbortTest();
    end;
 
-   // Do upper value now
+   // Prompt for upper measurement
    MsgText = StrAdd('Enter manual reading:<BR>', UpperLine);
    MsgText = StrAdd(MsgText, ' (');
    MsgText = StrAdd(MsgText, Units);
    MsgText = StrAdd(MsgText, ')');
 
    InputResult = '0';
-
    Button = UIEditDialog('Enter Value', MsgText, FALSE, TRUE, InputResult);
 
+   // Handle upper value entry or cancellation
    if (Button == DIALOGRESULT_Ok)
    begin
       if (Debug)
       begin
+         // Debug: log the raw entered string
          UIWriteNormal(StrAdd('Entered value: ', InputResult));
       end;
    end
    else
    begin
+      // Operator canceled upper input ? abort test
       UIWriteNormal('Canceled by operator');
       MiscAbortTest();
    end;
 
+   // Convert upper input to numeric form
    UpperValueEntered = 0.0;
-
    if (FormatIsInteger(InputResult))
    begin
       UpperValueEntered = InputResult;
    end;
-
    if (FormatIsReal(InputResult))
    begin
       UpperValueEntered = InputResult;
    end;
 
-
+   // Validate upper value range
    if (UpperValueEntered > UpperMaxValue)
    begin
       ErrorLine = StrAdd('Value entered above maximum value: ', UpperMaxValue);
@@ -587,7 +820,6 @@ begin
       ui_report_error(ErrorLine);
       MiscAbortTest();
    end;
-
    if (UpperValueEntered < UpperMinValue)
    begin
       ErrorLine = StrAdd('Value entered below minimum value: ', UpperMinValue);
@@ -596,8 +828,10 @@ begin
       MiscAbortTest();
    end;
 
+   // Compute difference between upper and lower
    Delta = UpperValueEntered - LowerValueEntered;
 
+   // Validate delta range
    if (Delta < DeltaMin)
    begin
       ErrorLine = StrAdd('Delta between values lower than limit: ', DeltaMin);
@@ -605,7 +839,6 @@ begin
       ui_report_error(ErrorLine);
       MiscAbortTest();
    end;
-
    if (Delta > DeltaMax)
    begin
       ErrorLine = StrAdd('Delta between values higher than limit: ', DeltaMax);
@@ -614,6 +847,7 @@ begin
       MiscAbortTest();
    end;
 
+   // Build report lines for lower, upper, and delta
    ReportLowerLine = '';
    ReportLowerLine = StrAdd(ReportLowerLine, LowerLine);
    ReportLowerLine = StrAdd(ReportLowerLine, ' measured value (');
@@ -652,58 +886,77 @@ begin
    ReportDeltaLine = StrAdd(ReportDeltaLine, ' ');
    ReportDeltaLine = StrAdd(ReportDeltaLine, Units);
 
+   // Determine maximum string length for uniform box width
    StrLenLower = StrLength(ReportLowerLine);
    StrLenUpper = StrLength(ReportUpperLine);
    StrLenDelta = StrLength(ReportDeltaLine);
 
    MaxStrLen = 0;
-
    MaxStrLen = max_real(MaxStrLen, StrLenLower);
    MaxStrLen = max_real(MaxStrLen, StrLenUpper);
    MaxStrLen = max_real(MaxStrLen, StrLenDelta);
 
    BoxTopLen = MaxStrLen + 4;
 
+   // Pad each report line to match box width
    ReportLowerLine = pad_str_char('*', ReportLowerLine, BoxTopLen, FALSE);
    ReportUpperLine = pad_str_char('*', ReportUpperLine, BoxTopLen, FALSE);
    ReportDeltaLine = pad_str_char('*', ReportDeltaLine, BoxTopLen, FALSE);
 
+   // Build box top and middle borders
    StrBoxTop = '';
-
    for Char = 1 to BoxTopLen do
    begin
       StrBoxTop = StrAdd(StrBoxTop, '*');
    end;
-
    StrBoxMiddle = '*';
-
    for Char = 1 to BoxTopLen - 2 do
    begin
       StrBoxMiddle = StrAdd(StrBoxMiddle, ' ');
    end;
-
    StrBoxMiddle = StrAdd(StrBoxMiddle, '*');
 
+   // Output the boxed report
    ui_report_normal(StrBoxTop);
-//   ui_report_normal(StrBoxMiddle);
    ui_report_normal(ReportLowerLine);
    ui_report_normal(ReportUpperLine);
    ui_report_normal(ReportDeltaLine);
-//   ui_report_normal(StrBoxMiddle);
    ui_report_normal(StrBoxTop);
 
+   // Insert a blank line after reporting
    blank_line(TRUE);
-
 end;
 
+
+{**
+  @brief   Prompt the operator to enter or scan the Epicor part number and verify it matches the expected value.
+  @param   PartNum  The expected Epicor part number for this test.
+  @return  void
+**}
 function check_epicor_pn(PartNum: string): void;
 begin
+   // Initialize the input result buffer
    InputResult = '';
-   Button = UIEditDialog('Epicor Part Number', 'Scan or enter the Epicor PN from the Traveler', FALSE, TRUE, InputResult);
+
+   // Prompt the operator to enter or scan the Epicor part number
+   Button = UIEditDialog(
+      'Epicor Part Number',
+      'Scan or enter the Epicor PN from the Traveler',
+      FALSE,
+      TRUE,
+      InputResult
+   );
+
+   // If the operator clicked OK, validate the entry
    if (Button == DIALOGRESULT_Ok)
    begin
+      // Trim whitespace from the entered value
       InputResult = StrTrim(InputResult);
+
+      // Compare the expected part number to the operator’s entry
       Result = StrCompare(PartNum, InputResult);
+
+      // If they do not match, display a boxed error and abort
       if (Result <> 0)
       begin
          ui_report_error('*********************************************');
@@ -711,95 +964,161 @@ begin
          ui_report_error('* PLEASE VERIFY YOU HAVE THE CORRECT TEST   *');
          ui_report_error('* FOR YOUR PART NUMBER OR CONTACT TEST LAB! *');
          ui_report_error('*********************************************');
-         MiscAbortTest();
+         MiscAbortTest();  // stop the test due to mismatch
       end;
    end
    else
    begin
+      // Operator canceled the entry ? log error and abort
       ui_report_error('User canceled entering PN');
       MiscAbortTest();
    end;
 end;
 
+
+{**
+  @brief   Display an informational dialog that the operator can cancel to abort the test.
+  @param   Msg   The message text to show in the OK/Cancel dialog.
+  @return  void
+**}
 function ui_info_cancellable(Msg: string): void;
 begin
+   // Display an OK/Cancel dialog with the provided message
+   Button = UIMessageDialogOkCancel(Msg);
 
-     Button = UIMessageDialogOkCancel(Msg);
-
-     if (Button == DIALOGRESULT_Cancel)
-     begin
-          MiscAbortTest();
-     end;
+   // If the operator selects Cancel, abort the test execution
+   if (Button == DIALOGRESULT_Cancel)
+   begin
+      MiscAbortTest();
+   end;
 end;
 
+
+{**
+  @brief   Check the main failure counter and notify the timer subsystem of errors.
+  @details
+    Retrieves the current failure count from the main failure counter (FAILCOUNTER_Main)
+    and forwards it, along with the debug flag, to the timer error handler function.
+  @param   Debug  Optional flag to enable debug logging (default FALSE).
+  @return  void
+**}
+function timer_check_fails(Debug: boolean = FALSE): void;
+begin
+   // Get the number of failures recorded in the main counter
+   Fails = FailCounterGet(FAILCOUNTER_Main);
+
+   if (Debug)
+   begin
+      // Log the current fail count for debugging
+      UIWriteWarning(StrAdd('Fail Counter [Main]:', Fails));
+   end;
+
+   // Pass the fail count and debug flag to the timer's error handling routine
+   timer_set_errors(Fails, Debug);
+end;
+
+
+{**
+  @brief   Initialize and prompt the operator to start the test, then start the test timer.
+  @details
+    - Clears existing timer errors.
+    - Uses @p Seconds if non-zero; otherwise reads the duration from an INI file.
+    - If the INI lookup returns "NULL", sets duration to zero, stops the timer, and displays "Unknown".
+    - Configures and starts the timer if a positive duration is available.
+    - Displays a cancellable info dialog with @p Message.
+    - Enables global message printing and begins the timer.
+  @param   Seconds  Optional override for the test duration in seconds (default = 0).
+  @param   Message  The prompt text shown in the start dialog (default = 'PRESS SPACEBAR TO START TEST').
+  @param   Debug    Optional flag to enable debug logging (default = FALSE).
+  @return  void
+**}
 function ui_test_prompt(Seconds: integer = 0; Message: string = 'PRESS SPACEBAR TO START TEST'; Debug: boolean = FALSE): void;
 begin
-   // Sets up the test timer and displays the operator prompt to start test.
-   // Upon operator starting the test, starts the timer.
-   //
-   // If a Seconds value is passed, test timer will use that value.
-   // If Seconds is omitted or zero is passed, looks up test duration in ini file
+   // Clear any previous timer error counts
+   timer_set_errors(0, Debug);
 
+   // Determine test duration: use provided Seconds or read from configuration
    if (Seconds <> 0)
    begin
+     // Override duration with the passed parameter
      Test_seconds = Seconds;
    end
    else
    begin
+      // Fetch duration string from INI file
       Test_duration = read_test_duration(Debug);
       if (Debug)
       begin
-         UIWriteNormal(StrAdd('Returned test duration: ', Test_duration));
+         UIWriteNormal(StrAdd('Returned test duration: ', Test_duration));  // debug log
       end;
 
+      // If INI lookup failed, handle as unknown duration
       if (StrCompare(Test_duration, 'NULL') == 0)
       begin
-
          if (Debug)
          begin
-            UIWriteNormal('Test duration is NULL, setting to ZERO (0) and displaying message');
+            UIWriteNormal('Test duration is NULL, setting to ZERO (0) and displaying message');  // debug log
          end;
-         Test_seconds = 0;
-         timer_stop(Debug, TRUE);
-         timer_disp_str('None', Debug, TRUE);
+         Test_seconds = 0;                                        // no valid duration
+         timer_stop(Debug, TRUE);                                // ensure timer is stopped
+         timer_disp_str('Unknown', 0, Debug, TRUE);              // display 'Unknown' on timer
       end
       else
       begin
+         // Convert the returned duration string to numeric seconds
          Test_seconds = Test_duration;
-
          if (Debug)
          begin
-            UIWriteNormal(StrAdd('Setting seconds to: ', Test_seconds));
+            UIWriteNormal(StrAdd('Setting seconds to: ', Test_seconds));  // debug log
          end;
       end;
    end;
 
+   // Configure the timer display only if a positive duration is set
    if (Test_seconds <> 0)
    begin
-      timer_set(Test_seconds, Debug, TRUE);
+      timer_set(Test_seconds, Debug, TRUE);  // prepare timer with duration
    end;
 
+   // Show a start prompt that the operator can cancel
    ui_info_cancellable(Message);
 
+   // Ensure messages will be printed via the GlobalDataRead flag
    GlobalDataRead('MsgPrint', ON);
 
+   // Start the timer if it was configured
    if (Test_seconds <> 0)
    begin
       timer_start(Debug);
    end;
 
+   // Insert a blank line after starting
    blank_line(TRUE);
-
 end;
 
+
+{**
+  @brief   Build a parenthesized string showing the states of two switches.
+  @param   SW1Name   Name of the first switch (for reference).
+  @param   SW1State  State text of the first switch.
+  @param   SW2Name   Name of the second switch (for reference).
+  @param   SW2State  State text of the second switch.
+  @return  A string in the format "(SW1State, SW2State)".
+**}
 function str_sw_two_state(SW1Name: string; SW1State: string; SW2Name: string; SW2State: string): string;
 begin
+   // Initialize result with an opening parenthesis
    Result = '(';
+   // Append the first switch state
    Result = StrAdd(Result, SW1State);
+   // Append a comma and space separator
    Result = StrAdd(Result, ', ');
+   // Append the second switch state
    Result = StrAdd(Result, SW2State);
+   // Append the closing parenthesis
    Result = StrAdd(Result, ')');
 end;
+
 
 //function str_sw_three_state(SW1Name: string; SW1State: string; SW2Name: string; SW2State: string; SW3Name: string; SW3State: string): string;
 //begin
@@ -815,374 +1134,422 @@ end;
 //   Result = StrAdd(Result, SW3State);
 //end;
 
+{**
+  @brief   Build a parenthesized string showing the states of three switches.
+  @param   SW1Name   Name of the first switch (for reference).
+  @param   SW1State  State text of the first switch.
+  @param   SW2Name   Name of the second switch (for reference).
+  @param   SW2State  State text of the second switch.
+  @param   SW3Name   Name of the third switch (for reference).
+  @param   SW3State  State text of the third switch.
+  @return  A string in the format "(SW1State, SW2State, SW3State)".
+**}
 function str_sw_three_state(SW1Name: string; SW1State: string; SW2Name: string; SW2State: string; SW3Name: string; SW3State: string): string;
 begin
+   // Initialize result with opening parenthesis and first switch state
    Result = StrAdd('(', SW1State);
+   // Append comma and space separator
    Result = StrAdd(Result, ', ');
+   // Append second switch state
    Result = StrAdd(Result, SW2State);
+   // Append comma and space separator
    Result = StrAdd(Result, ', ');
+   // Append third switch state
    Result = StrAdd(Result, SW3State);
+   // Append closing parenthesis
    Result = StrAdd(Result, ')');
 end;
 
+
+{**
+  @brief   Verify a two-pin switch in both its states (NC and NO) according to the specified default.
+  @param   SWName   The label or identifier of the switch under test.
+  @param   Pin1     The first terminal pin of the switch.
+  @param   Pin2     The second terminal pin of the switch.
+  @param   NCState  If TRUE, test closed (NC) first then open (NO); if FALSE, test open first then closed.
+  @return  Returns TRUE if both continuity and no-continuity tests complete without abort; test is aborted on failure or cancel.
+**}
 function test_one_switch(SWName: string; Pin1: tpin; Pin2: tpin; NCState: boolean): boolean;
 begin
+   // Build and display the test header
    String = 'TESTING SWITCH ';
-
    String = StrAdd(String, SWName);
 
+   // Add spacing in UI and report for clarity
    UIWriteNormal(' ');
    ReportWriteNormal(' ');
 
+   // Output header line to UI and report
    UIWriteNormal(String);
    ReportWriteNormal(String);
 
    if (NCState == TRUE)
    begin
-      // Switch NC
-
+      // --- Test Normally Closed (NC) first ---
       String = StrAdd(SWName, ' CLOSED');
-
       ConnectionTest(String, Pin1, Pin2);
 
-      // Now Open
+      // Prompt operator to change switch to Open
       String = StrAdd('PRESS AND HOLD ', SWName);
-
       ui_info_cancellable(String);
 
+      // --- Test Normally Open (NO) now ---
       String = StrAdd(SWName, ' OPEN');
-
       NoConnectionLV(String, Pin1, Pin2);
    end
    else
    begin
-      // Switch NO
+      // --- Test Normally Open (NO) first ---
       String = StrAdd(SWName, ' OPEN');
-
       NoConnectionLV(String, Pin1, Pin2);
 
-      // Now Closed
+      // Prompt operator to change switch to Closed
       String = StrAdd('PRESS AND HOLD ', SWName);
-
       ui_info_cancellable(String);
 
+      // --- Test Normally Closed (NC) now ---
       String = StrAdd(SWName, ' CLOSED');
-
       ConnectionTest(String, Pin1, Pin2);
    end;
 
+   // Prompt operator to release all switch contacts before proceeding
    ui_info_cancellable('RELEASE ALL SWITCHES');
 
+   // Note: Underlying test functions abort on failure; returned value indicates overall success
 end;
 
+{**
+  @brief   Perform continuity/no-continuity tests on a primary switch and its override counterpart.
+  @details
+    - Displays a combined header: "TESTING SWITCHES @p SWName, @p SWNameOverride".
+    - If @p NCState = TRUE, executes three test phases:
+      1. Primary CLOSED, override OPEN.
+      2. Both OPEN after prompting the operator to hold the primary switch.
+      3. Primary OPEN, override CLOSED after prompting the operator to hold the override switch.
+    - If @p NCState = FALSE, shows an unimplemented notice and aborts the test.
+    - Finally, prompts the operator to release all switches.
+  @param   SWName           Identifier of the primary switch under test.
+  @param   SWNameOverride   Identifier of the override switch under test.
+  @param   Pin1             First pin used for continuity/no-continuity checks.
+  @param   Pin2             Second pin used for continuity/no-continuity checks.
+  @param   NCState          If TRUE, perform the NC-first test sequence; else abort as unimplemented.
+  @return  TRUE if tests complete without abort; aborts on failure or unimplemented branch.
+**}
 function test_one_switch_with_override(SWName: string; SWNameOverride: string; Pin1: tpin; Pin2: tpin; NCState: boolean): boolean;
 begin
+   // Build test header combining both switch names
    String = 'TESTING SWITCHES ';
-
    String = StrAdd(String, SWName);
    String = StrAdd(String, ', ');
    String = StrAdd(String, SWNameOverride);
 
+   // Add blank line for readability in UI and report
    UIWriteNormal(' ');
    ReportWriteNormal(' ');
 
+   // Display header to operator and report
    UIWriteNormal(String);
    ReportWriteNormal(String);
 
    if (NCState == TRUE)
    begin
-      // Switch NC
-      // +----+----+
-      // | S1 | OR |
-      // +----+----+
-      // | 1  | 0  |
-      // +----+----+
-
+      // --- Phase 1: primary CLOSED, override OPEN (1,0) ---
       String = str_sw_two_state(SWName, 'CLOSED', SWNameOverride, 'OPEN');
-
       ConnectionTest(String, Pin1, Pin2);
 
-      // +----+----+
-      // | S1 | OR |
-      // +----+----+
-      // | 0  | 0  |
-      // +----+----+
-
+      // Prompt operator to hold the primary switch
       String = StrAdd('PRESS AND HOLD ', SWName);
-
       ui_info_cancellable(String);
 
+      // --- Phase 2: both OPEN (0,0) ---
       String = str_sw_two_state(SWName, 'OPEN', SWNameOverride, 'OPEN');
-
       NoConnectionLV(String, Pin1, Pin2);
 
-      // +----+----+
-      // | S1 | OR |
-      // +----+----+
-      // | 0  | 1  |
-      // +----+----+
-
+      // Prompt operator to hold the override switch
       String = StrAdd('PRESS AND HOLD ', SWNameOverride);
-
       ui_info_cancellable(String);
 
+      // --- Phase 3: primary OPEN, override CLOSED (0,1) ---
       String = str_sw_two_state(SWName, 'OPEN', SWNameOverride, 'CLOSED');
-
       ConnectionTest(String, Pin1, Pin2);
-
    end
    else
    begin
+      // NCState = FALSE: test not implemented
       UIInfoDialog('TEST NOT IMPLEMENTED. PLEASE CONTACT TEST DEPARTMENT');
       MiscAbortTest();
    end;
 
+   // Final prompt to release all switches
    ui_info_cancellable('RELEASE ALL SWITCHES');
-
 end;
 
+
+{**
+  @brief   Perform series continuity tests on two switches in a single circuit.
+  @details
+    - Displays a header combining @p SWName1 and @p SWName2.
+    - If @p NCState = TRUE, executes three test phases in series:
+      1. Both switches CLOSED (1,1).
+      2. First switch OPEN, second CLOSED (0,1) after prompting operator.
+      3. First CLOSED, second OPEN (1,0) after prompting operator.
+    - If @p NCState = FALSE, displays a not-implemented dialog and aborts.
+    - Finally, prompts the operator to release all switches.
+  @param   SWName1  Identifier for the first switch.
+  @param   SWName2  Identifier for the second switch.
+  @param   Pin1     First terminal pin for continuity checks.
+  @param   Pin2     Second terminal pin for continuity checks.
+  @param   NCState  If TRUE, run the series NC-first sequence; otherwise abort as unimplemented.
+  @return  Returns TRUE upon successful test sequence; aborts on error or unimplemented branch.
+**}
 function test_two_series(SWName1: string; SWName2: string; Pin1: tpin; Pin2: tpin; NCState: boolean): boolean;
 begin
+   // Initialize the test header string
    String = 'TESTING SWITCHES ';
-
    String = StrAdd(String, SWName1);
    String = StrAdd(String, ', ');
    String = StrAdd(String, SWName2);
 
+   // Add spacing in UI and report for readability
    UIWriteNormal(' ');
    ReportWriteNormal(' ');
 
+   // Display the header in UI and report
    UIWriteNormal(String);
    ReportWriteNormal(String);
 
    if (NCState == TRUE)
    begin
-      // +----+----+
-      // | S1 | S2 |
-      // +----+----+
-      // | 1  | 1  |
-      // +----+----+
-
+      // --- Phase 1: both switches CLOSED (1,1) ---
       String = str_sw_two_state(SWName1, 'CLOSED', SWName2, 'CLOSED');
-
       ConnectionTest(String, Pin1, Pin2);
 
-      // +----+----+
-      // | S1 | S2 |
-      // +----+----+
-      // | 0  | 1  |
-      // +----+----+
+      // --- Phase 2: first OPEN, second CLOSED (0,1) ---
       String = StrAdd('PRESS AND HOLD ', SWName1);
-
       ui_info_cancellable(String);
-
       String = str_sw_two_state(SWName1, 'OPEN', SWName2, 'CLOSED');
-
       NoConnectionLV(String, Pin1, Pin2);
 
-      // +----+----+
-      // | S1 | S2 |
-      // +----+----+
-      // | 1  | 0  |
-      // +----+----+
+      // --- Phase 3: first CLOSED, second OPEN (1,0) ---
       String = StrAdd('RELEASE ', SWName1);
       String = StrAdd(String, '<BR>PRESS AND HOLD ');
       String = StrAdd(String, SWName2);
-
       ui_info_cancellable(String);
-
       String = str_sw_two_state(SWName1, 'CLOSED', SWName2, 'OPEN');
-
       NoConnectionLV(String, Pin1, Pin2);
    end
    else
    begin
+      // Unimplemented NCState = FALSE branch: notify and abort
       UIInfoDialog('TEST NOT IMPLEMENTED. PLEASE CONTACT TEST DEPARTMENT');
       MiscAbortTest();
    end;
 
+   // Final prompt to release all switches
    ui_info_cancellable('RELEASE ALL SWITCHES');
-
 end;
 
+
+{**
+  @brief   Perform series continuity tests on two switches with an override switch.
+  @details
+    - Constructs and displays a header combining @p SW1Name, @p SW2Name, and @p SWOverrideName.
+    - If @p NCState = TRUE, executes the following sequence:
+      1. Test both switches closed and override open (1,1,0).
+      2. Prompt operator to hold @p SW1Name, then test (0,1,0).
+      3. Prompt operator to release @p SW1Name and hold @p SW2Name, then test (1,0,0).
+      4. Prompt operator to hold @p SWOverrideName, then test (1,0,1).
+    - If @p NCState = FALSE, displays a not-implemented message and aborts.
+    - Finally, prompts the operator to release all switches.
+  @param   SW1Name          Identifier for the first switch.
+  @param   SW2Name          Identifier for the second switch.
+  @param   SWOverrideName   Identifier for the override switch.
+  @param   Pin1             First terminal pin for continuity tests.
+  @param   Pin2             Second terminal pin for continuity tests.
+  @param   NCState          If TRUE, run the NC-first series sequence; otherwise abort.
+  @return  TRUE if the test sequence completes without abort; aborts on failure or unimplemented branch.
+**}
 function test_two_series_with_override(SW1Name: string; SW2Name: string; SWOverrideName: string; Pin1: tpin; Pin2: tpin; NCState: boolean): boolean;
 begin
+   // Build the test header with all switch names
    String = 'TESTING SWITCHES ';
-
    String = StrAdd(String, SW1Name);
    String = StrAdd(String, ', ');
    String = StrAdd(String, SW2Name);
    String = StrAdd(String, ', ');
    String = StrAdd(String, SWOverrideName);
 
+   // Add spacing in both UI and report for readability
    UIWriteNormal(' ');
    ReportWriteNormal(' ');
 
+   // Display the header line in UI and report
    UIWriteNormal(String);
    ReportWriteNormal(String);
 
-
    if (NCState == TRUE)
    begin
-      // +----+----+----+
-      // | S1 | S2 | OR |
-      // +----+----+----+
-      // | 1  | 1  | 0  |
-      // +----+----+----+
+      // --- Phase 1: S1 CLOSED, S2 CLOSED, Override OPEN (1,1,0) ---
       String = str_sw_three_state(SW1Name, 'CLOSED', SW2Name, 'CLOSED', SWOverrideName, 'OPEN');
-
       ConnectionTest(String, Pin1, Pin2);
 
-      // +----+----+----+
-      // | S1 | S2 | OR |
-      // +----+----+----+
-      // | 0  | 1  | 0  |
-      // +----+----+----+
+      // --- Phase 2: Prompt to hold S1, then test S1 OPEN, S2 CLOSED, Override OPEN (0,1,0) ---
       String = StrAdd('PRESS AND HOLD ', SW1Name);
-
       ui_info_cancellable(String);
-
-      String = str_sw_three_state(SW1Name, 'OPEN', SW2Name, 'CLOSED', SWOverrideName, 'OPEN');
-
+      String = str_sw_three_state(SW1Name, 'OPEN',   SW2Name, 'CLOSED', SWOverrideName, 'OPEN');
       NoConnectionLV(String, Pin1, Pin2);
 
-      // +----+----+----+
-      // | S1 | S2 | OR |
-      // +----+----+----+
-      // | 0  | 0  | 0  |
-      // +----+----+----+
-//      String = StrAdd('PRESS AND HOLD ', SW2Name);
-//
-//      ui_info_cancellable(String);
-//
-//      String = str_sw_three_state(SW1Name, 'OPEN', SW2Name, 'OPEN', SWOverrideName, 'OPEN');
-//
-//      NoConnectionLV(String, Pin1, Pin2);
-
-      // +----+----+----+
-      // | S1 | S2 | OR |
-      // +----+----+----+
-      // | 1  | 0  | 0  |
-      // +----+----+----+
+      // --- Phase 3: Prompt to release S1 and hold S2, then test S1 CLOSED, S2 OPEN, Override OPEN (1,0,0) ---
       String = StrAdd('RELEASE ', SW1Name);
       String = StrAdd(String, '<BR>PRESS AND HOLD ');
       String = StrAdd(String, SW2Name);
-
       ui_info_cancellable(String);
-
-      String = str_sw_three_state(SW1Name, 'CLOSED', SW2Name, 'OPEN', SWOverrideName, 'OPEN');
-
+      String = str_sw_three_state(SW1Name, 'CLOSED', SW2Name, 'OPEN',   SWOverrideName, 'OPEN');
       NoConnectionLV(String, Pin1, Pin2);
 
-      // +----+----+----+
-      // | S1 | S2 | OR |
-      // +----+----+----+
-      // | 1  | 0  | 1  |
-      // +----+----+----+
+      // --- Phase 4: Prompt to hold Override, then test S1 CLOSED, S2 OPEN, Override CLOSED (1,0,1) ---
       String = StrAdd('PRESS AND HOLD ', SWOverrideName);
-
       ui_info_cancellable(String);
-
-      String = str_sw_three_state(SW1Name, 'CLOSED', SW2Name, 'OPEN', SWOverrideName, 'CLOSED');
-
+      String = str_sw_three_state(SW1Name, 'CLOSED', SW2Name, 'OPEN',   SWOverrideName, 'CLOSED');
       ConnectionTest(String, Pin1, Pin2);
-
    end
    else
    begin
+      // Unimplemented branch: notify operator and abort test
       UIInfoDialog('TEST NOT IMPLEMENTED. PLEASE CONTACT TEST DEPARTMENT');
       MiscAbortTest();
    end;
 
+   // Final prompt to release all switches before proceeding
    ui_info_cancellable('RELEASE ALL SWITCHES');
-
 end;
 
-function rcl_test_cap_report(CapAvg: real; TolPercent: integer): boolean;
+
+{**
+  @brief   Calculate and display the capacitance tolerance range.
+  @details Computes the upper and lower tolerance limits from the average capacitance
+           (@p CapAvg) and a percentage tolerance (@p TolPercent), then reports the
+           formatted range.
+  @param   CapAvg      Average capacitance in Farads (e.g., 1.0E-9 for 1 nF).
+  @param   TolPercent  Integer percentage tolerance (e.g., 10 for ±10%).
+  @return  void
+**}
+function rcl_test_cap_report(CapAvg: real; TolPercent: integer): void;
 begin
    // Print out tolerances for capacitance testing.
    // CapAvg: Specify as unitless float in Farads. nF is 1.0E-9
    // TolPercent: Integer percentage tolerance.
 
-   UpperTol = CapAvg * (1 + (TolPercent / 100));
-   LowerTol = CapAvg * (1 - (TolPercent / 100));
+   UpperTol = CapAvg * (1 + (TolPercent / 100)); // calculate upper tolerance limit
+   LowerTol = CapAvg * (1 - (TolPercent / 100)); // calculate lower tolerance limit
 
-   blank_line(TRUE);
+   blank_line(TRUE);                             // insert blank line before report
 
-   ui_report_normal('Capacitance parameters');
-   String = StrAdd('Average: ', FormatCapacitance(CapAvg));
+   ui_report_normal('Capacitance parameters');   // header for capacitance report
+   String = StrAdd('Average: ', FormatCapacitance(CapAvg)); // add average value
    String = StrAdd(String, ', Tolerance: ');
-   String = StrAdd(String, TolPercent);
+   String = StrAdd(String, TolPercent);          // add tolerance percentage
    String = StrAdd(String, '%  ->  [');
-   String = StrAdd(String, FormatCapacitance(LowerTol));
+   String = StrAdd(String, FormatCapacitance(LowerTol)); // add lower bound
    String = StrAdd(String, ' - ');
-   String = StrAdd(String, FormatCapacitance(UpperTol));
+   String = StrAdd(String, FormatCapacitance(UpperTol)); // add upper bound
    String = StrAdd(String, ']');
 
-   ui_report_normal(String);
+   ui_report_normal(String);                     // display the full tolerance range
 
-   blank_line(TRUE);
-
-
+   blank_line(TRUE);                             // insert blank line after report
 end;
 
+
+{**
+  @brief   Perform a capacitance test on specified pins with tolerance checking.
+  @details
+    Checks that the Electrical Components command group is active before testing.
+    Computes upper and lower tolerance limits from the average capacitance (@p CapAvg)
+    and percentage tolerance (@p TolPercent).  If @p ReportTol is TRUE, reports the
+    tolerance parameters before running the test.  Executes an RLC parallel capacitance
+    test and returns its result.  Aborts the test with an error if the command group
+    is not active.
+  @param   Name        Descriptive name for the capacitor under test.
+  @param   FromPin     Starting terminal pin for the capacitance measurement.
+  @param   ToPin       Ending terminal pin for the capacitance measurement.
+  @param   CapAvg      Average capacitance in Farads (e.g., 1.0E-9 for 1 nF).
+  @param   TolPercent  Integer percentage tolerance (e.g., 10 for ±10%).
+  @param   ReportTol   Optional flag to display tolerance info before testing (default FALSE).
+  @return  TRUE if the capacitance falls within tolerance, FALSE otherwise.
+**}
 function rcl_test_cap(Name: string; FromPin: tpin; ToPin: tpin; CapAvg: real; TolPercent: integer; ReportTol: boolean = FALSE): boolean;
 begin
-   Result = FALSE;
+   Result = FALSE;  // default to failure
 
+   // Verify electrical components support is available
    if (ParamIsCommandGroupActive(CMDGRP_ElectricalComponents))
    begin
-      // Test capacitance with optional printout to report.
-      // CapAvg: Specify as unitless float in Farads. nF is 1.0E-9
-      // TolPercent: Integer percentage tolerance.
-      UpperTol = CapAvg * (1 + (TolPercent / 100));
-      LowerTol = CapAvg * (1 - (TolPercent / 100));
+      // Calculate tolerance bounds based on average and percentage
+      UpperTol = CapAvg * (1 + (TolPercent / 100));  // upper limit
+      LowerTol = CapAvg * (1 - (TolPercent / 100));  // lower limit
 
       if (ReportTol)
       begin
+         // Optionally display tolerance parameters in report
          rcl_test_cap_report(CapAvg, TolPercent);
       end;
 
+      // Execute the actual RLC parallel capacitance test
       Result = RLCParallelCapacitanceTest(Name, FromPin, ToPin, LowerTol, UpperTol);
    end
    else
    begin
+      // Command group inactive ? report error and abort test
       ui_report_error('Electrical Components command group NOT ACTIVE! ABORTING TEST! Contact test department.');
       MiscAbortTest();
    end;
 
-   blank_line(TRUE);
-
+   blank_line(TRUE);  // spacing after test
 end;
 
+
+{**
+  @brief   Retrieve the operator’s name from the operator ID mapping file.
+  @details
+    1. Attempts to open the INI file defined by `FILE_OPERATOR_ID_MAP`.
+    2. Reads the current operator ID from global data key `"Value1"` in `"TestStart InputData"`.
+    3. Looks up the corresponding name in the `[OperatorID]` section using that ID.
+    4. If the file cannot be opened or the lookup returns `"NULL"`, displays error dialogs, logs the error, and aborts the test.
+  @return  The operator name string on success; never returns if an error occurs (test is aborted).
+**}
 function operator_name_from_id(): string;
 begin
+   // Default to "NULL" until a valid name is found
    Result = 'NULL';
 
+   // Open the operator ID mapping INI file
    Handle = FileOpenIni(FILE_OPERATOR_ID_MAP);
 
    if (Handle == 0)
    begin
+      // Failed to open file => notify operator and prevent further testing
       UIErrorDialog('COULD NOT OPEN OPERATOR ID FILE.<BR><BR>CONTACT TEST LAB.');
    end
    else
    begin
+      // Retrieve the operator ID from global data
       Operator = GlobalDataRead('Value1', '', 'TestStart InputData');
+      // Fetch the name corresponding to the operator ID
       OperatorName = FileGetIni(Handle, 'OperatorID', Operator, 'NULL');
       FileCloseIni(Handle);
 
       if (StrCompare(OperatorName, 'NULL') == 0)
       begin
+         // No matching name found => log error, report, and abort
          UIWriteError('OPERATOR ID NOT FOUND.<BR><BR>CONTACT TEST LAB');
          ReportWriteError('OPERATOR ID NOT FOUND, TEST AUTOMATICALLY ABORTED.');
-
          MiscAbortTest();
       end
       else
       begin
+         // Valid name found => return it
          Result = OperatorName;
       end;
    end;
-
-
 end;
