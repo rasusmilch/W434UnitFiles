@@ -7,7 +7,7 @@ begin
 }
    FILE_TIMER_DURATIONS = 'O:\Test Eng\Support_Files\W434\test_durations.ini';
    FILE_JOB_WHITELIST = 'O:\Test Eng\Support_Files\W434\job_numbers_whitelist.ini';
-
+   FILE_OPERATOR_ID_MAP = 'O:\Test Eng\Support_Files\W434\operator_id_mapping.ini';
 end;
 
 function read_test_duration(Debug: boolean = FALSE): string;
@@ -221,7 +221,7 @@ begin
    ReportWriteNormal(Line);
 end;
 
-function blank_line(Report: boolean): void;
+function blank_line(Report: boolean = TRUE): void;
 begin
    UIWriteNormal(' ');
 
@@ -1095,5 +1095,94 @@ begin
    end;
 
    ui_info_cancellable('RELEASE ALL SWITCHES');
+
+end;
+
+function rcl_test_cap_report(CapAvg: real; TolPercent: integer): boolean;
+begin
+   // Print out tolerances for capacitance testing.
+   // CapAvg: Specify as unitless float in Farads. nF is 1.0E-9
+   // TolPercent: Integer percentage tolerance.
+
+   UpperTol = CapAvg * (1 + (TolPercent / 100));
+   LowerTol = CapAvg * (1 - (TolPercent / 100));
+
+   blank_line(TRUE);
+
+   ui_report_normal('Capacitance parameters');
+   String = StrAdd('Average: ', FormatCapacitance(CapAvg));
+   String = StrAdd(String, ', Tolerance: ');
+   String = StrAdd(String, TolPercent);
+   String = StrAdd(String, '%  ->  [');
+   String = StrAdd(String, FormatCapacitance(LowerTol));
+   String = StrAdd(String, ' - ');
+   String = StrAdd(String, FormatCapacitance(UpperTol));
+   String = StrAdd(String, ']');
+
+   ui_report_normal(String);
+
+   blank_line(TRUE);
+
+
+end;
+
+function rcl_test_cap(Name: string; FromPin: tpin; ToPin: tpin; CapAvg: real; TolPercent: integer; ReportTol: boolean = FALSE): boolean;
+begin
+   Result = FALSE;
+
+   if (ParamIsCommandGroupActive(CMDGRP_ElectricalComponents))
+   begin
+      // Test capacitance with optional printout to report.
+      // CapAvg: Specify as unitless float in Farads. nF is 1.0E-9
+      // TolPercent: Integer percentage tolerance.
+      UpperTol = CapAvg * (1 + (TolPercent / 100));
+      LowerTol = CapAvg * (1 - (TolPercent / 100));
+
+      if (ReportTol)
+      begin
+         rcl_test_cap_report(CapAvg, TolPercent);
+      end;
+
+      Result = RLCParallelCapacitanceTest(Name, FromPin, ToPin, LowerTol, UpperTol);
+   end
+   else
+   begin
+      ui_report_error('Electrical Components command group NOT ACTIVE! ABORTING TEST! Contact test department.');
+      MiscAbortTest();
+   end;
+
+   blank_line(TRUE);
+
+end;
+
+function operator_name_from_id(): string;
+begin
+   Result = 'NULL';
+
+   Handle = FileOpenIni(FILE_OPERATOR_ID_MAP);
+
+   if (Handle == 0)
+   begin
+      UIErrorDialog('COULD NOT OPEN OPERATOR ID FILE.<BR><BR>CONTACT TEST LAB.');
+   end
+   else
+   begin
+      Operator = GlobalDataRead('Value1', '', 'TestStart InputData');
+      OperatorName = FileGetIni(Handle, 'OperatorID', Operator, 'NULL');
+      FileCloseIni(Handle);
+
+      if (StrCompare(OperatorName, 'NULL') == 0)
+      begin
+         UIWriteError('OPERATOR ID NOT FOUND.<BR><BR>CONTACT TEST LAB');
+         ReportWriteError('OPERATOR ID NOT FOUND, TEST AUTOMATICALLY ABORTED.');
+
+         MiscAbortTest();
+      end
+      else
+      begin
+         Result = OperatorName;
+      end;
+   end;
+
 
 end;
