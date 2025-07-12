@@ -538,13 +538,13 @@ end;
  * "Cancel", "True", and "False".  Compares the operator’s choice against @p SuccessFlag:
  * if they match, the test passes; otherwise it fails.  Any cancellation or mismatch
  * increments the failure counter and records an error message.  Finally, draws a
- * bordered report line and returns the error status.
+ * bordered report line and returns prompt pass (TRUE) or failure (FALSE).
  *
  * @param   Title         The caption text for the dialog window.
  * @param   Message       The prompt or question displayed to the operator.
  * @param   SuccessFlag   If TRUE, selecting "True" is a pass; if FALSE, selecting "False" is a pass.
  * @param   Debug         Optional flag to enable extra debug output (default is FALSE).
- * @return  Returns TRUE if an error or test failure occurred, FALSE on a successful pass.
+ * @return  Returns       FALSE if an error or test failure occurred, TRUE on a successful pass.
  *}
 function ui_dialog_operator_true_false(Title: string; Message: string; SuccessFlag: boolean; Debug: boolean = FALSE): boolean;
 begin
@@ -555,7 +555,7 @@ begin
    Error = FALSE;              // tracks whether an error/failure occurred
 
    // Show a custom dialog with Cancel, True, False buttons
-   Button = UIMessageDialogCustom(Title, Message, ['Cancel', 'True', 'False']);
+   Button = UIMessageDialogCustom(Title, Message, ['CANCEL', 'TRUE', 'FALSE']);
    switch(Button)
    begin
       case DIALOGRESULT_Closed:
@@ -619,7 +619,13 @@ begin
 
    blank_line(TRUE);                                 // add a blank line for readability
 
-   Result = Error;                                   // return TRUE on error/failure, FALSE on pass
+   Result = TRUE;
+
+   if (Error)
+   begin
+      Result = FALSE;                                // return FALSE on error/failure
+   end;
+
 end;
 
 function max_real(Var1: real; Var2: real): real;
