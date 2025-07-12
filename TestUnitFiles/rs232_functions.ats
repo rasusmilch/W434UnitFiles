@@ -1,3 +1,45 @@
+{
+  Provides serial port discovery and probing utilities, RS232 command send/receive wrappers,
+  and timer control commands over RS232.
+
+  serial_probe(Port: integer; Response: string; Debug: boolean): boolean
+  //  Probe a given COM port by sending "probe;" and validate the received string against Response.
+
+  serial_discover(Response: string; Debug: boolean): integer
+  //  Scan COM ports 1–8 at 115200 baud, open each, and use serial_probe to identify a working port.
+
+  rs232_send_cmd(Cmd: string; Debug: boolean; Reopen: boolean = FALSE): boolean
+  //  Send Cmd over the configured RS232 port (or reopen if specified), then read and log the response.
+
+  timer_discover(Debug: boolean): integer
+  //  Call serial_discover with the predefined RS232_RESPONSE to detect the timer’s COM port.
+
+  timer_send_cmd(Cmd: string; Debug: boolean; Reopen: boolean = FALSE): boolean
+  //  Ensure a valid timer port (probing with timer_discover if needed) and forward Cmd via rs232_send_cmd.
+
+  timer_disp_str(Message: string; Line: integer = 0; Debug: boolean = FALSE; Reopen: boolean = FALSE): void
+  //  Display Message on the timer’s line (0 or 1), validating the line index and sending the command.
+
+  timer_set(Seconds: integer; Debug: boolean = FALSE; Reopen: boolean = FALSE): boolean
+  //  Configure the timer duration to Seconds via “setTimer” command or report an error if zero.
+
+  timer_start(Debug: boolean = FALSE; Reopen: boolean = FALSE): boolean
+  //  Send the “startTimer;” command to begin the timer countdown.
+
+  timer_stop(Debug: boolean = FALSE; Reopen: boolean = FALSE): boolean
+  //  Send the “stopTimer;” command to halt the timer.
+
+  timer_pause(Debug: boolean = FALSE; Reopen: boolean = FALSE): boolean
+  //  Send the “pauseTimer;” command to pause the timer.
+
+  timer_finish(TestResult: string; Debug: boolean = FALSE; Reopen: boolean = FALSE): boolean
+  //  Send “doneTimer |TestResult|;” to the timer to indicate test completion and close session.
+
+  timer_set_errors(Errors: integer; Debug: boolean = FALSE; Reopen: boolean = FALSE): boolean
+  //  Update the timer’s error count via “setErrorTimer <Errors>;” command.
+}
+
+
 constants
 begin
    RS232_RESPONSE = 'Version 1.0,TA-1234';
@@ -184,15 +226,26 @@ begin
 
 end;
 
+{**
+  @brief   Send an RS232 command string and receive the response, with optional reopen and debug logging.
+  @details
+    If @p Reopen is TRUE, clears the port to force reopening; otherwise reads the port from global data 'RS232.PORT'.
+    When a valid port is available, sends @p Cmd via RS232SendString and reads the response via RS232ReceiveString.
+    If @p Debug is TRUE, logs send/receive success or error codes.  If no port is specified and @p Debug is TRUE, logs a notification.
+  @param   Cmd     The command string to send over RS232.
+  @param   Debug   Enable detailed debug output when TRUE.
+  @param   Reopen  If TRUE, clears the stored port to force a reopen (default FALSE).
+  @return  Always returns TRUE (does not currently signal failure).
+**}
 function rs232_send_cmd(Cmd: string; Debug: boolean; Reopen: boolean = FALSE): boolean;
 begin
    if (Reopen)
    begin
-     Port = 'NULL';
+     Port = 'NULL'; // Clear port to force reopen
    end
    else
    begin
-     Port = GlobalDataRead('RS232.PORT', 'NULL');
+     Port = GlobalDataRead('RS232.PORT', 'NULL'); // Read port from global configuration
    end;
 
    if (StrCompare(Port, 'NULL') <> 0)
@@ -201,7 +254,7 @@ begin
      begin
        if (Debug)
        begin
-          UIWriteNormal('Data sent');
+          UIWriteNormal('Data sent'); // Debug: command successfully sent
        end;
      end
      else
@@ -209,7 +262,7 @@ begin
         if (Debug)
         begin
            ErrorCode = RS232GetError();
-           UIWriteNormal(StrAdd('Port Error code: ', ErrorCode));
+           UIWriteNormal(StrAdd('Port Error code: ', ErrorCode)); // Debug: report send error code
         end;
      end;
 
@@ -218,7 +271,7 @@ begin
      begin
        if (Debug)
        begin
-          UIWriteNormal(StrAdd('Data: ', Data));
+          UIWriteNormal(StrAdd('Data: ', Data)); // Debug: display received data
        end;
      end
      else
@@ -226,7 +279,7 @@ begin
         if (Debug)
         begin
            ErrorCode = RS232GetError();
-           UIWriteNormal(StrAdd('Response Error code: ', ErrorCode));
+           UIWriteNormal(StrAdd('Response Error code: ', ErrorCode)); // Debug: report receive error code
         end;
      end;
    end
@@ -234,137 +287,264 @@ begin
    begin
      if (Debug)
      begin
-       UIWriteNormal('No port specified!');
+       UIWriteNormal('No port specified!'); // Debug: no port was configured
      end;
    end;
 end;
 
+
+{**
+  @brief   Discover the RS232 communication port using serial_discover.
+  @details Calls serial_discover with RS232_RESPONSE and the debug flag.
+           If no port is found (result 0) and Debug is TRUE, logs an error message.
+           Returns the discovered port number or 0 if none detected.
+  @param   Debug  Enable debug logging when TRUE.
+  @return  The discovered port identifier (0 if not found).
+**}
 function timer_discover(Debug: boolean): integer;
 begin
+   // Attempt to detect the RS232 port
    Port = serial_discover(RS232_RESPONSE, Debug);
 
    if (Port == 0)
    begin
+     // No port detected
      if (Debug)
      begin
         UIWriteError('Comm port not detected, is RS232 adapter plugged in?');
      end;
-
-   //MiscAbortTest();
+     // Test is not aborted here, but could be with MiscAbortTest()
    end;
 
+   // Return the discovered port (0 if none)
    Result = Port;
-
 end;
 
+
+{**
+  @brief   Send a command to the timer via RS232, probing for port if needed.
+  @details
+    If Reopen is TRUE, clears existing RS232 port value; otherwise reads 'RS232.PORT' from global data.
+    If a valid port is available, calls rs232_send_cmd(Cmd, Debug).
+    If no port is found, calls timer_discover(Debug) to probe, and if discovered, calls rs232_send_cmd.
+    Logs progress and errors when Debug is TRUE.
+  @param   Cmd     Command string to send via RS232.
+  @param   Debug   Enable debug output when TRUE.
+  @param   Reopen  If TRUE, clear stored port to force re-discovery (default FALSE).
+  @return  Returns TRUE if command send attempted (port found or discovered); FALSE otherwise.
+**}
 function timer_send_cmd(Cmd: string; Debug: boolean; Reopen: boolean = FALSE): boolean;
 begin
+   // Determine whether to reuse or clear the stored RS232 port
    if (Reopen)
    begin
-     Port = 'NULL';
+     Port = 'NULL'; // Clear port to force re-open
    end
    else
    begin
-     Port = GlobalDataRead('RS232.PORT', 'NULL');
+     Port = GlobalDataRead('RS232.PORT', 'NULL'); // Read previously stored port
    end;
 
-   PortNum = 0;
+   PortNum = 0; // Initialize discovered port number
 
+   // If a valid port string exists
    if (StrCompare(Port, 'NULL') <> 0)
    begin
       if (Debug)
       begin
-         UIWriteNormal(StrAdd('Port found at ', Port));
+         UIWriteNormal(StrAdd('Port found at ', Port)); // Debug: inform of existing port
       end;
 
-      rs232_send_cmd(Cmd, Debug);
+      rs232_send_cmd(Cmd, Debug); // Send command using known port
    end
    else
    begin
       if (Debug)
       begin
-         UIWriteNormal('Port needs probing');
+         UIWriteNormal('Port needs probing'); // Debug: no port, will probe
       end;
 
-      PortNum = timer_discover(Debug);
+      PortNum = timer_discover(Debug); // Probe for RS232 port
 
       if (PortNum > 0)
       begin
          if (Debug)
          begin
-           UIWriteNormal(StrAdd('Port needed probing, found at ', PortNum));
+           UIWriteNormal(StrAdd('Port needed probing, found at ', PortNum)); // Debug: found new port
          end;
 
-         rs232_send_cmd(Cmd, Debug);
+         rs232_send_cmd(Cmd, Debug); // Send command using discovered port
       end
       else
       begin
          if (Debug)
          begin
-            UIWriteNormal('Port NOT FOUND');
+            UIWriteNormal('Port NOT FOUND'); // Debug: probe failed
          end;
       end;
    end;
 end;
 
-function timer_disp_str(Message: string; Debug: boolean = FALSE; Reopen: boolean = FALSE): void;
-begin
-   String = 'dispString |';
-   String = StrAdd(String, Message);
-   String = StrAdd(String, '|;');
 
-   if (Debug)
+{**
+  @brief   Send a text string to the timer display on the specified line.
+  @details
+    Builds a `dispString |Message| ` command, ensures the line index is 0 or 1 (defaults to 0 if out of bounds),
+    optionally logs the command when `Debug` is TRUE, appends the line number, and transmits via `timer_send_cmd`.
+  @param   Message   The text to display on the timer.
+  @param   Line      The display line index (0 or 1); values outside this range are reset to 0.
+  @param   Debug     If TRUE, outputs the constructed command for debugging.
+  @param   Reopen    If TRUE, forces the RS232 port to be reopened before sending.
+  @return  void
+**}
+function timer_disp_str(Message: string; Line: integer = 0; Debug: boolean = FALSE; Reopen: boolean = FALSE): void;
+begin
+   // Initialize the display command prefix
+   String = 'dispString |';
+   // Append the message content
+   String = StrAdd(String, Message);
+   // Close the message section
+   String = StrAdd(String, '| ');
+
+   // Validate that Line is within supported range (0 or 1)
+   if (Line < 0 OR Line > 1)
    begin
-      UIWriteNormal(StrAdd('Sending command: ', String));
+      UIWriteError(StrAdd('ERROR: Display line number out of bounds: ', Line)); // report invalid line
+      Line = 0; // reset to default line
    end;
 
+   // Optionally log the command before appending line number
+   if (Debug)
+   begin
+      UIWriteNormal(StrAdd('Sending command: ', String)); // debug: show constructed command
+   end;
+
+   // Append the line index to the command
+   String = StrAdd(String, Line);
+
+   // Send the final command to the timer, with debug and reopen options
    timer_send_cmd(String, Debug, Reopen);
 end;
 
+
+{**
+  @brief   Configure the hardware timer duration and transmit the set command.
+  @details
+    If @p Seconds is non-zero, constructs "setTimer <Seconds>;" and sends via timer_send_cmd.
+    If @p Seconds is zero, displays "Invalid" on the timer and logs an error.
+  @param   Seconds  Number of seconds to set the timer (non-zero required).
+  @param   Debug    Enable debug logging when TRUE.
+  @param   Reopen   If TRUE, force reopening of the RS232 port before sending.
+  @return  TRUE if the set command was sent; FALSE if the duration was invalid.
+**}
 function timer_set(Seconds: integer; Debug: boolean = FALSE; Reopen: boolean = FALSE): boolean;
 begin
-   String = '';
+   String = '';  // Initialize the command string
 
    if (Seconds <> 0)
    begin
+      // Build the timer set command with terminator
       String = StrAdd('setTimer ', Seconds);
       String = StrAdd(String, ';');
 
       if (Debug)
       begin
-         UIWriteNormal(String);
+         UIWriteNormal(String);  // Debug: show the command being sent
       end;
 
-      timer_send_cmd(String, Debug, Reopen);
+      timer_send_cmd(String, Debug, Reopen);  // Send the setTimer command
    end
    else
    begin
-      timer_disp_str('Invalid', Debug, Reopen);
-
-      UIWriteError('Invalid timer duration value passed. CONTACT TEST LAB');
+      timer_disp_str('Invalid', Debug, Reopen);  // Display an invalid message on the timer
+      UIWriteError('Invalid timer duration value passed. CONTACT TEST LAB');  // Log error
    end;
-
-
 end;
 
+
+{**
+  @brief   Send the command to start the timer via RS232.
+  @param   Debug    Enable debug logging when TRUE.
+  @param   Reopen   If TRUE, force reopening of the RS232 port before sending.
+  @return  Returns TRUE if the start command was sent; FALSE otherwise.
+**}
 function timer_start(Debug: boolean = FALSE; Reopen: boolean = FALSE): boolean;
 begin
+   // Issue the 'startTimer;' command to the timer hardware
    timer_send_cmd('startTimer;', Debug, Reopen);
 end;
 
+
+{**
+  @brief   Send the command to stop the timer via RS232.
+  @param   Debug    Enable debug logging when TRUE.
+  @param   Reopen   If TRUE, force reopening of the RS232 port before sending.
+  @return  Returns TRUE if the stop command was sent; FALSE otherwise.
+**}
 function timer_stop(Debug: boolean = FALSE; Reopen: boolean = FALSE): boolean;
 begin
+   // Issue the 'stopTimer;' command to the timer hardware
    timer_send_cmd('stopTimer;', Debug, Reopen);
 end;
 
+
+{**
+  @brief   Send the command to pause the timer via RS232.
+  @param   Debug    Enable debug logging when TRUE.
+  @param   Reopen   If TRUE, force reopening of the RS232 port before sending.
+  @return  Returns TRUE if the pause command was sent; FALSE otherwise.
+**}
 function timer_pause(Debug: boolean = FALSE; Reopen: boolean = FALSE): boolean;
 begin
+   // Issue the 'pauseTimer;' command to the timer hardware
    timer_send_cmd('pauseTimer;', Debug, Reopen);
 end;
 
-function timer_finish(Debug: boolean = FALSE; Reopen: boolean = FALSE): boolean;
+
+{**
+  @brief   Send the test completion status to the timer and close the timer session.
+  @details
+    Constructs a `doneTimer |TestResult|;` command to indicate test completion and
+    transmits it via RS232. Ports closed between modules are reopened if `Reopen` is TRUE.
+  @param   TestResult  The result string to display at test end (e.g., "PASS" or "FAIL").
+  @param   Debug       Enable debug logging when TRUE.
+  @param   Reopen      If TRUE, force reopening of the RS232 port before sending.
+  @return  Returns TRUE if the finish command was sent; FALSE otherwise.
+**}
+function timer_finish(TestResult: string; Debug: boolean = FALSE; Reopen: boolean = FALSE): boolean;
 begin
-   // Ports are closed between modules or test sections (those opened during test
-   // must be reopened in TestEnd)
-   timer_send_cmd('doneTimer;', Debug, Reopen);
+   // Build the completion command with result
+   Str = StrAdd('doneTimer |', TestResult);
+   Str = StrAdd(Str, '|;');
+   // Send the command to the timer
+   timer_send_cmd(Str, Debug, Reopen);
+end;
+
+
+{**
+  @brief   Configure the hardware timer’s error count.
+  @details Builds the "setErrorTimer <Errors>;" command string and sends it to the timer via RS232,
+           with optional debug logging and port reopening.
+  @param   Errors   The error count value to set on the timer.
+  @param   Debug    If TRUE, logs the constructed command via UIWriteNormal.
+  @param   Reopen   If TRUE, forces reopening of the RS232 port before sending.
+  @return  Returns TRUE if the command was sent; FALSE otherwise.
+**}
+function timer_set_errors(Errors: integer; Debug: boolean = FALSE; Reopen: boolean = FALSE): boolean;
+begin
+   // Initialize the command string
+   String = '';
+
+   // Append the setErrorTimer command and error count
+   String = StrAdd('setErrorTimer ', Errors);
+   String = StrAdd(String, ';');
+
+   // Optionally display the command for debugging
+   if (Debug)
+   begin
+      UIWriteNormal(String);
+   end;
+
+   // Send the error-setting command to the timer
+   timer_send_cmd(String, Debug, Reopen);
 end;

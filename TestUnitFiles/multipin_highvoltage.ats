@@ -1,174 +1,263 @@
-{*
-// Instead of tedious pin group lists, these take a list of pins given a pin_info string
-// and tests them against the remaining pins. Good for chassis tests, 1 or 2 pins tested against
-// all others like Collins.
-//
-// Example usage (similar setup for other functions):
-//    // Initial Setup
-//    // Get list of all pins in string format from pintable (FIRST PIN IN TABLE, LAST PIN IN TABLE)
-//    AllPinsListStr = get_named_pin_list("P1-A", "P2-CASE");
-   
-//    // Convert string to list using ';' as separator
-//    MiscListFromString(AllPinsListStr, ListAllPins, ';');
+{
+  get_named_pin_list(FromPin: tpin; ToPin: tpin): string
+    Retrieve a semicolon-delimited string of named pins between two pin handles.
 
-//    // Get pins that have PIN_INFO set = 'CHASSIS' in pin table and set LOW, then set all
-//    // other pins HIGH and run DB on the grouping.
-//    nc_db_pin_info_low('CHASSIS', ListAllPins);
-//
-// Can also define certain pins as switch or sensitive components and hold them at the same potential:
-//    nc_hv_pin_info_high('SW1', ListAllPins);
-//    nc_hv_pin_info_high('SW2', ListAllPins);
-//    nc_hv_pin_info_high('SW3', ListAllPins);
-//    nc_hv_pin_info_high('SW5', ListAllPins);
-//    nc_hv_pin_info_high('SW7', ListAllPins);
-//    nc_hv_pin_info_high('SW9', ListAllPins);
-//
-// Further examples Collins AS-0191-001, ONBOARD SYSTEMS AS-0192-001 and especially AS-0188-001 for multipins
-// tested against all other pins (switch contacts against all others)
-*}
+  transform_pinlist_name_str(PinList: tpinarray): string
+    Convert an array of pin identifiers into a comma-separated string of their PIN_Name values.
 
+  no_conn_db_lists(HighName: string; HighList: tpinarray; LowName: string; LowList: tpinarray): void
+    Define and execute a no-connection database test group for specified high and low pin arrays.
+
+  nc_db_pin_info_high(PinInfoStr: string; FullPinList: tarray): void
+    Perform a no-connection DB test treating pins with matching PIN_Info as HIGH and all others as LOW.
+
+  nc_db_pin_info_low(PinInfoStr: string; FullPinList: tarray): void
+    Perform a no-connection DB test treating pins with matching PIN_Info as LOW and all others as HIGH.
+
+  no_conn_hv_lists(HighName: string; HighList: tpinarray; LowName: string; LowList: tpinarray): void
+    Execute a high-voltage no-connection test group for specified high and low pin arrays.
+
+  nc_hv_pin_info_high(PinInfoStr: string; FullPinList: tarray): void
+    Perform a high-voltage no-connection test treating pins with matching PIN_Info as HIGH.
+
+  nc_hv_pin_info_low(PinInfoStr: string; FullPinList: tarray): void
+    Perform a high-voltage no-connection test treating pins with matching PIN_Info as LOW.
+
+  no_conn_lv_abort(Description: string; PinList: tpinarray): void
+    Perform low-voltage isolation on each pin in the list and abort the test if any fail.
+}
+
+
+{
+ Dynamic no-connection test utilities using PIN_Info tags to build pin groups at runtime.
+
+ Usage Example:
+   // Retrieve all named pins between two endpoints:
+   AllPinsListStr = get_named_pin_list("P1-A","P2-CASE");
+   MiscListFromString(AllPinsListStr,ListAllPins,';');
+
+   // Chassis DB test: pins tagged "CHASSIS" LOW vs. all others HIGH
+   nc_db_pin_info_low('CHASSIS',ListAllPins);
+
+   // HV isolation tests: treat switch contacts as HIGH against all others
+   nc_hv_pin_info_high('SW1',ListAllPins);
+   nc_hv_pin_info_high('SW2',ListAllPins);
+   …
+
+ Typical applications include chassis isolation tests, switch contact verification, and multipin protocols.
+ For further examples see Collins AS-0191-001, ONBOARD SYSTEMS AS-0192-001 and especially
+ AS-0188-001 for multiple pins tested against all other pins (switch contacts against all others.)
+}
+
+
+{**
+  @brief   Retrieve a semicolon-delimited string of named pins within a specified range.
+  @details
+    1. Initializes a temporary list with the starting pin.
+    2. Uses PinsInRange to collect all pins from @p FromPin to @p ToPin.
+    3. Iterates through each pin, adding only those with a non-empty name to the list.
+    4. Converts the final list to a semicolon-separated string.
+  @param   FromPin  The first pin in the range to inspect.
+  @param   ToPin    The last pin in the range to inspect.
+  @return  A string of named pins separated by ';', or an empty string if none found.
+**}
 function get_named_pin_list(FromPin: tpin; ToPin: tpin): string;
 begin
-   // Get only named pins from pin table between FROM and TO inclusive.
-   // Returns a string to convert to list (can't return list?)
-
+   // Initialize list with the first pin definition
    PinDefineList(List, [FromPin]);
-//   PinName = PinGetData(FromPin, PIN_Name);
-//   MiscListFromString(PinName, List, ';');
 
-//   Text = MiscListToString(List, ',');
-//   UIWriteNormal(Text);
-
+   // Populate PinList with all pins in the specified range
    Count = PinsInRange(PinList, FromPin, ToPin, FALSE, TRUE);
 
+   // Loop through each pin in the range
    for Index = 1 to Count do
    begin
-      PinName = PinGetData(PinList[Index], PIN_Name);
+      PinName = PinGetData(PinList[Index], PIN_Name);  // fetch the pin’s name
 
-      // Does this have a name?
+      // Only include pins that have a non-empty name
       IsNull = StrCompare(PinName, '');
       if (IsNull <> 0)
       begin
-//         UIWriteNormal(PinName);
-         //UIWriteNormal(PinList[Index]);
          Pin = PinList[Index];
          PinDefineList(SinglePinList, [Pin]);
-         MiscAddLists(List, List, SinglePinList);
+         MiscAddLists(List, List, SinglePinList);  // add named pin to the list
       end
       else
       begin
-//         UIWriteNormal('No name set');
+         // Skip unnamed pins
       end;
    end;
 
-   //Count = MiscGetListSize(List);
-   //UIWriteNormal(Count);
-
+   // Convert the collected named pins to a semicolon-delimited string
    Text = MiscListToString(List, ';');
-   // UIWriteNormal(Text);
-
    Result = Text;
-
 end;
 
+
+{**
+  @brief   Convert an array of pin identifiers into a comma-separated string of their names.
+  @param   PinList  Array of pin handles to transform.
+  @return  A string containing each pin’s PIN_Name separated by commas (empty if PinList is empty).
+**}
 function transform_pinlist_name_str(PinList: tpinarray): string;
 begin
-   // Transform pins from system addresses (index, 1, 2... 47) into string names
+   // Initialize result string
    NameStr = '';
 
+   // Determine how many pins are in the input array
    Count = MiscGetListSize(PinList);
    //UIWriteNormal(Count);
 
-   // Seed the string with the first pin
+   // Seed NameStr with the first pin’s name, if any
    if (Count >= 1)
    begin
-      NameStr = PinGetData(PinList[1], PIN_Name);
+      NameStr = PinGetData(PinList[1], PIN_Name); // get PIN_Name property
       //UIWriteNormal(NameStr);
    end;
 
-   // Add ",PINNAME" for all other pins
+   // Append remaining pin names, each prefixed by a comma
    if (Count >= 2)
    begin
       for Index = 2 to Count do
       begin
-         PinName = PinGetData(PinList[Index], PIN_Name);
+         PinName = PinGetData(PinList[Index], PIN_Name); // retrieve next pin name
          //UIWriteNormal(PinName);
-         NameStr = StrAdd(NameStr, ',');
-         NameStr = StrAdd(NameStr, PinName);
+         NameStr = StrAdd(NameStr, ',');     // add comma delimiter
+         NameStr = StrAdd(NameStr, PinName); // append pin name
       end;
    end;
 
+   // Return the combined list of names
    Result = NameStr;
-
 end;
 
+
+{**
+  @brief   Define and execute a no-connection database group for two pin arrays.
+  @param   HighName   Label for the high-voltage pin group.
+  @param   HighList   Array of high-voltage pin identifiers.
+  @param   LowName    Label for the low-voltage pin group.
+  @param   LowList    Array of low-voltage pin identifiers.
+  @return  void
+**}
 function no_conn_db_lists(HighName: string; HighList: tpinarray; LowName: string; LowList: tpinarray): void;
 begin
+   // Define the high-voltage pin list for database operations
    PinDefineList(PinHigh, HighList);
 
+   // Define the low-voltage pin list for database operations
    PinDefineList(PinLow, LowList);
 
+   // Execute the no-connection test group with the specified labels and pin lists
    NoConnGroupDB('NCDB', HighName, PinHigh, LowName, PinLow);
 end;
 
+
+{**
+  @brief   Perform a no-connection database test treating pins matching a given info string as HIGH.
+  @details
+    1. Creates a list of pins whose PIN_Info matches @p PinInfoStr (HIGH pins).
+    2. Computes the complementary LOW pin list by subtracting HIGH pins from @p FullPinList.
+    3. Transforms the HIGH pin list into a comma-separated name string.
+    4. Executes a no-connection DB test group with HIGH and LOW pin lists.
+  @param   PinInfoStr   The PIN_Info value used to select HIGH pins.
+  @param   FullPinList  Array of all pin identifiers to consider.
+  @return  void
+**}
 function nc_db_pin_info_high(PinInfoStr: string; FullPinList: tarray): void;
 begin
-   // Tests pins with PinInfoStr in their PIN_Info field as HIGH and all others
-   // from the list as LOW.
+   // Tests pins with PinInfoStr in their PIN_Info field as HIGH and all others from the list as LOW.
 
-   // Get HIGH pins
+   // Create list of HIGH pins matching the specified info string
    PinCreateList(HighPinList, PIN_Info, PinInfoStr);
 
-   // Get LOW pins
+   // Compute LOW pins by removing HIGH pins from the full list
    MiscSubtractLists(LowPinList, FullPinList, HighPinList);
 
+   // Convert HIGH pin list to comma-separated names for display
    HighNames = transform_pinlist_name_str(HighPinList);
 
-   // Test
+   // Execute the no-connection database test with HIGH and LOW groups
    no_conn_db_lists(HighNames, HighPinList, 'ALL OTHER PINS', LowPinList);
 end;
 
+
+{**
+  @brief   Perform a no-connection database test treating pins matching a given info string as LOW.
+  @details
+    1. Creates a list of pins whose PIN_Info matches @p PinInfoStr (LOW pins).
+    2. Computes the complementary HIGH pin list by subtracting LOW pins from @p FullPinList.
+    3. Transforms the LOW pin list into a comma-separated name string.
+    4. Executes a no-connection DB test group with HIGH and LOW pin lists.
+  @param   PinInfoStr   The PIN_Info value used to select LOW pins.
+  @param   FullPinList  Array of all pin identifiers to consider.
+  @return  void
+  @example
+    // Example usage:
+    // Get list of all pins in string format from pintable (FIRST PIN IN TABLE, LAST PIN IN TABLE)
+    AllPinsListStr = get_named_pin_list("P1-A","P2-CASE");
+    // Convert string to list
+    MiscListFromString(AllPinsListStr,ListAllPins,';');
+    // Get pins that have PIN_INFO set in pin table and set LOW
+    nc_db_pin_info_low('CHASSIS',ListAllPins);
+**}
 function nc_db_pin_info_low(PinInfoStr: string; FullPinList: tarray): void;
 begin
    {*
    // Tests pins with PinInfoStr in their PIN_Info field as LOW and all others
    // from the list as HIGH.
-
-   // Example usage:
-   //    // Get list of all pins in string format from pintable (FIRST PIN IN TABLE, LAST PIN IN TABLE)
-   //    AllPinsListStr = get_named_pin_list("P1-A", "P2-CASE");
-   
-   //    // Convert string to list
-   //    MiscListFromString(AllPinsListStr, ListAllPins, ';');
-   //    // Get pins that have PIN_INFO set in pin table and set LOW
-   //    nc_db_pin_info_low('CHASSIS', ListAllPins);
    *}
 
-   // Get LOW pins
+   // Create list of LOW pins matching the specified info string
    PinCreateList(LowPinList, PIN_Info, PinInfoStr);
 
-   // Get HIGH pins
+   // Compute HIGH pins by removing LOW pins from the full list
    MiscSubtractLists(HighPinList, FullPinList, LowPinList);
 
+   // Convert LOW pin list to a comma-separated name string
    LowNames = transform_pinlist_name_str(LowPinList);
 
-   // Test
+   // Execute the no-connection database test with HIGH and LOW groups
    no_conn_db_lists('ALL OTHER PINS', HighPinList, LowNames, LowPinList);
 end;
 
+
+{**
+  @brief   Execute a high-voltage no-connection test group with specified pin arrays.
+  @details Defines separate high and low pin lists and invokes the HV no-connection group.
+  @param   HighName   Label for the high-voltage pin group.
+  @param   HighList   Array of pins to treat as high-voltage.
+  @param   LowName    Label for the low-voltage pin group.
+  @param   LowList    Array of pins to treat as low-voltage.
+  @return  void
+**}
 function no_conn_hv_lists(HighName: string; HighList: tpinarray; LowName: string; LowList: tpinarray): void;
 begin
+   // Define the high-voltage pin list for the test group
    PinDefineList(PinHigh, HighList);
 
+   // Define the low-voltage pin list for the test group
    PinDefineList(PinLow, LowList);
 
+   // Perform the HV no-connection database group test
    NoConnGroupHV('NCHV', HighName, PinHigh, LowName, PinLow);
 end;
 
+
+{**
+  @brief   Perform a high-voltage no-connection test treating pins matching a given info string as HIGH.
+  @details
+    1. Creates a list of pins whose PIN_Info equals @p PinInfoStr (HIGH pins).
+    2. Computes the complementary LOW pin list by subtracting HIGH pins from @p FullPinList.
+    3. Transforms the HIGH pin list into a comma-separated name string.
+    4. Executes a high-voltage no-connection test group with HIGH and LOW pin lists.
+  @param   PinInfoStr   The PIN_Info filter to select HIGH pins.
+  @param   FullPinList  Array of all pin identifiers to consider.
+  @return  void
+**}
 function nc_hv_pin_info_high(PinInfoStr: string; FullPinList: tarray): void;
 begin
-   // Tests pins with PinInfoStr in their PIN_Info field as HIGH and all others
-   // from the list as LOW.
+   // Tests pins with PinInfoStr in their PIN_Info field as HIGH and all others from the list as LOW.
 
    // Get HIGH pins
    PinCreateList(HighPinList, PIN_Info, PinInfoStr);
@@ -176,16 +265,28 @@ begin
    // Get LOW pins
    MiscSubtractLists(LowPinList, FullPinList, HighPinList);
 
+   // Convert HIGH pin list to a comma-separated name string
    HighNames = transform_pinlist_name_str(HighPinList);
 
-   // Test
+   // Execute the high-voltage no-connection database test with the specified groups
    no_conn_hv_lists(HighNames, HighPinList, 'ALL OTHER PINS', LowPinList);
 end;
 
+
+{**
+  @brief   Perform a high-voltage no-connection test treating pins matching a given info string as LOW.
+  @details
+    1. Builds a list of pins whose PIN_Info equals @p PinInfoStr (LOW pins).
+    2. Computes the complementary HIGH pin list by subtracting LOW pins from @p FullPinList.
+    3. Transforms the LOW pin list into a comma-separated name string.
+    4. Executes a high-voltage no-connection database group test with the HIGH and LOW pin lists.
+  @param   PinInfoStr   The PIN_Info value used to select LOW pins.
+  @param   FullPinList  Array of all pin identifiers to consider.
+  @return  void
+**}
 function nc_hv_pin_info_low(PinInfoStr: string; FullPinList: tarray): void;
 begin
-   // Tests pins with PinInfoStr in their PIN_Info field as LOW and all others
-   // from the list as HIGH.
+   // Tests pins with PinInfoStr in their PIN_Info field as LOW and all others from the list as HIGH.
 
    // Get LOW pins
    PinCreateList(LowPinList, PIN_Info, PinInfoStr);
@@ -193,34 +294,47 @@ begin
    // Get HIGH pins
    MiscSubtractLists(HighPinList, FullPinList, LowPinList);
 
+   // Convert LOW pin list to a comma-separated string of names
    LowNames = transform_pinlist_name_str(LowPinList);
 
-   // Test
+   // Execute the high-voltage no-connection test with the specified groups
    no_conn_hv_lists('ALL OTHER PINS', HighPinList, LowNames, LowPinList);
 end;
 
+
+{**
+  @brief   Perform low-voltage isolation tests on each pin, aborting on any failure.
+  @details
+    Iterates through @p PinList, calling NoConnAllLV for each pin with the provided @p Description.
+    Tracks overall success in @c AllPassed and aborts the test if any individual pin test fails,
+    reporting an error to both UI and report log.
+  @param   Description  Text label used in each NoConnAllLV call.
+  @param   PinList      Array of pin identifiers to test for isolation.
+  @return  void
+**}
 function no_conn_lv_abort(Description: string; PinList: tpinarray): void;
 begin
-   AllPassed = TRUE;
+   AllPassed = TRUE;  // assume success until a failure occurs
 
-   Count = MiscGetListSize(PinList);
+   Count = MiscGetListSize(PinList); // get number of pins to test
    //UIWriteNormal(Count);
 
-   // Add ",PINNAME" for all other pins
+   // Perform low-voltage isolation test on each pin
    if (Count >= 1)
    begin
       for Index = 1 to Count do
       begin
-         PinName = PinGetData(PinList[Index], PIN_Name);
-//         UIWriteNormal(PinName);
-         Result = NoConnAllLV(Description, PinList[Index]);
+         PinName = PinGetData(PinList[Index], PIN_Name); // fetch pin name for context
+         //UIWriteNormal(PinName);
+         Result = NoConnAllLV(Description, PinList[Index]); // test this pin
          if (Result == FALSE)
          begin
-            AllPassed = FALSE;
+            AllPassed = FALSE; // mark overall failure if any test fails
          end;
       end;
    end;
 
+   // If any pin failed, report error and abort the test
    if (AllPassed == FALSE)
    begin
       UIWriteError('LOW VOLTAGE ISOLATION TEST FAILED, ABORTING TEST');

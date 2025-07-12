@@ -76,6 +76,9 @@
 
   operator_name_from_id(): string
   //   Lookup and return the operator’s name based on the current operator ID from FILE_OPERATOR_ID_MAP, aborting on error.
+
+  timer_fails_check(Debug: boolean = FALSE): void
+  // Report the main failure counter total to the timer.
 }
 
 constants
@@ -1559,3 +1562,22 @@ begin
       end;
    end;
 end;
+
+{**
+  @brief   Report the main failure counter total to the timer.
+  @details
+    Retrieves the count from the main failure counter (FAILCOUNTER_Main) and calls
+    timer_set_errors to update the timer’s error register.
+  @param   Debug  Optional flag to enable debug logging when TRUE (default FALSE).
+  @return  void
+**}
+function timer_fails_check(Debug: boolean = FALSE): void;
+begin
+   // Main failure count
+   Fails = FailCounterGet(FAILCOUNTER_Main);
+
+   // Update the timer’s error register with the aggregated failure count
+   timer_set_errors(Fails, Debug);
+end;
+
+
