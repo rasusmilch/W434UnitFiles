@@ -1,30 +1,36 @@
 {
+  get_named_pin_list_all(): string
+  //  Build a semicolon-delimited list of every pin in the pin table that has a non-empty name.
+
   get_named_pin_list(FromPin: tpin; ToPin: tpin): string
-    Retrieve a semicolon-delimited string of named pins between two pin handles.
+  //  Retrieve a semicolon-delimited string of named pins between two pin handles.
 
   transform_pinlist_name_str(PinList: tpinarray): string
-    Convert an array of pin identifiers into a comma-separated string of their PIN_Name values.
+  //  Convert an array of pin identifiers into a comma-separated string of their PIN_Name values.
 
   no_conn_db_lists(HighName: string; HighList: tpinarray; LowName: string; LowList: tpinarray): void
-    Define and execute a no-connection database test group for specified high and low pin arrays.
+  //  Define and execute a no-connection database test group for specified high and low pin arrays.
 
   nc_db_pin_info_high(PinInfoStr: string; FullPinList: tarray): void
-    Perform a no-connection DB test treating pins with matching PIN_Info as HIGH and all others as LOW.
+  //  Perform a no-connection DB test treating pins with matching PIN_Info as HIGH and all others as LOW.
 
   nc_db_pin_info_low(PinInfoStr: string; FullPinList: tarray): void
-    Perform a no-connection DB test treating pins with matching PIN_Info as LOW and all others as HIGH.
+  //  Perform a no-connection DB test treating pins with matching PIN_Info as LOW and all others as HIGH.
 
   no_conn_hv_lists(HighName: string; HighList: tpinarray; LowName: string; LowList: tpinarray): void
-    Execute a high-voltage no-connection test group for specified high and low pin arrays.
+  //  Execute a high-voltage no-connection test group for specified high and low pin arrays.
 
   nc_hv_pin_info_high(PinInfoStr: string; FullPinList: tarray): void
-    Perform a high-voltage no-connection test treating pins with matching PIN_Info as HIGH.
+  //  Perform a high-voltage no-connection test treating pins with matching PIN_Info as HIGH.
 
   nc_hv_pin_info_low(PinInfoStr: string; FullPinList: tarray): void
-    Perform a high-voltage no-connection test treating pins with matching PIN_Info as LOW.
+  //  Perform a high-voltage no-connection test treating pins with matching PIN_Info as LOW.
 
   no_conn_lv_abort(Description: string; PinList: tpinarray): void
-    Perform low-voltage isolation on each pin in the list and abort the test if any fail.
+  //  Perform low-voltage isolation on each pin in the list and abort the test if any fail.
+
+  get_netlist_primary(): string
+  //  Retrieve all primary component pin names from the netlist as a semicolon-delimited string.
 }
 
 
@@ -48,6 +54,54 @@
  For further examples see Collins AS-0191-001, ONBOARD SYSTEMS AS-0192-001 and especially
  AS-0188-001 for multiple pins tested against all other pins (switch contacts against all others.)
 }
+
+
+{**
+  @brief   Retrieve a semicolon-delimited list of all named pins in the pin table.
+  @details
+    Iterates over every pin index from 1 to PinGetCount()-1, includes only pins whose
+    PIN_Name is non-empty, and builds a semicolon-separated string of those pins.
+  @return  A string of named pin indices separated by ';', or an empty string if none found.
+**}
+function get_named_pin_list_all(): string;
+begin
+   CreatedList = FALSE;            // Flag to indicate the list has been seeded
+
+   // Determine total number of pins
+   Count = PinGetCount();
+
+   // Iterate through each pin index
+   for Index = 1 to Count - 1 do
+   begin
+      PinName = PinGetData(Index, PIN_Name);  // fetch this pin’s name
+
+      // Only include pins that have a non-empty name
+      IsNull = StrCompare(PinName, '');
+      if (IsNull <> 0)
+      begin
+         UIWriteNormal(PinName);               // Debug: output the pin name
+         PinDefineList(SinglePinList, [Index]); // create a single-item list for this pin
+
+         if (CreatedList == FALSE)
+         begin
+            PinDefineList(List, [Index]);     // seed the master list on first named pin
+            CreatedList = TRUE;
+         end
+         else
+         begin
+            MiscAddLists(List, List, SinglePinList);  // append this pin to the master list
+         end;
+      end
+      else
+      begin
+         // Skip unnamed pins
+      end;
+   end;
+
+   // Convert the collected named pins to a semicolon-delimited string
+   Text = MiscListToString(List, ';');
+   Result = Text;                       // return the final string
+end;
 
 
 {**
@@ -341,4 +395,20 @@ begin
       ReportWriteError('LOW VOLTAGE ISOLATION TEST FAILED, ABORTING TEST');
       MiscAbortTest();
    end;
+end;
+
+{**
+  @brief   Retrieve a list of all primary named pins from the netlist.
+  @details
+    Calls NWCreatePinlist to gather pins of type COMPONENT_Wire with primary pin roles,
+    then converts that pin list into a semicolon-delimited string for use in isolation or breakdown tests.
+  @return  A string of primary pin names separated by ';'.
+**}
+function get_netlist_primary(): string;
+begin
+   // Create a pin list of all primary component pins of type wire
+   NWCreatePinlist(PinList, COMPONENT_Wire, COMPONENTDATA_Name, '*', COMPONENTPINS_Primary, FALSE);
+
+   // Convert the pin list to a semicolon-delimited string and return it
+   Result = MiscListToString(PinList, ';');
 end;
