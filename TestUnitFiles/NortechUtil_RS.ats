@@ -23,14 +23,17 @@
   ui_report_error(Line: string): void
   //   Write an error message to both the UI and the test report.
 
+  ui_report_warning(Line: string): void;
+  //   Write a warning message to the UI and log it normally in the report.
+
   ui_report_normal(Line: string): void
   //   Write a normal message to both the UI and the test report.
 
   blank_line(Report: boolean = TRUE): void
   //   Insert a blank line in the UI and optionally in the report.
 
-  msg_box_border(ReportLine: string; BorderChar: string; Error: boolean = FALSE): void
-  //   Display ReportLine inside a BorderChar frame, reporting via error or normal output based on Error.
+  msg_box_border(ReportLine: string; BorderChar: string; Error: boolean = FALSE; Warning: boolean = FALSE; Report: boolean = TRUE): void
+  //   Display a text line within a character border, routing output as error, warning, or normal.
 
   report_manual_reading(Line: string; Units: string; MinValue: real; MaxValue: real; Debug: boolean = FALSE): void
   //   Prompt for and validate a manual measurement, then display it in a bordered report.
@@ -436,33 +439,66 @@ begin
    ReportWriteError(Line);
 end;
 
-
-function ui_report_normal(Line: string): void;
+{**
+  @brief   Display a warning message to the UI and log it normally in the report.
+  @param   Line  The warning text to display and record.
+  @return  void
+**}
+function ui_report_warning(Line: string): void;
 begin
-   UIWriteNormal(Line);
-   ReportWriteNormal(Line);
+   UIWriteWarning(Line);        // output warning to the user interface
+   ReportWriteNormal(Line);     // record the warning in the report log
 end;
 
+
+{**
+  @brief   Display a normal message to the operator and record it in the report.
+  @details
+    Calls UIWriteNormal to output the message on the UI and ReportWriteNormal to log the same message in the report.
+  @param   Line  The message text to display and log.
+  @return  void
+**}
+function ui_report_normal(Line: string): void;
+begin
+   UIWriteNormal(Line);         // write the message to the user interface
+   ReportWriteNormal(Line);     // record the message in the test report
+end;
+
+
+{**
+  @brief   Insert a blank line in the UI and optionally in the report.
+  @details
+    Always writes a single space line via UIWriteNormal. If @p Report is TRUE,
+    also writes a space line in the report via ReportWriteNormal.
+  @param   Report  When TRUE (default), echo the blank line into the report log as well.
+  @return  void
+**}
 function blank_line(Report: boolean = TRUE): void;
 begin
+   // Write a blank line to the user interface
    UIWriteNormal(' ');
 
    if (Report == TRUE)
    begin
+      // Also write a blank line to the report log
       ReportWriteNormal(' ');
    end;
 end;
 
+
 {**
-  @brief   Display a text line within a character border, reporting as error or normal.
-  @details Constructs a top/bottom border and middle line by surrounding @p ReportLine
-           with the single character @p BorderChar.  If @p Error is TRUE, routes output
-           via @c ui_report_error; otherwise via @c ui_report_normal.
+  @brief   Display a text line within a character border, routing output as error, warning, or normal.
+  @details
+    Constructs a top and bottom border using the first character of BorderChar, builds the middle line containing ReportLine,
+    then outputs the boxed lines via reporting functions (error, warning, or normal) if Report is TRUE,
+    or direct UI write functions otherwise. Aborts if both Error and Warning are set simultaneously.
   @param   ReportLine   The text to display inside the border.
   @param   BorderChar   The character used to draw the border (only the first character is used).
-  @param   Error        Optional; when TRUE, report as error (default FALSE).
+  @param   Error        If TRUE, routes the boxed output via ui_report_error or UIWriteError.
+  @param   Warning      If TRUE, routes the boxed output via ui_report_warning or UIWriteWarning.
+  @param   Report       If TRUE, uses report logging functions; otherwise uses direct UI write functions.
 **}
-function msg_box_border(ReportLine: string; BorderChar: string; Error: boolean = FALSE): void;
+function msg_box_border(ReportLine: string; BorderChar: string; Error: boolean = FALSE; Warning: boolean = FALSE; Report: boolean = TRUE): void;
 begin
    // Extract the first character of BorderChar for drawing
    StrBoxChar = StrCopy(BorderChar, 1, 1);
@@ -492,20 +528,64 @@ begin
    end;
    StrBoxMiddle = StrAdd(StrBoxMiddle, StrBoxChar);
 
-   // Output the boxed lines as either error or normal report
-   if (Error)
+   // Validate that Error and Warning are not both set
+   if (Error AND Warning)
    begin
-      ui_report_error(StrBoxTop);
-      ui_report_error(String);
-      ui_report_error(StrBoxTop);
+      UIErrorDialog('ERROR: CANNOT HAVE BOTH WARNING AND ERROR SET');
+      MiscAbortTest();
+   end;
+
+   // Output the boxed lines according to Report flag
+   if (Report)
+   begin
+      // Use reporting functions
+      if (Error)
+      begin
+         ui_report_error(StrBoxTop);
+         ui_report_error(String);
+         ui_report_error(StrBoxTop);
+      end;
+
+      if (Warning)
+      begin
+         ui_report_warning(StrBoxTop);
+         ui_report_warning(String);
+         ui_report_warning(StrBoxTop);
+      end;
+
+      if (Error == FALSE AND Warning == FALSE)
+      begin
+         ui_report_normal(StrBoxTop);
+         ui_report_normal(String);
+         ui_report_normal(StrBoxTop);
+      end;
    end
    else
    begin
-      ui_report_normal(StrBoxTop);
-      ui_report_normal(String);
-      ui_report_normal(StrBoxTop);
+      // Use direct UI write functions
+      if (Error)
+      begin
+         UIWriteError(StrBoxTop);
+         UIWriteError(String);
+         UIWriteError(StrBoxTop);
+      end;
+
+      if (Warning == TRUE)
+      begin
+         UIWriteWarning(StrBoxTop);
+         UIWriteWarning(String);
+         UIWriteWarning(StrBoxTop);
+      end;
+
+      if (Error == FALSE AND Warning == FALSE)
+      begin
+         UIWriteNormal(StrBoxTop);
+         UIWriteNormal(String);
+         UIWriteNormal(StrBoxTop);
+      end;
    end;
 end;
+
 
 
 {**
