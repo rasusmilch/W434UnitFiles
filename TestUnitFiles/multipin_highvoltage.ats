@@ -39,13 +39,13 @@
   //  Execute a high-voltage “no-connection” (isolation) test across a list of pins.
 
   no_conn_hv_populated(Description: string; Trise: ttime = 1s)
-  //  Run a high-voltage "no-connection" (isolation) test on POPULATED and UNPOPULATED contacts.
+  //  Run a high-voltage "no-connection" (isolation) test on POPULATED and shorter duration on UNPOPULATED contacts.
 
   no_conn_db(Description: string; PinList: tpinarray)
   //  Execute a dielectric-breakdown "no-connection" test for each pin in a list.
 
   no_conn_db_populated(Description: string; Twait: ttime = 1s, Tmeas: ttime = 1s)
-  //  Run a dielectric-breakdown “no-connection” test on POPULATED and UNPOPULATED contacts.
+  //  Run a dielectric-breakdown “no-connection” test on POPULATED and shorter duration on UNPOPULATED contacts.
 }
 
 
