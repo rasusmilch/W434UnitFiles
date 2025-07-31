@@ -9,7 +9,7 @@
   //  Convert an array of pin identifiers into a comma-separated string of their PIN_Name values.
 
   no_conn_db_lists(HighName: string; HighList: tpinarray; LowName: string; LowList: tpinarray): void
-  //  Define and execute a no-connection database test group for specified high and low pin arrays.
+  //  Define and execute a no-connection db test group for specified high and low pin arrays.
 
   nc_db_pin_info_high(PinInfoStr: string; FullPinList: tarray): void
   //  Perform a no-connection DB test treating pins with matching PIN_Info as HIGH and all others as LOW.
@@ -29,8 +29,23 @@
   no_conn_lv_abort(Description: string; PinList: tpinarray): void
   //  Perform low-voltage isolation on each pin in the list and abort the test if any fail.
 
-  get_netlist_primary(): string
+  get_netlist_primary(Debug: boolean = FALSE): string
   //  Retrieve all primary component pin names from the netlist as a semicolon-delimited string.
+
+  get_netlist_both(Debug: boolean = FALSE): string
+  //  Retrieve a list of all named wire pins from the netlist.
+
+  no_conn_hv(Description: string; PinList: tpinarray)
+  //  Execute a high-voltage “no-connection” (isolation) test across a list of pins.
+
+  no_conn_hv_populated(Description: string; Trise: ttime = 1s)
+  //  Run a high-voltage "no-connection" (isolation) test on POPULATED and UNPOPULATED contacts.
+
+  no_conn_db(Description: string; PinList: tpinarray)
+  //  Execute a dielectric-breakdown "no-connection" test for each pin in a list.
+
+  no_conn_db_populated(Description: string; Twait: ttime = 1s, Tmeas: ttime = 1s)
+  //  Run a dielectric-breakdown “no-connection” test on POPULATED and UNPOPULATED contacts.
 }
 
 
@@ -55,6 +70,47 @@
  AS-0188-001 for multiple pins tested against all other pins (switch contacts against all others.)
 }
 
+{**
+  @brief   Retrieve a list of all primary named pins from the netlist.
+  @details
+    Calls NWCreatePinlist to gather pins of type COMPONENT_Wire with primary pin roles,
+    then converts that pin list into a semicolon-delimited string for use in isolation or breakdown tests.
+  @return  A string of primary pin names separated by ';'.
+**}
+function get_netlist_primary(Debug: boolean = FALSE): string;
+begin
+   // Create a pin list of all primary component pins of type wire
+   NWCreatePinlist(PinList, COMPONENT_Wire, COMPONENTDATA_Name, '*', COMPONENTPINS_Primary, FALSE);
+
+   // Convert the pin list to a semicolon-delimited string and return it
+   Result = MiscListToString(PinList, ';');
+
+   if (Debug)
+   begin
+      UIWriteNormal(Result);
+   end;
+end;
+
+{**
+  @brief   Retrieve a list of all named wire pins from the netlist.
+  @details
+    Calls NWCreatePinlist to gather pins of type COMPONENT_Wire,
+    then converts that pin list into a semicolon-delimited string for use in isolation or breakdown tests.
+  @return  A string of wire pin names separated by ';'.
+**}
+function get_netlist_both(Debug: boolean = FALSE): string;
+begin
+   // Create a pin list of all wire pins of type wire
+   NWCreatePinlist(PinList, COMPONENT_Wire, COMPONENTDATA_Name, '*', COMPONENTPINS_Both, FALSE);
+
+   // Convert the pin list to a semicolon-delimited string and return it
+   Result = MiscListToString(PinList, ';');
+
+   if (Debug)
+   begin
+      UIWriteNormal(Result);
+   end;
+end;
 
 {**
   @brief   Retrieve a semicolon-delimited list of all named pins in the pin table.
@@ -63,7 +119,7 @@
     PIN_Name is non-empty, and builds a semicolon-separated string of those pins.
   @return  A string of named pin indices separated by ';', or an empty string if none found.
 **}
-function get_named_pin_list_all(): string;
+function get_named_pin_list_all(Debug: boolean = FALSE): string;
 begin
    CreatedList = FALSE;            // Flag to indicate the list has been seeded
 
@@ -79,7 +135,10 @@ begin
       IsNull = StrCompare(PinName, '');
       if (IsNull <> 0)
       begin
-         UIWriteNormal(PinName);               // Debug: output the pin name
+         if (Debug)
+         begin
+            UIWriteNormal(PinName);               // Debug: output the pin name
+         end;
          PinDefineList(SinglePinList, [Index]); // create a single-item list for this pin
 
          if (CreatedList == FALSE)
@@ -357,30 +416,120 @@ end;
 
 
 {**
-  @brief   Perform low-voltage isolation tests on each pin, aborting on any failure.
-  @details
-    Iterates through @p PinList, calling NoConnAllLV for each pin with the provided @p Description.
-    Tracks overall success in @c AllPassed and aborts the test if any individual pin test fails,
-    reporting an error to both UI and report log.
-  @param   Description  Text label used in each NoConnAllLV call.
-  @param   PinList      Array of pin identifiers to test for isolation.
-  @return  void
-**}
+ @brief Run a low-voltage isolation test and abort immediately if any new failure is detected.
+
+ @details
+ This routine wraps the LV isolation sequence with a fail-counter guard. It snapshots the
+ main fail counter before and after the test and compares the values. If the counter has
+ increased (i.e., new failures occurred during this call), it logs errors to the UI and
+ report, then aborts the overall test run.
+
+ Operational flow:
+ - Record the starting value of the main fail counter (FAILCOUNTER_Main).
+ - Apply/verify LV test options via test_lv_option().
+ - Execute the LV isolation test via IsolationTestLV().
+ - Record the ending value of the main fail counter.
+ - If FailsEnd differs from FailsStart, emit errors and call MiscAbortTest().
+
+ @param Description  Human-readable label for the session (not used in this routine but preserved
+                     for signature consistency with related helpers and potential future reporting).
+ @param PinList      List of pins intended for context (not used directly in this routine).
+
+ @return void
+
+ @pre
+ - The following helpers and identifiers must exist: FailCounterGet(), test_lv_option(),
+   IsolationTestLV(), UIWriteError(), ReportWriteError(), MiscAbortTest(), FAILCOUNTER_Main.
+ - Variables AllPassed (boolean), FailsStart (integer), and FailsEnd (integer) are declared/valid.
+
+ @post
+ - If any new failure is detected (FailsEnd <> FailsStart), the procedure will abort the test flow.
+
+ @sideeffects
+ - Writes error messages to UI and report streams.
+ - May terminate the active test sequence via MiscAbortTest().
+
+ @note
+ - AllPassed is initialized but not used to gate behavior; abort logic relies solely on the fail
+   counter delta. This preserves existing semantics where failure handling is centralized via counters.
+ - Parameters @p Description and @p PinList are accepted for API parity but are not referenced here.
+
+ @see FailCounterGet, IsolationTestLV, test_lv_option, MiscAbortTest
+}
 function no_conn_lv_abort(Description: string; PinList: tpinarray): void;
+begin
+   AllPassed = TRUE;  // assume success until a failure occurs (legacy aggregate flag; not used below)
+
+   // Main failure count (snapshot before running the LV isolation test)
+   FailsStart = FailCounterGet(FAILCOUNTER_Main);
+
+   test_lv_option(); // Configure/validate LV test options prior to execution
+
+   IsolationTestLV(); // Execute the low-voltage isolation test sequence
+
+   // Main failure count (snapshot after test run)
+   FailsEnd = FailCounterGet(FAILCOUNTER_Main);
+
+   // If any pin failed, report error and abort the test
+   if (FailsStart <> FailsEnd)
+   begin
+      UIWriteError('LOW VOLTAGE ISOLATION TEST FAILED, ABORTING TEST'); // UI alert
+      ReportWriteError('LOW VOLTAGE ISOLATION TEST FAILED, ABORTING TEST'); // Report log entry
+      MiscAbortTest(); // Terminate further testing due to new failures detected
+   end;
+end;
+
+
+{**
+ @brief Execute a high-voltage “no-connection” (isolation) test across a list of pins.
+
+ @details
+ Iterates over @p PinList and invokes NoConnAllHV() per pin, passing through the
+ human-readable @p Description for traceability in logs/reports. The routine tracks
+ an aggregate status in AllPassed, which is initialized TRUE and flipped to FALSE
+ if any individual pin test fails. The optional “abort on failure” section is
+ currently commented out, so the function will complete the pass over all pins
+ even if failures occur.
+
+ Control flow notes:
+ - Uses a 1-based loop: Index = 1 .. Count, where Count = MiscGetListSize(PinList).
+ - Pin names are fetched via PinGetData() for potential UI/report context; related
+   UI lines are present but commented out.
+
+ @param Description  Label or test identifier forwarded to NoConnAllHV() for reporting.
+ @param PinList      Array of pin handles/IDs (tpinarray) to be tested for HV isolation.
+
+ @return void
+
+ @pre
+ - PinList is initialized; MiscGetListSize(), PinGetData(), and NoConnAllHV() are available.
+ - Variables AllPassed (boolean), Count (integer), Index (integer), Result (boolean),
+   and PinName (string) are declared/accessible in this scope as required by the language.
+
+ @post
+ - AllPassed reflects overall success (TRUE only if all per-pin tests returned TRUE).
+
+ @sideeffects
+ - Executes NoConnAllHV(), which may drive HV instrumentation and produce logs.
+ - Optional UI/report writes are present but commented out in this function.
+
+ @see NoConnAllHV, MiscGetListSize, PinGetData
+}
+function no_conn_hv(Description: string; PinList: tpinarray): void;
 begin
    AllPassed = TRUE;  // assume success until a failure occurs
 
    Count = MiscGetListSize(PinList); // get number of pins to test
-   //UIWriteNormal(Count);
+   //UIWriteNormal(Count); // optional: display total pin count
 
-   // Perform low-voltage isolation test on each pin
+   // Perform high-voltage isolation test on each pin
    if (Count >= 1)
    begin
       for Index = 1 to Count do
       begin
-         PinName = PinGetData(PinList[Index], PIN_Name); // fetch pin name for context
-         //UIWriteNormal(PinName);
-         Result = NoConnAllLV(Description, PinList[Index]); // test this pin
+         PinName = PinGetData(PinList[Index], PIN_Name); // fetch pin name for context (logging)
+         //UIWriteNormal(PinName); // optional: echo pin under test
+         Result = NoConnAllHV(Description, PinList[Index]); // test this pin (returns TRUE on pass)
          if (Result == FALSE)
          begin
             AllPassed = FALSE; // mark overall failure if any test fails
@@ -388,27 +537,220 @@ begin
       end;
    end;
 
-   // If any pin failed, report error and abort the test
-   if (AllPassed == FALSE)
-   begin
-      UIWriteError('LOW VOLTAGE ISOLATION TEST FAILED, ABORTING TEST');
-      ReportWriteError('LOW VOLTAGE ISOLATION TEST FAILED, ABORTING TEST');
-      MiscAbortTest();
-   end;
 end;
 
-{**
-  @brief   Retrieve a list of all primary named pins from the netlist.
-  @details
-    Calls NWCreatePinlist to gather pins of type COMPONENT_Wire with primary pin roles,
-    then converts that pin list into a semicolon-delimited string for use in isolation or breakdown tests.
-  @return  A string of primary pin names separated by ';'.
-**}
-function get_netlist_primary(): string;
-begin
-   // Create a pin list of all primary component pins of type wire
-   NWCreatePinlist(PinList, COMPONENT_Wire, COMPONENTDATA_Name, '*', COMPONENTPINS_Primary, FALSE);
 
-   // Convert the pin list to a semicolon-delimited string and return it
-   Result = MiscListToString(PinList, ';');
+{**
+ @brief Run a high-voltage isolation (“no-connection”) test on POPULATED and UNPOPULATED contacts.
+
+ @details
+ The routine executes two HV isolation passes using no_conn_hv():
+ 1) POPULATED contacts taken from the primary netlist, and
+ 2) UNPOPULATED contacts computed as the set difference between all defined pins and all wired pins.
+
+ Workflow:
+ - Adds visual spacing and section headers to the UI.
+ - Builds pin sets by tokenizing semicolon-delimited strings.
+ - Applies isolation-HV configuration via ParamIsolationHV(), leaving all parameters unchanged
+   except the fifth argument, which is set from @p Tmeas (timing/measurement dwell as defined
+   by your platform).
+ - Records the active measurement parameters under CMDGRP_IsolationHV.
+ - Invokes no_conn_hv() for each pin set, forwarding @p Description for report/log traceability.
+
+ @param Description  Human-readable label/identifier forwarded to no_conn_hv() for consistent reporting.
+ @param Tmeas        Measurement/hold time applied through ParamIsolationHV()’s fifth parameter (default 1s).
+
+ @return void
+
+ @pre
+ - Helper routines/identifiers are available: blank_line(), msg_box_border(), get_netlist_primary(),
+   get_named_pin_list_all(), get_netlist_both(), MiscListFromString(), MiscSubtractLists(),
+   ParamIsolationHV(), ReportWriteMeasurementParameters(), no_conn_hv(), CMDGRP_IsolationHV.
+ - Variables/handles exist and are compatible with the helpers:
+   PopulatedPinListStr, PopulatedPinList, AllPinsListStr, AllWireListStr,
+   FullPinList, WirePinList, UnconnectedPinList.
+ - Pin-list strings are semicolon-delimited (';').
+
+ @sideeffects
+ - Produces UI/report output (headings and parameter blocks).
+ - Updates HV isolation configuration via ParamIsolationHV().
+
+ @note
+ - UNPOPULATED pins are computed as: UnconnectedPinList = FullPinList - WirePinList.
+ - Only the fifth parameter of ParamIsolationHV() is changed here; all others are left as PARAM_DontChange.
+
+ @see no_conn_hv, ParamIsolationHV, MiscListFromString, MiscSubtractLists,
+      get_netlist_primary, get_named_pin_list_all, get_netlist_both
+}
+function no_conn_hv_populated(Description: string; Tmeas: ttime = 1s): void;
+begin
+   blank_line(); // Visual spacer before the POPULATED contacts section
+
+   msg_box_border('Testing POPULATED contacts', '*'); // Section header for POPULATED pins
+
+   PopulatedPinListStr = get_netlist_primary(); // Acquire semicolon-delimited primary-netlist pins
+   MiscListFromString(PopulatedPinListStr,PopulatedPinList,';'); // Tokenize into PopulatedPinList
+
+   no_conn_hv(Description, PopulatedPinList); // Execute HV isolation test on POPULATED pins with label
+
+   blank_line(); // Spacer between sections
+   msg_box_border('Testing UNPOPULATED contacts', '*'); // Section header for UNPOPULATED pins
+
+   ParamIsolationHV(PARAM_DontChange, PARAM_DontChange, PARAM_DontChange, PARAM_DontChange, Tmeas); // Apply measurement dwell/time
+
+//   ReportWriteMeasurementParameters(CMDGRP_IsolationHV); // Log active HV parameters for traceability
+
+   AllPinsListStr = get_named_pin_list_all(); // Retrieve all defined pins (fixture/connector scope)
+
+   AllWireListStr = get_netlist_both(); // Retrieve all wired pins/ends from the combined netlist
+
+   MiscListFromString(AllPinsListStr,FullPinList,';'); // Tokenize full pin inventory
+   MiscListFromString(AllWireListStr,WirePinList,';'); // Tokenize wired-pin inventory
+
+   // Compute Unconnected pins by removing netlist wires from the full list
+   MiscSubtractLists(UnconnectedPinList, FullPinList, WirePinList); // Unconnected = FullPinList - WirePinList
+
+   no_conn_hv(Description, UnconnectedPinList); // Execute HV isolation test on UNPOPULATED pins with same label
+end;
+
+
+{**
+ @brief Execute a dielectric-breakdown "no-connection" test for each pin in a list.
+
+ @details
+ Iterates over @p PinList and calls NoConnAllDB() for each pin, forwarding the
+ human-readable @p Description for traceability in logs and reports. The routine
+ maintains an aggregate status flag (AllPassed), initialized TRUE and set to FALSE
+ if any individual pin test fails. The function completes testing of all pins
+ regardless of failures; it does not report or abort on failure in this scope.
+
+ Control flow and data:
+ - Count is obtained via MiscGetListSize(PinList); loop is 1-based from 1 to Count.
+ - Pin names are fetched with PinGetData() and may be echoed to UI if the commented
+   UI lines are enabled.
+ - NoConnAllDB() performs the dielectric-breakdown evaluation and returns TRUE/FALSE.
+
+ @param Description  Label or identifier passed to NoConnAllDB() for reporting/traceability.
+ @param PinList      Array of pins (tpinarray) to be subjected to dielectric-breakdown "no-connection" testing.
+
+ @return void
+
+ @pre
+ - PinList is initialized and valid.
+ - The following symbols are available in scope and compatible with this usage:
+   MiscGetListSize(), PinGetData(), NoConnAllDB(),
+   variables AllPassed (boolean), Count (integer), Index (integer),
+   Result (boolean), and PinName (string).
+
+ @post
+ - AllPassed reflects aggregate outcome after the loop (TRUE only if all pins passed).
+
+ @sideeffects
+ - May drive high-voltage test equipment via NoConnAllDB().
+ - Optional UI output is present but currently commented out in this routine.
+
+ @note
+ - This procedure does not itself log failures or abort; caller is responsible for any
+   error handling based on AllPassed or per-pin results if captured externally.
+
+ @see NoConnAllDB, MiscGetListSize, PinGetData
+}
+function no_conn_db(Description: string; PinList: tpinarray): void;
+begin
+   AllPassed = TRUE;  // assume success until a failure occurs
+
+   Count = MiscGetListSize(PinList); // get number of pins to test
+   //UIWriteNormal(Count); // optional: display total pin count
+
+   // Perform high-voltage isolation test on each pin (dielectric-breakdown "no-connection" check)
+   if (Count >= 1)
+   begin
+      for Index = 1 to Count do
+      begin
+         PinName = PinGetData(PinList[Index], PIN_Name); // fetch pin name for context (logging)
+         //UIWriteNormal(PinName); // optional: echo pin under test
+         Result = NoConnAllDB(Description, PinList[Index]); // run DB test for this pin; TRUE on pass
+         if (Result == FALSE)
+         begin
+            AllPassed = FALSE; // mark overall failure if any test fails
+         end;
+      end;
+   end;
+
+end;
+
+
+{**
+ @brief Run a dielectric-breakdown “no-connection” test on POPULATED and UNPOPULATED contacts.
+
+ @details
+ Executes two dielectric-breakdown (DB) passes using no_conn_db():
+ 1) POPULATED contacts obtained from the primary netlist, then
+ 2) UNPOPULATED contacts computed as the set difference of all defined pins and all wired pins.
+
+ The routine:
+ - Adds visual spacing and section headers to the UI.
+ - Builds pin lists by tokenizing semicolon-delimited strings.
+ - Applies DB timing via ParamDielectricBreakdown() using @p Twait and @p Tmeas.
+ - Records the active measurement parameters under CMDGRP_IsolationDB.
+ - Invokes no_conn_db() for both pin sets, forwarding @p Description for report/log traceability.
+
+ @param Description  Human-readable label/identifier forwarded to no_conn_db() for consistent reporting.
+ @param Twait        Wait time before the DB measurement window (default 1s).
+ @param Tmeas        Duration of the DB measurement window (default 1s).
+
+ @return void
+
+ @pre
+ - Helper routines/identifiers are available: blank_line(), msg_box_border(), get_netlist_primary(),
+   get_named_pin_list_all(), get_netlist_both(), MiscListFromString(), MiscSubtractLists(),
+   ParamDielectricBreakdown(), ReportWriteMeasurementParameters(), no_conn_db(), CMDGRP_IsolationDB.
+ - Variables/handles exist and are compatible with the helpers:
+   PopulatedPinListStr, PopulatedPinList, AllPinsListStr, AllWireListStr,
+   FullPinList, WirePinList, UnconnectedPinList.
+ - @p Twait and @p Tmeas are valid for ParamDielectricBreakdown().
+
+ @sideeffects
+ - Produces UI/report output (headers and parameter blocks).
+ - Updates dielectric-breakdown configuration via ParamDielectricBreakdown().
+ - Initiates DB testing that may stress the UUT at high voltage.
+
+ @note
+ - UNPOPULATED pins are computed as: UnconnectedPinList = FullPinList - WirePinList.
+ - Pin-list strings are expected to be semicolon-delimited (';').
+
+ @see no_conn_db, ParamDielectricBreakdown, MiscListFromString, MiscSubtractLists,
+      get_netlist_primary, get_named_pin_list_all, get_netlist_both
+}
+function no_conn_db_populated(Description: string; Twait: ttime = 1s; Tmeas: ttime = 1s): void;
+begin
+   blank_line(); // Visual spacer before the POPULATED contacts section
+
+   test_db_option();
+
+   msg_box_border('Testing POPULATED contacts', '*'); // Section header for POPULATED pins
+
+   PopulatedPinListStr = get_netlist_primary(); // Acquire semicolon-delimited primary-netlist pins
+   MiscListFromString(PopulatedPinListStr,PopulatedPinList,';'); // Tokenize into PopulatedPinList
+
+   no_conn_db(Description, PopulatedPinList); // Execute dielectric-breakdown test on POPULATED pins with label
+
+   blank_line(); // Spacer between sections
+   msg_box_border('Testing UNPOPULATED contacts', '*'); // Section header for UNPOPULATED pins
+
+   ParamDielectricBreakdown(PARAM_DontChange, PARAM_DontChange, Twait, Tmeas); // Apply DB timing (wait/measure)
+
+//   ReportWriteMeasurementParameters(CMDGRP_IsolationDB); // Log active DB parameters for traceability
+
+   AllPinsListStr = get_named_pin_list_all(); // Retrieve all defined pins (fixture/connector scope)
+
+   AllWireListStr = get_netlist_both(); // Retrieve all wired pins/ends from the combined netlist
+
+   MiscListFromString(AllPinsListStr,FullPinList,';'); // Tokenize full pin inventory
+   MiscListFromString(AllWireListStr,WirePinList,';'); // Tokenize wired-pin inventory
+
+   // Compute Unconnected pins by removing netlist wires from the full list
+   MiscSubtractLists(UnconnectedPinList, FullPinList, WirePinList); // Unconnected = FullPinList - WirePinList
+
+   no_conn_db(Description, UnconnectedPinList); // Execute dielectric-breakdown test on UNPOPULATED pins with same label
 end;
