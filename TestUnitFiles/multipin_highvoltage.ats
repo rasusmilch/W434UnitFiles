@@ -38,6 +38,9 @@
   no_conn_hv(Description: string; PinList: tpinarray)
   //  Execute a high-voltage “no-connection” (isolation) test across a list of pins.
 
+  no_conn_hv_current_populated(Description: string; Tmeas: ttime = 1s)
+  //  Run a high-voltage DC dielectric breakdown test on POPULATED and UNPOPULATED contacts.
+
   no_conn_hv_populated(Description: string; Tmeas: ttime = 1s)
   //  Run a high-voltage "no-connection" (isolation) test on POPULATED and shorter duration on UNPOPULATED contacts.
 
@@ -539,6 +542,78 @@ begin
 
 end;
 
+{**
+ @brief Run a high-voltage DC dielectric breakdown test on POPULATED and UNPOPULATED contacts.
+
+ @details
+ The routine executes two HV isolation passes using no_conn_hv():
+ 1) POPULATED contacts taken from the primary netlist, and
+ 2) UNPOPULATED contacts computed as the set difference between all defined pins and all wired pins.
+
+ Workflow:
+ - Adds visual spacing and section headers to the UI.
+ - Builds pin sets by tokenizing semicolon-delimited strings.
+ - Applies isolation-HV configuration via ParamIsolationHV(), leaving all parameters unchanged
+   except the fifth argument, which is set from @p Tmeas (timing/measurement dwell as defined
+   by your platform).
+ - Records the active measurement parameters under CMDGRP_IsolationHV.
+ - Invokes no_conn_hv() for each pin set, forwarding @p Description for report/log traceability.
+
+ @param Description  Human-readable label/identifier forwarded to no_conn_hv() for consistent reporting.
+ @param Tmeas        Measurement/hold time applied through ParamIsolationHV()’s fifth parameter (default 1s).
+
+ @return void
+
+ @pre
+ - Helper routines/identifiers are available: blank_line(), msg_box_border(), get_netlist_primary(),
+   get_named_pin_list_all(), get_netlist_both(), MiscListFromString(), MiscSubtractLists(),
+   ParamIsolationHV(), ReportWriteMeasurementParameters(), no_conn_hv(), CMDGRP_IsolationHV.
+ - Variables/handles exist and are compatible with the helpers:
+   PopulatedPinListStr, PopulatedPinList, AllPinsListStr, AllWireListStr,
+   FullPinList, WirePinList, UnconnectedPinList.
+ - Pin-list strings are semicolon-delimited (';').
+
+ @sideeffects
+ - Produces UI/report output (headings and parameter blocks).
+ - Updates HV isolation configuration via ParamIsolationHV().
+
+ @note
+ - UNPOPULATED pins are computed as: UnconnectedPinList = FullPinList - WirePinList.
+ - Only the fifth parameter of ParamIsolationHV() is changed here; all others are left as PARAM_DontChange.
+
+ @see no_conn_hv, ParamIsolationHV, MiscListFromString, MiscSubtractLists,
+      get_netlist_primary, get_named_pin_list_all, get_netlist_both
+}
+function no_conn_hv_current_populated(Description: string; Tmeas: ttime = 1s): void;
+begin
+   blank_line(); // Visual spacer before the POPULATED contacts section
+
+   msg_box_border('Testing contacts -CONTAINED- in netlist', '*'); // Section header for POPULATED pins
+
+   PopulatedPinListStr = get_netlist_primary(); // Acquire semicolon-delimited primary-netlist pins
+   MiscListFromString(PopulatedPinListStr,PopulatedPinList,';'); // Tokenize into PopulatedPinList
+
+   no_conn_hv(Description, PopulatedPinList); // Execute HV isolation test on POPULATED pins with label
+
+   blank_line(); // Spacer between sections
+   msg_box_border('Testing contacts -NOT- in netlist', '*'); // Section header for UNPOPULATED pins
+
+   ParamIsolationHVCurrent(PARAM_DontChange, PARAM_DontChange, PARAM_DontChange, PARAM_DontChange, Tmeas);
+
+//   ReportWriteMeasurementParameters(CMDGRP_IsolationHV); // Log active HV parameters for traceability
+
+   AllPinsListStr = get_named_pin_list_all(); // Retrieve all defined pins (fixture/connector scope)
+
+   AllWireListStr = get_netlist_both(); // Retrieve all wired pins/ends from the combined netlist
+
+   MiscListFromString(AllPinsListStr,FullPinList,';'); // Tokenize full pin inventory
+   MiscListFromString(AllWireListStr,WirePinList,';'); // Tokenize wired-pin inventory
+
+   // Compute Unconnected pins by removing netlist wires from the full list
+   MiscSubtractLists(UnconnectedPinList, FullPinList, WirePinList); // Unconnected = FullPinList - WirePinList
+
+   no_conn_hv(Description, UnconnectedPinList); // Execute HV isolation test on UNPOPULATED pins with same label
+end;
 
 {**
  @brief Run a high-voltage isolation (“no-connection”) test on POPULATED and UNPOPULATED contacts.
