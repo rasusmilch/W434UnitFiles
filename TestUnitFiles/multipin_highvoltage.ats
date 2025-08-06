@@ -38,7 +38,7 @@
   no_conn_hv(Description: string; PinList: tpinarray)
   //  Execute a high-voltage “no-connection” (isolation) test across a list of pins.
 
-  no_conn_hv_populated(Description: string; Trise: ttime = 1s)
+  no_conn_hv_populated(Description: string; Tmeas: ttime = 1s)
   //  Run a high-voltage "no-connection" (isolation) test on POPULATED and shorter duration on UNPOPULATED contacts.
 
   no_conn_db(Description: string; PinList: tpinarray)
@@ -586,7 +586,7 @@ function no_conn_hv_populated(Description: string; Tmeas: ttime = 1s): void;
 begin
    blank_line(); // Visual spacer before the POPULATED contacts section
 
-   msg_box_border('Testing POPULATED contacts', '*'); // Section header for POPULATED pins
+   msg_box_border('Testing contacts -CONTAINED- in netlist', '*'); // Section header for POPULATED pins
 
    PopulatedPinListStr = get_netlist_primary(); // Acquire semicolon-delimited primary-netlist pins
    MiscListFromString(PopulatedPinListStr,PopulatedPinList,';'); // Tokenize into PopulatedPinList
@@ -594,7 +594,7 @@ begin
    no_conn_hv(Description, PopulatedPinList); // Execute HV isolation test on POPULATED pins with label
 
    blank_line(); // Spacer between sections
-   msg_box_border('Testing UNPOPULATED contacts', '*'); // Section header for UNPOPULATED pins
+   msg_box_border('Testing contacts -NOT- in netlist', '*'); // Section header for UNPOPULATED pins
 
    ParamIsolationHV(PARAM_DontChange, PARAM_DontChange, PARAM_DontChange, PARAM_DontChange, Tmeas); // Apply measurement dwell/time
 
@@ -728,7 +728,7 @@ begin
 
    test_db_option();
 
-   msg_box_border('Testing POPULATED contacts', '*'); // Section header for POPULATED pins
+   msg_box_border('Testing contacts -CONTAINED- in netlist', '*'); // Section header for POPULATED pins
 
    PopulatedPinListStr = get_netlist_primary(); // Acquire semicolon-delimited primary-netlist pins
    MiscListFromString(PopulatedPinListStr,PopulatedPinList,';'); // Tokenize into PopulatedPinList
@@ -736,7 +736,7 @@ begin
    no_conn_db(Description, PopulatedPinList); // Execute dielectric-breakdown test on POPULATED pins with label
 
    blank_line(); // Spacer between sections
-   msg_box_border('Testing UNPOPULATED contacts', '*'); // Section header for UNPOPULATED pins
+   msg_box_border('Testing contacts -NOT- in netlist', '*'); // Section header for UNPOPULATED pins
 
    ParamDielectricBreakdown(PARAM_DontChange, PARAM_DontChange, Twait, Tmeas); // Apply DB timing (wait/measure)
 
