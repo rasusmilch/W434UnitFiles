@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Employee Name Lookup</title>
+    <hta:application 
+        applicationname="EmployeeLookup"
+        border="thin"
+        caption="yes"
+        contextmenu="no"
+        maximizebutton="no"
+        minimizebutton="yes"
+        showintaskbar="yes"
+        singleinstance="yes"
+        windowstate="normal"
+    />
+
+    <script type="text/javascript">
+        var APP_WIDTH = 425;
+        var APP_HEIGHT = 380;
+        var APP_USER = "USERNAME";
+        var APP_PASS = "PASSWORD";
+
+        function validateInput(input) {
+            return /^\d{7}$/.test(input);
+        }
+
+        function showError(msg) {
+            document.getElementById('employeeName').value = "";
+            alert(msg);
+        }
+
+        function lookupEmployee() {
+            var empID = document.getElementById('empID').value;
+
+            if (!validateInput(empID)) {
+                showError("Please enter a valid 7-digit Employee ID.");
+                return;
+            }
+
+            var http = new ActiveXObject("MSXML2.XMLHTTP");
+            var url = "https://az-prodapp01.nortechsys.com/NSI_EPICOR/api/v1/BaqSvc/Employee/?%24select=EmpBasic_Name&%24filter=EmpBasic_EmpID%20eq%20%27" + empID + "%27";
+
+            try {
+                http.open("GET", url, false, APP_USER, APP_PASS);
+                http.send();
+
+                if (http.status === 200) {
+                    var response;
+                    if (typeof JSON !== "undefined" && typeof JSON.parse === "function") {
+                        response = JSON.parse(http.responseText);
+                    } else {
+                        // Fallback: parse manually (only safe for trusted responses!)
+                        response = eval('(' + http.responseText + ')');
+                    }
+                    if (response.value && response.value.length > 0) {
+                        document.getElementById('employeeName').value = response.value[0].EmpBasic_Name;
+                    } else {
+                        showError("No employee found with that ID.");
+                    }
+                } else {
+                    showError("Error retrieving data: HTTP " + http.status);
+                }
+            } catch (e) {
+                showError("An error occurred: " + e.message);
+            }
+
+            var empInput = document.getElementById('empID');
+            empInput.focus();
+            empInput.select();
+        }
+
+        // Optional: restrict input to digits only
+        function restrictInput(e) {
+            var key = e.keyCode || e.which;
+            if (key === 13) { // Enter key
+                lookupEmployee();
+                return true;
+            }
+            if (key < 48 || key > 57) {
+                window.event.returnValue = false;
+                return false;
+            }
+            return true;
+        }
+
+        window.onload = function () {
+            window.resizeTo(APP_WIDTH, APP_HEIGHT);
+            window.moveTo((screen.availWidth - APP_WIDTH) / 2, (screen.availHeight - APP_HEIGHT) / 2);
+            document.getElementById('empID').focus();
+        };
+
+        window.onresize = function () {
+            window.resizeTo(APP_WIDTH, APP_HEIGHT);
+        };
+    </script>
+</head>
+
+<body style="font-family:Segoe UI; font-size:14px; padding:20px;">
+
+    <h3>Employee Name Lookup</h3>
+
+    <label for="empID">Employee ID (7 digits):</label><br />
+    <input type="text" id="empID" maxlength="7" onkeypress="restrictInput(event)" /><br /><br />
+
+    <input type="button" value="Lookup" onclick="lookupEmployee()"/><br /><br />
+
+    <label for="employeeName">Employee Name:</label><br />
+    <input type="text" id="employeeName" readonly style="width:300px; background-color:#e0e0e0;" />
+
+
+</body>
+</html>

@@ -1,5 +1,5 @@
 {
-  get_named_pin_list_all(): string
+  get_named_pin_list_all(Debug: boolean = FALSE): string
   //  Build a semicolon-delimited list of every pin in the pin table that has a non-empty name.
 
   get_named_pin_list(FromPin: tpin; ToPin: tpin): string
@@ -8,22 +8,22 @@
   transform_pinlist_name_str(PinList: tpinarray): string
   //  Convert an array of pin identifiers into a comma-separated string of their PIN_Name values.
 
-  no_conn_db_lists(HighName: string; HighList: tpinarray; LowName: string; LowList: tpinarray): void
+  no_conn_db_lists(HighName: string; HighList: tpinarray; LowName: string; LowList: tpinarray; Debug: boolean = FALSE): void
   //  Define and execute a no-connection db test group for specified high and low pin arrays.
 
-  nc_db_pin_info_high(PinInfoStr: string; FullPinList: tarray): void
+  nc_db_pin_info_high(PinInfoStr: string; Debug: boolean = FALSE): void
   //  Perform a no-connection DB test treating pins with matching PIN_Info as HIGH and all others as LOW.
 
-  nc_db_pin_info_low(PinInfoStr: string; FullPinList: tarray): void
+  nc_db_pin_info_low(PinInfoStr: string; Debug: boolean = FALSE): void
   //  Perform a no-connection DB test treating pins with matching PIN_Info as LOW and all others as HIGH.
 
-  no_conn_hv_lists(HighName: string; HighList: tpinarray; LowName: string; LowList: tpinarray): void
+  no_conn_hv_lists(HighName: string; HighList: tpinarray; LowName: string; LowList: tpinarray; Debug: boolean = FALSE): void
   //  Execute a high-voltage no-connection test group for specified high and low pin arrays.
 
-  nc_hv_pin_info_high(PinInfoStr: string; FullPinList: tarray): void
+  nc_hv_pin_info_high(PinInfoStr: string; Debug: boolean = FALSE): void
   //  Perform a high-voltage no-connection test treating pins with matching PIN_Info as HIGH.
 
-  nc_hv_pin_info_low(PinInfoStr: string; FullPinList: tarray): void
+  nc_hv_pin_info_low(PinInfoStr: string; Debug: boolean = FALSE)
   //  Perform a high-voltage no-connection test treating pins with matching PIN_Info as LOW.
 
   no_conn_lv_abort(Description: string; PinList: tpinarray): void
@@ -249,173 +249,428 @@ end;
 
 
 {**
-  @brief   Define and execute a no-connection database group for two pin arrays.
-  @param   HighName   Label for the high-voltage pin group.
-  @param   HighList   Array of high-voltage pin identifiers.
-  @param   LowName    Label for the low-voltage pin group.
-  @param   LowList    Array of low-voltage pin identifiers.
-  @return  void
-**}
-function no_conn_db_lists(HighName: string; HighList: tpinarray; LowName: string; LowList: tpinarray): void;
+ @brief Run a no-connection dielectric breakdown test between two labeled pin lists.
+
+ @details
+   Defines two pin groups for the dielectric breakdown no-connection test:
+   - HIGH group: pins provided in @p HighList, labeled by @p HighName.
+   - LOW  group: pins provided in @p LowList,  labeled by @p LowName.
+   Optionally logs the resolved pin-name strings when @p Debug is TRUE, then
+   invokes @c NoConnGroupDB with the supplied labels and lists.
+
+ @param HighName  Label for the HIGH group (e.g., a descriptive name or category).
+ @param HighList  Pin array comprising the HIGH group.
+ @param LowName   Label for the LOW group (e.g., "ALL OTHER PINS").
+ @param LowList   Pin array comprising the LOW group.
+ @param Debug     When TRUE, emits human-readable lists of both groups to the UI.
+
+ @return void
+
+ @pre
+   - @p HighList and @p LowList are valid @c tpinarray values.
+   - Helper routines are available: @c PinDefineList, @c transform_pinlist_name_str,
+     @c UIWriteNormal, @c StrAdd, @c NoConnGroupDB.
+
+ @post
+   - The no-connection dielectric breakdown group test is executed using the given
+     labels and pin lists; if @p Debug is TRUE, group compositions are logged beforehand.
+
+ @note
+   - This routine does not modify the input lists; it defines internal groups and
+     delegates execution to @c NoConnGroupDB.
+*}
+function no_conn_db_lists(HighName: string; HighList: tpinarray; LowName: string; LowList: tpinarray; Debug: boolean = FALSE): void;
 begin
-   // Define the high-voltage pin list for database operations
+   // Define the HIGH group from the provided HighList for dielectric breakdown testing.
    PinDefineList(PinHigh, HighList);
 
-   // Define the low-voltage pin list for database operations
+   // Define the LOW group from the provided LowList for dielectric breakdown testing.
    PinDefineList(PinLow, LowList);
 
-   // Execute the no-connection test group with the specified labels and pin lists
-   NoConnGroupDB('NCDB', HighName, PinHigh, LowName, PinLow);
+   // If debugging is enabled, stringify and log both group lists.
+   if (Debug)
+   begin
+      // Build a printable name string for the HIGH list.
+      HighListPinNames = transform_pinlist_name_str(HighList);
+
+      // Build a printable name string for the LOW list.
+      LowListPinNames = transform_pinlist_name_str(LowList);
+
+      // Emit the HIGH list names to the UI.
+      UIWriteNormal(StrAdd('HighListPinNames -> ', HighListPinNames));
+
+      // Emit the LOW list names to the UI.
+      UIWriteNormal(StrAdd('LowListPinNames -> ', LowListPinNames));
+   end;
+
+   // Invoke the no-connection dielectric breakdown group test with labels and lists.
+   NoConnGroupDB('NCDB', HighName, HighList, LowName, LowList);
 end;
 
 
-{**
-  @brief   Perform a no-connection database test treating pins matching a given info string as HIGH.
-  @details
-    1. Creates a list of pins whose PIN_Info matches @p PinInfoStr (HIGH pins).
-    2. Computes the complementary LOW pin list by subtracting HIGH pins from @p FullPinList.
-    3. Transforms the HIGH pin list into a comma-separated name string.
-    4. Executes a no-connection DB test group with HIGH and LOW pin lists.
-  @param   PinInfoStr   The PIN_Info value used to select HIGH pins.
-  @param   FullPinList  Array of all pin identifiers to consider.
-  @return  void
-**}
-function nc_db_pin_info_high(PinInfoStr: string; FullPinList: tarray): void;
-begin
-   // Tests pins with PinInfoStr in their PIN_Info field as HIGH and all others from the list as LOW.
 
-   // Create list of HIGH pins matching the specified info string
+{**
+ @brief Perform a no-connection dielectric breakdown test with HIGH pins selected by a PIN_Info substring; all others are LOW.
+
+ @details
+   Partitions the complete pin set into two groups based on @p PinInfoStr:
+   - HIGH group: pins whose PIN_Info field contains the provided substring.
+   - LOW group : every remaining pin (set difference Full - High).
+   Optionally logs human-readable name lists when @p Debug is TRUE, then invokes
+   @c no_conn_db_lists to execute the no-connection dielectric breakdown test.
+
+ @param PinInfoStr  Substring matched against each pin's PIN_Info field to define the HIGH group.
+ @param Debug       When TRUE, writes the full and HIGH pin name lists to the UI for traceability.
+
+ @return void
+
+ @pre
+   The following helpers are available and behave as implied:
+   get_named_pin_list_all, MiscListFromString, PinCreateList, MiscSubtractLists,
+   transform_pinlist_name_str, UIWriteNormal, StrAdd, no_conn_db_lists.
+   Working variables (e.g., FullPinList, HighPinList, LowPinList, HighNames, FullPinListNames) are valid in scope.
+
+ @post
+   No-connection dielectric breakdown test executed with:
+   - HIGH = match(PIN_Info, PinInfoStr)
+   - LOW  = FullPinList - HighPinList
+*}
+function nc_db_pin_info_high(PinInfoStr: string; Debug: boolean = FALSE): void;
+begin
+   // Retrieve the master list of all named pins as a delimited string.
+   AllPinsListStr = get_named_pin_list_all();
+
+   // Parse the master list into FullPinList using ';' as the delimiter.
+   MiscListFromString(AllPinsListStr,FullPinList,';');
+
+   // Build the HIGH group by selecting pins whose PIN_Info contains PinInfoStr.
    PinCreateList(HighPinList, PIN_Info, PinInfoStr);
 
-   // Compute LOW pins by removing HIGH pins from the full list
+   Count = MiscGetListSize(HighPinList);
+
+   if (Count == 0)
+   begin
+      UIWriteError(StrAdd('Error: Found 0 pins with given PinInfo: ', PinInfoStr));
+      MiscAbortTest();
+   end;
+
+   if (Debug)
+   begin
+      UIWriteWarning(StrAdd('PinInfoStr: ', PinInfoStr));
+      UIWriteWarning(StrAdd('PinInfo Count: ', Count));
+   end;
+
+   // Derive the LOW group as FullPinList minus HighPinList.
    MiscSubtractLists(LowPinList, FullPinList, HighPinList);
 
-   // Convert HIGH pin list to comma-separated names for display
+   // Create a comma-separated name string for the HIGH pins.
    HighNames = transform_pinlist_name_str(HighPinList);
 
-   // Execute the no-connection database test with HIGH and LOW groups
-   no_conn_db_lists(HighNames, HighPinList, 'ALL OTHER PINS', LowPinList);
+   // When debugging, emit the full and HIGH pin name lists to the UI.
+   if (Debug)
+   begin
+      // Create a printable name string for the full pin list.
+      FullPinListNames = transform_pinlist_name_str(FullPinList);
+
+      // Log the full pin set.
+      UIWriteNormal(StrAdd('FullPinList -> ', FullPinListNames));
+
+      // Log the HIGH pin set.
+      UIWriteNormal(StrAdd('HighPinList -> ', HighNames));
+   end;
+
+   // Execute the no-connection dielectric breakdown test with the HIGH and LOW groups.
+   no_conn_db_lists(HighNames, HighPinList, 'ALL OTHER PINS', LowPinList, Debug);
 end;
 
 
-{**
-  @brief   Perform a no-connection database test treating pins matching a given info string as LOW.
-  @details
-    1. Creates a list of pins whose PIN_Info matches @p PinInfoStr (LOW pins).
-    2. Computes the complementary HIGH pin list by subtracting LOW pins from @p FullPinList.
-    3. Transforms the LOW pin list into a comma-separated name string.
-    4. Executes a no-connection DB test group with HIGH and LOW pin lists.
-  @param   PinInfoStr   The PIN_Info value used to select LOW pins.
-  @param   FullPinList  Array of all pin identifiers to consider.
-  @return  void
-  @example
-    // Example usage:
-    // Get list of all pins in string format from pintable (FIRST PIN IN TABLE, LAST PIN IN TABLE)
-    AllPinsListStr = get_named_pin_list("P1-A","P2-CASE");
-    // Convert string to list
-    MiscListFromString(AllPinsListStr,ListAllPins,';');
-    // Get pins that have PIN_INFO set in pin table and set LOW
-    nc_db_pin_info_low('CHASSIS',ListAllPins);
-**}
-function nc_db_pin_info_low(PinInfoStr: string; FullPinList: tarray): void;
-begin
-   {*
-   // Tests pins with PinInfoStr in their PIN_Info field as LOW and all others
-   // from the list as HIGH.
-   *}
 
-   // Create list of LOW pins matching the specified info string
+{**
+ @brief Perform a no-connection dielectric breakdown test with LOW pins selected by a PIN_Info substring; all others are HIGH.
+
+ @details
+   Partitions the complete pin set into two groups based on @p PinInfoStr:
+   - LOW group : pins whose PIN_Info field contains the provided substring.
+   - HIGH group: all remaining pins (set difference Full - Low).
+   Optionally logs human-readable name lists when @p Debug is TRUE, then invokes
+   @c no_conn_db_lists using the labeled HIGH group ("ALL OTHER PINS") and the derived LOW group.
+
+ @param PinInfoStr  Substring matched against each pin's PIN_Info field to define the LOW group.
+ @param Debug       When TRUE, writes the full and LOW pin name lists to the UI for traceability.
+
+ @return void
+
+ @pre
+   The following helpers are available and behave as implied:
+   get_named_pin_list_all, MiscListFromString, PinCreateList, MiscSubtractLists,
+   transform_pinlist_name_str, UIWriteNormal, StrAdd, no_conn_db_lists.
+
+ @post
+   No-connection dielectric breakdown test executed with:
+   - HIGH = FullPinList - LowPinList
+   - LOW  = match(PIN_Info, PinInfoStr)
+*}
+function nc_db_pin_info_low(PinInfoStr: string; Debug: boolean = FALSE): void;
+begin
+   // Retrieve the master list of all named pins as a delimited string.
+   AllPinsListStr = get_named_pin_list_all(Debug);
+
+   // Parse the master pin string into FullPinList using ';' as the delimiter.
+   MiscListFromString(AllPinsListStr,FullPinList,';');
+
+   // Build the LOW group by selecting pins whose PIN_Info contains PinInfoStr.
    PinCreateList(LowPinList, PIN_Info, PinInfoStr);
 
-   // Compute HIGH pins by removing LOW pins from the full list
+   Count = MiscGetListSize(LowPinList);
+
+   if (Count == 0)
+   begin
+      UIWriteError(StrAdd('Error: Found 0 pins with given PinInfo: ', PinInfoStr));
+      MiscAbortTest();
+   end;
+
+   if (Debug)
+   begin
+      UIWriteWarning(StrAdd('PinInfoStr: ', PinInfoStr));
+      UIWriteWarning(StrAdd('PinInfo Count: ', Count));
+   end;
+
+   // Derive the HIGH group as the set difference: FullPinList minus LowPinList.
    MiscSubtractLists(HighPinList, FullPinList, LowPinList);
 
-   // Convert LOW pin list to a comma-separated name string
+   // Create a comma-separated LOW pin name string for reporting and API usage.
    LowNames = transform_pinlist_name_str(LowPinList);
 
-   // Execute the no-connection database test with HIGH and LOW groups
-   no_conn_db_lists('ALL OTHER PINS', HighPinList, LowNames, LowPinList);
+   // If debugging, stringify the full and LOW pin lists and write them to the UI.
+   if (Debug)
+   begin
+      // Produce a printable name string for the full pin list.
+      FullPinListNames = transform_pinlist_name_str(FullPinList);
+
+      // Log the full and LOW pin sets for verification and traceability.
+      UIWriteNormal(StrAdd('FullPinList -> ', FullPinListNames));
+      UIWriteNormal(StrAdd('LowPinList -> ', LowNames));
+   end;
+
+   // Execute the no-connection dielectric breakdown test with HIGH vs. LOW groups.
+   no_conn_db_lists('ALL OTHER PINS', HighPinList, LowNames, LowPinList, Debug);
 end;
 
 
+
+
 {**
-  @brief   Execute a high-voltage no-connection test group with specified pin arrays.
-  @details Defines separate high and low pin lists and invokes the HV no-connection group.
-  @param   HighName   Label for the high-voltage pin group.
-  @param   HighList   Array of pins to treat as high-voltage.
-  @param   LowName    Label for the low-voltage pin group.
-  @param   LowList    Array of pins to treat as low-voltage.
-  @return  void
-**}
-function no_conn_hv_lists(HighName: string; HighList: tpinarray; LowName: string; LowList: tpinarray): void;
+ @brief Run a high-voltage (HV) no-connection group test between two explicit pin lists.
+
+ @details
+   This routine defines two pin groups for HV no-connection testing:
+   - HIGH group: pins specified by @p HighList, labeled with @p HighName.
+   - LOW  group: pins specified by @p LowList,  labeled with @p LowName.
+   It optionally logs the resolved pin names when @p Debug is TRUE, then invokes
+   the database-backed HV test @c NoConnGroupHV with the constructed groups.
+
+ @param HighName  Human-readable label for the HIGH group (e.g., a list or role name).
+ @param HighList  Pin array comprising the HIGH group to be driven/considered as HIGH.
+ @param LowName   Human-readable label for the LOW group (e.g., "ALL OTHER PINS").
+ @param LowList   Pin array comprising the LOW group to be driven/considered as LOW.
+ @param Debug     When TRUE, prints the name-expanded contents of both groups.
+
+ @return void
+
+ @pre
+   - @p HighList and @p LowList are valid @c tpinarray values.
+   - @p PinHigh and @p PinLow are valid pin-set identifiers for @c PinDefineList.
+   - Helper functions exist: @c PinDefineList, @c transform_pinlist_name_str, @c UIWriteNormal, @c StrAdd, @c NoConnGroupHV.
+
+ @post
+   - The HV no-connection group test is executed with the provided HIGH and LOW groups.
+   - If @p Debug is TRUE, group compositions are emitted to the UI prior to test execution.
+
+ @note
+   - This function does not alter input lists; it defines internal test groups and delegates to @c NoConnGroupHV.
+*}
+function no_conn_hv_lists(HighName: string; HighList: tpinarray; LowName: string; LowList: tpinarray; Debug: boolean = FALSE): void;
 begin
-   // Define the high-voltage pin list for the test group
+   // Define the HIGH test group from the provided HighList.
    PinDefineList(PinHigh, HighList);
 
-   // Define the low-voltage pin list for the test group
+   // Define the LOW test group from the provided LowList.
    PinDefineList(PinLow, LowList);
 
-   // Perform the HV no-connection database group test
+   // If debug is enabled, stringify both lists and write them to the UI.
+   if (Debug)
+   begin
+      // Create a printable name string for the HIGH list.
+      HighListPinNames = transform_pinlist_name_str(HighList);
+
+      // Create a printable name string for the LOW list.
+      LowListPinNames = transform_pinlist_name_str(LowList);
+
+      // Emit the HIGH list names to the UI.
+      UIWriteNormal(StrAdd('HighListPinNames -> ', HighListPinNames));
+
+      // Emit the LOW list names to the UI.
+      UIWriteNormal(StrAdd('LowListPinNames -> ', LowListPinNames));
+   end;
+
+   // Execute the HV no-connection group test with the labeled HIGH and LOW groups.
    NoConnGroupHV('NCHV', HighName, PinHigh, LowName, PinLow);
 end;
 
 
-{**
-  @brief   Perform a high-voltage no-connection test treating pins matching a given info string as HIGH.
-  @details
-    1. Creates a list of pins whose PIN_Info equals @p PinInfoStr (HIGH pins).
-    2. Computes the complementary LOW pin list by subtracting HIGH pins from @p FullPinList.
-    3. Transforms the HIGH pin list into a comma-separated name string.
-    4. Executes a high-voltage no-connection test group with HIGH and LOW pin lists.
-  @param   PinInfoStr   The PIN_Info filter to select HIGH pins.
-  @param   FullPinList  Array of all pin identifiers to consider.
-  @return  void
-**}
-function nc_hv_pin_info_high(PinInfoStr: string; FullPinList: tarray): void;
-begin
-   // Tests pins with PinInfoStr in their PIN_Info field as HIGH and all others from the list as LOW.
 
-   // Get HIGH pins
+{**
+ @brief Execute an HV no-connection test where HIGH pins are selected by a PIN_Info substring.
+
+ @details
+   Constructs two groups from the complete pin set:
+   - HIGH: pins whose PIN_Info field contains @p PinInfoStr.
+   - LOW : all remaining pins (set difference Full - High).
+   Invokes @c no_conn_hv_lists to perform the high-voltage open (no-connection) test.
+   If @p Debug is TRUE, logs the resolved name lists for verification.
+
+ @param PinInfoStr  Substring to match against each pin's PIN_Info field; matching pins form the HIGH group.
+ @param Debug       TRUE enables diagnostic UI output of the full and HIGH pin lists.
+
+ @return void
+
+ @pre
+   The following helpers are available and behave as implied: get_named_pin_list_all, MiscListFromString,
+   PinCreateList, MiscSubtractLists, transform_pinlist_name_str, UIWriteNormal, StrAdd, no_conn_hv_lists.
+
+ @post
+   HV no-connection test executed with HIGH = match(PIN_Info, PinInfoStr) and LOW = FullPinList - HighPinList.
+
+ @note
+   Matching semantics for HIGH selection follow @c PinCreateList with the @c PIN_Info selector.
+*}
+function nc_hv_pin_info_high(PinInfoStr: string; Debug: boolean = FALSE): void;
+begin
+   // Retrieve a string containing all named pins.
+   AllPinsListStr = get_named_pin_list_all();
+
+   // Parse the master pin string into FullPinList using ';' as the delimiter.
+   MiscListFromString(AllPinsListStr,FullPinList,';');
+
+   // Build HighPinList by selecting pins whose PIN_Info contains PinInfoStr.
    PinCreateList(HighPinList, PIN_Info, PinInfoStr);
 
-   // Get LOW pins
+   Count = MiscGetListSize(HighPinList);
+
+   if (Count == 0)
+   begin
+      UIWriteError(StrAdd('Error: Found 0 pins with given PinInfo: ', PinInfoStr));
+      MiscAbortTest();
+   end;
+
+   if (Debug)
+   begin
+      UIWriteWarning(StrAdd('PinInfoStr: ', PinInfoStr));
+      UIWriteWarning(StrAdd('PinInfo Count: ', Count));
+   end;
+
+   // Derive LowPinList as the set difference: FullPinList minus HighPinList.
    MiscSubtractLists(LowPinList, FullPinList, HighPinList);
 
-   // Convert HIGH pin list to a comma-separated name string
+   // Create a comma-separated HIGH pin name string for reporting and test API.
    HighNames = transform_pinlist_name_str(HighPinList);
 
-   // Execute the high-voltage no-connection database test with the specified groups
-   no_conn_hv_lists(HighNames, HighPinList, 'ALL OTHER PINS', LowPinList);
+   // If Debug is TRUE, emit the resolved pin name lists to the UI.
+   if (Debug)
+   begin
+      // Convert FullPinList into a printable name string.
+      FullPinListNames = transform_pinlist_name_str(FullPinList);
+
+      // Log the full pin set for traceability.
+      UIWriteNormal(StrAdd('FullPinList -> ', FullPinListNames));
+
+      // Log the HIGH pin set for verification.
+      UIWriteNormal(StrAdd('HighPinList -> ', HighNames));
+   end;
+
+   // Run the HV no-connection test using HIGH vs. "ALL OTHER PINS" (LOW group).
+   no_conn_hv_lists(HighNames, HighPinList, 'ALL OTHER PINS', LowPinList, Debug);
 end;
+
 
 
 {**
-  @brief   Perform a high-voltage no-connection test treating pins matching a given info string as LOW.
-  @details
-    1. Builds a list of pins whose PIN_Info equals @p PinInfoStr (LOW pins).
-    2. Computes the complementary HIGH pin list by subtracting LOW pins from @p FullPinList.
-    3. Transforms the LOW pin list into a comma-separated name string.
-    4. Executes a high-voltage no-connection database group test with the HIGH and LOW pin lists.
-  @param   PinInfoStr   The PIN_Info value used to select LOW pins.
-  @param   FullPinList  Array of all pin identifiers to consider.
-  @return  void
-**}
-function nc_hv_pin_info_low(PinInfoStr: string; FullPinList: tarray): void;
-begin
-   // Tests pins with PinInfoStr in their PIN_Info field as LOW and all others from the list as HIGH.
+ @brief Execute an HV no-connection test where LOW pins are selected by a PIN_Info substring.
 
-   // Get LOW pins
+ @details
+   Builds two groups from the complete pin set:
+   - LOW: pins whose PIN_Info field contains @p PinInfoStr.
+   - HIGH: all remaining pins (set difference Full - Low).
+   The function then calls @c no_conn_hv_lists to perform a high-voltage open (no-connection) test.
+   When @p Debug is TRUE, it logs the resolved pin name lists to the UI for traceability.
+
+ @param PinInfoStr  Substring to match against each pin's PIN_Info field; matching pins form the LOW group.
+ @param Debug       TRUE enables diagnostic UI output of the full and LOW pin lists.
+
+ @return void
+
+ @pre
+   The following helpers are available and behave as implied by their names:
+   get_named_pin_list_all, MiscListFromString, PinCreateList, MiscSubtractLists,
+   transform_pinlist_name_str, UIWriteNormal, StrAdd, no_conn_hv_lists.
+
+ @post
+   HV no-connection test executed with HIGH = FullPinList - LowPinList and LOW = match(PIN_Info, PinInfoStr).
+
+ @note
+   Matching semantics for LOW selection follow @c PinCreateList using the @c PIN_Info selector.
+*}
+function nc_hv_pin_info_low(PinInfoStr: string; Debug: boolean = FALSE): void;
+begin
+   // Treat pins whose PIN_Info contains PinInfoStr as LOW; all others become HIGH.
+
+   // Retrieve a string containing all named pins.
+   AllPinsListStr = get_named_pin_list_all();
+
+   // Parse the master pin string into FullPinList using ';' as the delimiter.
+   MiscListFromString(AllPinsListStr,FullPinList,';');
+
+   // Build LowPinList by selecting pins whose PIN_Info contains PinInfoStr.
    PinCreateList(LowPinList, PIN_Info, PinInfoStr);
 
-   // Get HIGH pins
+   Count = MiscGetListSize(LowPinList);
+
+   if (Count == 0)
+   begin
+      UIWriteError(StrAdd('Error: Found 0 pins with given PinInfo: ', PinInfoStr));
+      MiscAbortTest();
+   end;
+
+   if (Debug)
+   begin
+      UIWriteWarning(StrAdd('PinInfoStr: ', PinInfoStr));
+      UIWriteWarning(StrAdd('PinInfo Count: ', Count));
+   end;
+
+   // Derive HighPinList as the set difference: FullPinList minus LowPinList.
    MiscSubtractLists(HighPinList, FullPinList, LowPinList);
 
-   // Convert LOW pin list to a comma-separated string of names
+   // Create a comma-separated LOW pin name string for reporting and test API.
    LowNames = transform_pinlist_name_str(LowPinList);
 
-   // Execute the high-voltage no-connection test with the specified groups
-   no_conn_hv_lists('ALL OTHER PINS', HighPinList, LowNames, LowPinList);
+   // If Debug is TRUE, emit the resolved pin name lists to the UI.
+   if (Debug)
+   begin
+      // Convert FullPinList into a printable name string.
+      FullPinListNames = transform_pinlist_name_str(FullPinList);
+
+      // Log the full pin set for traceability.
+      UIWriteNormal(StrAdd('FullPinList -> ', FullPinListNames));
+
+      // Log the LOW pin set for verification.
+      UIWriteNormal(StrAdd('LowPinList -> ', LowNames));
+   end;
+
+   // Run the HV no-connection test using HIGH (others) vs. LOW (matched by PIN_Info).
+   no_conn_hv_lists('ALL OTHER PINS', HighPinList, LowNames, LowPinList, Debug);
 end;
+
+
 
 
 {**
