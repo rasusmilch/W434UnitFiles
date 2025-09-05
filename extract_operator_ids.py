@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Recursively extract UNIQUE 7-digit Operator IDs from *.txt files and write them
-(sorted) to unique_operator_id.txt. Uses tqdm for a progress bar.
+(sorted) to unique_operator_id.txt. Shows tqdm progress during file enumeration
+and during scanning.
 
 Usage:
     pip install tqdm
@@ -43,11 +44,32 @@ def read_text_safely(path: Path) -> str:
             raise
     return path.read_text(encoding="utf-8", errors="ignore")
 
+def enumerate_txt_files(root: Path, show_progress: bool) -> list[Path]:
+    """
+    Enumerate *.txt files under root with visible progress feedback.
+    Returns a list (used to know the total for the subsequent scan bar).
+    """
+    if not show_progress:
+        return root.rglob("*.txt")
+
+    files: list[Path] = []
+    # Unknown total during discovery; show a live counter and rate.
+    with tqdm(desc="Enumerating *.txt files", unit="file", dynamic_ncols=True) as pbar:
+        for txt in root.rglob("*.txt"):
+            files.append(txt)
+            pbar.update(1)
+            # Periodically surface a count in the postfix without spamming the terminal.
+            if len(files) % 5000 == 0:
+                pbar.set_postfix_str(f"found={len(files):,}")
+
+    tqdm.write(f"Enumeration complete. Found {len(files):,} *.txt file(s).")
+    return files
+
 def collect_operator_ids(files: list[Path], show_progress: bool) -> set[str]:
     ids: set[str] = set()
     iterator = files
     if show_progress:
-        iterator = tqdm(files, desc="Scanning", unit="file", dynamic_ncols=True)
+        iterator = tqdm(files, desc="Scanning", unit="file", dynamic_ncols=True, total=len(files))
 
     for txt_path in iterator:
         try:
@@ -82,7 +104,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument(
         "--no-progress",
         action="store_true",
-        help="Disable the tqdm progress bar.",
+        help="Disable tqdm progress bars.",
     )
     return p.parse_args(argv)
 
@@ -94,7 +116,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Error: '{root}' is not a directory.", file=sys.stderr)
         return 2
 
-    files = sorted(root.rglob("*.txt"))
+    files = enumerate_txt_files(root, show_progress=not args.no_progress)
+    if not files:
+        print("No *.txt files found. Nothing to do.")
+        return 0
+
     ids = collect_operator_ids(files, show_progress=not args.no_progress)
     write_ids(ids, args.output)
 

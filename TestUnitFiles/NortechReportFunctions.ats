@@ -1,0 +1,52 @@
+constants
+begin
+{
+   For consistency, precise files begin with 'FILE_' whereas templates intended
+   to be transformed into another string by calling StrReplace(); or
+   archive_protocol(); begin with 'TMPL_'.
+}
+   FILE_OPERATOR_ID_MAP = 'O:\Test Eng\Support_Files\W434\operator_id_mapping.ini';
+end;
+
+{**
+  @brief   Retrieve the operator?s name from the operator ID mapping file.
+  @details
+    1. Attempts to open the INI file defined by `FILE_OPERATOR_ID_MAP`.
+    2. Reads the current operator ID from global data key `"Value1"` in `"TestStart InputData"`.
+    3. Looks up the corresponding name in the `[OperatorID]` section using that ID.
+    4. If the file cannot be opened or the lookup returns `"NULL"`, displays error dialogs, logs the error, and aborts the test.
+  @return  The operator name string on success; never returns if an error occurs (test is aborted).
+**}
+function is_operator_id_valid(): string;
+begin
+   // Default to "NULL" until a valid name is found
+   Result = FALSE;
+
+   // Open the operator ID mapping INI file
+   Handle = FileOpenIni(FILE_OPERATOR_ID_MAP);
+
+   if (Handle == 0)
+   begin
+      // Failed to open file => notify operator and prevent further testing
+      UIErrorDialog('COULD NOT OPEN OPERATOR ID FILE.<BR><BR>CONTACT TEST LAB.');
+   end
+   else
+   begin
+      // Retrieve the operator ID from global data
+      Operator = GlobalDataRead('Value1', '', 'TestStart InputData');
+      // Fetch the name corresponding to the operator ID
+      OperatorName = FileGetIni(Handle, 'OperatorID', Operator, 'NULL');
+      FileCloseIni(Handle);
+
+      if (StrCompare(OperatorName, 'NULL') == 0)
+      begin
+         // No matching name found => log error, report, and abort
+         UIErrorDialog('OPERATOR ID NOT FOUND. CONTACT TEST LAB');
+      end
+      else
+      begin
+         // Valid name found => return it
+         Result = TRUE;
+      end;
+   end;
+end;

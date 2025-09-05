@@ -24,9 +24,12 @@ B9PosY=-1
 Count=0
 
 [Header]
-Name=db_compensation_functions
+Name=NortechReportFunctions
 CreateName=Test_Admin
-CreateDate=45572.4128854282
+CreateDate=45881.2998664352
 ModifyName=Test_Admin
-ModifyDate=45572.4462154051
+ModifyDate=45881.3024817593
+MajorVersion=1
+MinorVersion=0
+Revision=0
 DescriptionLines=0

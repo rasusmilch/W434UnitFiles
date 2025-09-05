@@ -36,7 +36,7 @@
   //  Retrieve a list of all named wire pins from the netlist.
 
   no_conn_hv(Description: string; PinList: tpinarray)
-  //  Execute a high-voltage “no-connection” (isolation) test across a list of pins.
+  //  Execute a high-voltage ï¿½no-connectionï¿½ (isolation) test across a list of pins.
 
   no_conn_hv_current_populated(Description: string; Tmeas: ttime = 1s)
   //  Run a high-voltage DC dielectric breakdown test on POPULATED and UNPOPULATED contacts.
@@ -48,7 +48,7 @@
   //  Execute a dielectric-breakdown "no-connection" test for each pin in a list.
 
   no_conn_db_populated(Description: string; Twait: ttime = 1s, Tmeas: ttime = 1s)
-  //  Run a dielectric-breakdown “no-connection” test on POPULATED and shorter duration on UNPOPULATED contacts.
+  //  Run a dielectric-breakdown ï¿½no-connectionï¿½ test on POPULATED and shorter duration on UNPOPULATED contacts.
 }
 
 
@@ -66,7 +66,7 @@
    // HV isolation tests: treat switch contacts as HIGH against all others
    nc_hv_pin_info_high('SW1',ListAllPins);
    nc_hv_pin_info_high('SW2',ListAllPins);
-   …
+   ï¿½
 
  Typical applications include chassis isolation tests, switch contact verification, and multipin protocols.
  For further examples see Collins AS-0191-001, ONBOARD SYSTEMS AS-0192-001 and especially
@@ -132,7 +132,7 @@ begin
    // Iterate through each pin index
    for Index = 1 to Count - 1 do
    begin
-      PinName = PinGetData(Index, PIN_Name);  // fetch this pin’s name
+      PinName = PinGetData(Index, PIN_Name);  // fetch this pinï¿½s name
 
       // Only include pins that have a non-empty name
       IsNull = StrCompare(PinName, '');
@@ -188,7 +188,7 @@ begin
    // Loop through each pin in the range
    for Index = 1 to Count do
    begin
-      PinName = PinGetData(PinList[Index], PIN_Name);  // fetch the pin’s name
+      PinName = PinGetData(PinList[Index], PIN_Name);  // fetch the pinï¿½s name
 
       // Only include pins that have a non-empty name
       IsNull = StrCompare(PinName, '');
@@ -213,7 +213,7 @@ end;
 {**
   @brief   Convert an array of pin identifiers into a comma-separated string of their names.
   @param   PinList  Array of pin handles to transform.
-  @return  A string containing each pin’s PIN_Name separated by commas (empty if PinList is empty).
+  @return  A string containing each pinï¿½s PIN_Name separated by commas (empty if PinList is empty).
 **}
 function transform_pinlist_name_str(PinList: tpinarray): string;
 begin
@@ -224,7 +224,7 @@ begin
    Count = MiscGetListSize(PinList);
    //UIWriteNormal(Count);
 
-   // Seed NameStr with the first pin’s name, if any
+   // Seed NameStr with the first pinï¿½s name, if any
    if (Count >= 1)
    begin
       NameStr = PinGetData(PinList[1], PIN_Name); // get PIN_Name property
@@ -344,9 +344,7 @@ begin
    MiscListFromString(AllPinsListStr,FullPinList,';');
 
    // Build the HIGH group by selecting pins whose PIN_Info contains PinInfoStr.
-   PinCreateList(HighPinList, PIN_Info, PinInfoStr);
-
-   Count = MiscGetListSize(HighPinList);
+   Count = PinCreateList(HighPinList, PIN_Info, PinInfoStr);
 
    if (Count == 0)
    begin
@@ -419,9 +417,7 @@ begin
    MiscListFromString(AllPinsListStr,FullPinList,';');
 
    // Build the LOW group by selecting pins whose PIN_Info contains PinInfoStr.
-   PinCreateList(LowPinList, PIN_Info, PinInfoStr);
-
-   Count = MiscGetListSize(LowPinList);
+   Count = PinCreateList(LowPinList, PIN_Info, PinInfoStr);
 
    if (Count == 0)
    begin
@@ -553,9 +549,7 @@ begin
    MiscListFromString(AllPinsListStr,FullPinList,';');
 
    // Build HighPinList by selecting pins whose PIN_Info contains PinInfoStr.
-   PinCreateList(HighPinList, PIN_Info, PinInfoStr);
-
-   Count = MiscGetListSize(HighPinList);
+   Count = PinCreateList(HighPinList, PIN_Info, PinInfoStr);
 
    if (Count == 0)
    begin
@@ -631,9 +625,7 @@ begin
    MiscListFromString(AllPinsListStr,FullPinList,';');
 
    // Build LowPinList by selecting pins whose PIN_Info contains PinInfoStr.
-   PinCreateList(LowPinList, PIN_Info, PinInfoStr);
-
-   Count = MiscGetListSize(LowPinList);
+   Count = PinCreateList(LowPinList, PIN_Info, PinInfoStr);
 
    if (Count == 0)
    begin
@@ -739,13 +731,13 @@ end;
 
 
 {**
- @brief Execute a high-voltage “no-connection” (isolation) test across a list of pins.
+ @brief Execute a high-voltage ï¿½no-connectionï¿½ (isolation) test across a list of pins.
 
  @details
  Iterates over @p PinList and invokes NoConnAllHV() per pin, passing through the
  human-readable @p Description for traceability in logs/reports. The routine tracks
  an aggregate status in AllPassed, which is initialized TRUE and flipped to FALSE
- if any individual pin test fails. The optional “abort on failure” section is
+ if any individual pin test fails. The optional ï¿½abort on failureï¿½ section is
  currently commented out, so the function will complete the pass over all pins
  even if failures occur.
 
@@ -815,7 +807,7 @@ end;
  - Invokes no_conn_hv() for each pin set, forwarding @p Description for report/log traceability.
 
  @param Description  Human-readable label/identifier forwarded to no_conn_hv() for consistent reporting.
- @param Tmeas        Measurement/hold time applied through ParamIsolationHV()’s fifth parameter (default 1s).
+ @param Tmeas        Measurement/hold time applied through ParamIsolationHV()ï¿½s fifth parameter (default 1s).
 
  @return void
 
@@ -871,7 +863,7 @@ begin
 end;
 
 {**
- @brief Run a high-voltage isolation (“no-connection”) test on POPULATED and UNPOPULATED contacts.
+ @brief Run a high-voltage isolation (ï¿½no-connectionï¿½) test on POPULATED and UNPOPULATED contacts.
 
  @details
  The routine executes two HV isolation passes using no_conn_hv():
@@ -888,7 +880,7 @@ end;
  - Invokes no_conn_hv() for each pin set, forwarding @p Description for report/log traceability.
 
  @param Description  Human-readable label/identifier forwarded to no_conn_hv() for consistent reporting.
- @param Tmeas        Measurement/hold time applied through ParamIsolationHV()’s fifth parameter (default 1s).
+ @param Tmeas        Measurement/hold time applied through ParamIsolationHV()ï¿½s fifth parameter (default 1s).
 
  @return void
 
@@ -943,6 +935,70 @@ begin
    no_conn_hv(Description, UnconnectedPinList); // Execute HV isolation test on UNPOPULATED pins with same label
 end;
 
+{**
+ @brief Execute a dielectric-breakdown "no-connection" test for each pin in a list.
+
+ @details
+ Iterates over @p PinList and calls NoConnAllDB() for each pin, forwarding the
+ human-readable @p Description for traceability in logs and reports. The routine
+ maintains an aggregate status flag (AllPassed), initialized TRUE and set to FALSE
+ if any individual pin test fails. The function completes testing of all pins
+ regardless of failures; it does not report or abort on failure in this scope.
+
+ Control flow and data:
+ - Count is obtained via MiscGetListSize(PinList); loop is 1-based from 1 to Count.
+ - Pin names are fetched with PinGetData() and may be echoed to UI if the commented
+   UI lines are enabled.
+ - NoConnAllDB() performs the dielectric-breakdown evaluation and returns TRUE/FALSE.
+
+ @param Description  Label or identifier passed to NoConnAllDB() for reporting/traceability.
+ @param PinList      Array of pins (tpinarray) to be subjected to dielectric-breakdown "no-connection" testing.
+
+ @return void
+
+ @pre
+ - PinList is initialized and valid.
+ - The following symbols are available in scope and compatible with this usage:
+   MiscGetListSize(), PinGetData(), NoConnAllDB(),
+   variables AllPassed (boolean), Count (integer), Index (integer),
+   Result (boolean), and PinName (string).
+
+ @post
+ - AllPassed reflects aggregate outcome after the loop (TRUE only if all pins passed).
+
+ @sideeffects
+ - May drive high-voltage test equipment via NoConnAllDB().
+ - Optional UI output is present but currently commented out in this routine.
+
+ @note
+ - This procedure does not itself log failures or abort; caller is responsible for any
+   error handling based on AllPassed or per-pin results if captured externally.
+
+ @see NoConnAllDB, MiscGetListSize, PinGetData
+}
+function no_conn_db_current(Description: string; PinList: tpinarray): void;
+begin
+   AllPassed = TRUE;  // assume success until a failure occurs
+
+   Count = MiscGetListSize(PinList); // get number of pins to test
+   //UIWriteNormal(Count); // optional: display total pin count
+
+   // Perform high-voltage isolation test on each pin (dielectric-breakdown "no-connection" check)
+   if (Count >= 1)
+   begin
+      for Index = 1 to Count do
+      begin
+         PinName = PinGetData(PinList[Index], PIN_Name); // fetch pin name for context (logging)
+         //UIWriteNormal(PinName); // optional: echo pin under test
+         Result = NoConnAllHV(Description, PinList[Index]); // run HV DB current test for this pin; TRUE on pass
+         if (Result == FALSE)
+         begin
+            AllPassed = FALSE; // mark overall failure if any test fails
+         end;
+      end;
+   end;
+
+end;
 
 {**
  @brief Execute a dielectric-breakdown "no-connection" test for each pin in a list.
@@ -1011,7 +1067,7 @@ end;
 
 
 {**
- @brief Run a dielectric-breakdown “no-connection” test on POPULATED and UNPOPULATED contacts.
+ @brief Run a dielectric-breakdown ï¿½no-connectionï¿½ test on POPULATED and UNPOPULATED contacts.
 
  @details
  Executes two dielectric-breakdown (DB) passes using no_conn_db():

@@ -25,6 +25,18 @@
 *                and moved durations to a subfolder for ATS_scanner
 *   By: RS
 *
+* - Test Rev: 3.2
+*   Date: 2025-05-07
+*   Description: Added default case to switch/case handling of customers to
+*                ensure all 'AS-' tests are being processed with REX.
+*   By: PB
+*
+* - Test Rev: 3.3
+*   Date: 2025-08-27
+*   Description: Change resolve_customer_name() to use specific index following
+*                splitting of path.
+*   By: PB
+*
 * - Rev: (next version)
 *   Cust Doc Rev: (next revision)
 *   Date: YYYY-MM-DD
@@ -60,13 +72,24 @@ begin
    TMPL_ARCHIVE_HTML_COLLINS = 'O:\Test Eng\DATA\W434\<Year>\COLLINS_HTML\<ProjectName>\<ProjectName>-<SerialNumber>-<Year><Month><Day>-<Hour><Minute><Second>.html';
    TMPL_ARCHIVE_PDF_COLLINS = 'O:\Test Eng\DATA\W434\<Year>\COLLINS_PDF\<ProjectName>\<ProjectName>-<SerialNumber>-<Year><Month><Day>-<Hour><Minute><Second>.pdf';
 
-   PYTHON_EXE = 'C:\Python\python.exe';
-   //PYTHON_EXE = 'C:\Users\pbarton\scoop\apps\python\current\python.exe'; // For local testing
-   TMPL_REX_PARAMS = 'C:\REX\rex.py -m atp$ATPNUM$ -r ATP-$ATPNUM$_html.html -o ATP-$ATPNUM$.pdf -n';
+   FILE_REPORT_PDF_AERO_DEFAULT = 'C:\REX\output\AS-DEFAULT.pdf';
+   TMPL_ARCHIVE_PDF_AERO_DEFAULT = 'O:\Test Eng\DATA\W434\<Year>\$CUST$_PDF\<ProjectName>\<ProjectName>-<SerialNumber>-<Year><Month><Day>-<Hour><Minute><Second>.pdf';
+
+   //PYTHON_EXE = 'C:\Python\python.exe';
+   PYTHON_EXE = 'C:\Users\pbarton\scoop\apps\python\current\python.exe'; // For local testing
+   REX_PARAMS_DEFAULT_AERO = 'C:\REX\rex.py -m default_as -r default_txt -o AS-DEFAULT.pdf';
+   TMPL_REX_PARAMS_COLLINS_ATP = 'C:\REX\rex.py -m atp$ATPNUM$ -r ATP-$ATPNUM$_html.html -o ATP-$ATPNUM$.pdf';
 
    // TSX report is the same as FILE_REPORT_TXT_BJI until a custom TSX format is final.
    FILE_REPORT_TXT_TSX = 'C:\Users\Public\Documents\CEETIS\Temp\Reports\DefaultReport_txt.txt';
    TMPL_ARCHIVE_TXT_TSX = '\\az-fs1\chksmPBI\Weetech Reports\Bemidji\<ProjectName>-<SerialNumber>-<Year><Month><Day>-<Hour><Minute><Second>.txt';
+
+   // Path breaks down as follows:
+   // 1: "O:"
+   // 2: "Test Eng"
+   // 3: "434"
+   // 4: CUSTOMER_NAME or DIR_TO_MAP_TO_CUSTOMER_NAME
+   PARENT_INDEX = 4;
 end;
 
 
@@ -152,10 +175,8 @@ begin
             // USE THE PARENT DIR NAME TO REMAP TO CUSTOMER NAME, ELSE USE
             // PARENT DIR NAME
             MiscListFromString(ProjectFilename, PathParts, '\');
-            Size = MiscGetListSize(PathParts);
-            ParentIndex = Size - 1;
 
-            Customer = FileGetIni(Handle, 'DirectoryMap', PathParts[ParentIndex], Customer);
+            Customer = FileGetIni(Handle, 'DirectoryMap', PathParts[PARENT_INDEX], Customer);
          end;
 
          FileCloseIni(Handle);
@@ -176,7 +197,7 @@ begin
 
    Checks to ensure the test is not a PRETEST. Uses CUP to launch Python with
    parameters matching the test. Cleans up after itself so we don't
-   accidentally resuse the generated PDF.
+   accidentally reuse the generated PDF.
 }
    ProjectFilename = ProjectGetFilename();
    IsPretest = StrPosition('PRE', ProjectFilename);
@@ -184,16 +205,64 @@ begin
    if (IsPretest == 0)
    begin
       // Execute external util for processing of report & forced print.
-      Params = StrReplace(TMPL_REX_PARAMS, '$ATPNUM$', ATPNum, TRUE);
+      Params = StrReplace(TMPL_REX_PARAMS_COLLINS_ATP, '$ATPNUM$', ATPNum, TRUE);
       CUPExecuteCommand('CEETIS_CUP_001', 'run program', [PYTHON_EXE, Params], 30s, ResultData);
 
       CollinsPDFReport = StrReplace(TMPL_REPORT_PDF_COLLINS, '$ATPNUM$', ATPNum, FALSE);
-      UIWriteNormal(CollinsPDFReport);
 
       if (FileExists(CollinsPDFReport))
       begin
          archive_protocol(CollinsPDFReport, TMPL_ARCHIVE_PDF_COLLINS, TRUE, FALSE, FALSE);
          FileDelete(CollinsPDFReport);
+      end;
+   end;
+end;
+
+
+function assembly_is_aerospace(): boolean;
+begin
+   ProjectPathAndFilename = ProjectGetFilename();
+   Count = MiscListFromString(ProjectPathAndFilename, PathParts, '\');
+
+   // Take the first three characters of the test name and make it uppercase
+   AssemblyType = StrUpperCase(StrCopy(PathParts[Count], 1, 3));
+
+   if (StrCompare(AssemblyType, 'AS-') == 0)
+   begin
+      Result = TRUE;
+   end
+   else
+   begin
+      Result = FALSE;
+   end;
+end;
+
+
+function archive_default_aero_pdf(Customer: string): void;
+begin
+{
+   Use CEETIS CUP to run Python for report generation.
+
+   Call REX with parameters for default 'AS-' reporting.
+
+   Checks to ensure the test is not a PRETEST. Uses CUP to launch Python with
+   parameters matching the test. Cleans up after itself so we don't
+   accidentally reuse the generated PDF.
+}
+   ProjectFilename = ProjectGetFilename();
+   IsPretest = StrPosition('PRE', ProjectFilename);
+
+   if (IsPretest == 0)
+   begin
+      // Execute external util for processing of report & forced print.
+      CUPExecuteCommand('CEETIS_CUP_001', 'run program', [PYTHON_EXE, REX_PARAMS_DEFAULT_AERO], 30s, ResultData);
+
+      ReportDest = StrReplace(TMPL_ARCHIVE_PDF_AERO_DEFAULT, '$CUST$', Customer, FALSE);
+
+      if (FileExists(FILE_REPORT_PDF_AERO_DEFAULT))
+      begin
+         archive_protocol(FILE_REPORT_PDF_AERO_DEFAULT, ReportDest, TRUE, FALSE, FALSE);
+         FileDelete(FILE_REPORT_PDF_AERO_DEFAULT);
       end;
    end;
 end;
@@ -234,19 +303,19 @@ begin
    end;
 
 
-{******************************************************************************
-*   ARCHIVING SECTION REFERENCE
-*   archive_protocol(SOURCE, DEST, PASS, FAIL, ABORT);
-*      SOURCE (String): Full path to source report.
-*      DEST (String): Destination string as template.
-*      PASS (Boolean): Archive passing test.
-*      FAIL (Boolean): Archive failing test.
-*      ABORT (Boolean): Archive aborted test.
-*
-*   First archive all BJI reports (passing & failing, no aborts).
-*   Second, check for additional customer-specific requirements.
-*   Third, archvie all TSX reports (passing & failing, no aborts).
-******************************************************************************}
+   {******************************************************************************
+   *   ARCHIVING SECTION REFERENCE
+   *   archive_protocol(SOURCE, DEST, PASS, FAIL, ABORT);
+   *      SOURCE (String): Full path to source report.
+   *      DEST (String): Destination string as template.
+   *      PASS (Boolean): Archive passing test.
+   *      FAIL (Boolean): Archive failing test.
+   *      ABORT (Boolean): Archive aborted test.
+   *
+   *   First archive all BJI reports (passing & failing, no aborts).
+   *   Second, check for additional customer-specific requirements.
+   *   Third, archvie all TSX reports (passing & failing, no aborts).
+   ******************************************************************************}
 
    Customer = resolve_customer_name();
 
@@ -255,6 +324,10 @@ begin
    archive_protocol(FILE_REPORT_TXT_BJI, BJIArchive, TRUE, TRUE, FALSE);
 
    // ARCHIVE & PROCESSING RULES FOR SPECIFIC CUSTOMERS
+   // NOTE: If matched against a customer, ensure all possible sub-cases are handled!
+   //       i.e. match against COLLINS and then handle ATPs, but also handle non-ATP 'AS'
+   //       assemblies. Base archive_protocol prior to switch/case block will ensure
+   //       default reports are preserved.
    switch (Customer)
    begin
       case 'COLLINS':
@@ -272,12 +345,28 @@ begin
             begin
                archive_collins_atp_pass(ATPNum);
             end;
+         end
+         else
+         begin
+            if (assembly_is_aerospace())
+            begin
+               archive_default_aero_pdf(Customer);
+            end;
          end;
       end;
       case 'TEST LAB':
       begin
          // Never write a TSX report for TEST LAB tests
          GlobalDataWrite('Nortech.NOTSX', '1');
+      end;
+      default:
+      begin
+         // Default actions for tests not previously handled.
+         // For all 'AS-' assemblies, post-process to include header on each page
+         if (assembly_is_aerospace())
+         begin
+            archive_default_aero_pdf(Customer);
+         end;
       end;
    end;
 

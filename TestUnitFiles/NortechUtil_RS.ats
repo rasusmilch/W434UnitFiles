@@ -1346,13 +1346,11 @@ begin
    String = 'TESTING SWITCH ';
    String = StrAdd(String, SWName);
 
-   // Add spacing in UI and report for clarity
-   UIWriteNormal(' ');
-   ReportWriteNormal(' ');
+   // Add spacing in UI and report for readability
+   blank_line();
 
-   // Output header line to UI and report
-   UIWriteNormal(String);
-   ReportWriteNormal(String);
+   // Display the header in UI and report
+   msg_box_border(String, '*');
 
    if (NCState == TRUE)
    begin
@@ -1414,19 +1412,18 @@ begin
    String = StrAdd(String, ', ');
    String = StrAdd(String, SWNameOverride);
 
-   // Add blank line for readability in UI and report
-   UIWriteNormal(' ');
-   ReportWriteNormal(' ');
+   // Add spacing in UI and report for readability
+   blank_line();
 
-   // Display header to operator and report
-   UIWriteNormal(String);
-   ReportWriteNormal(String);
+   // Display the header in UI and report
+   msg_box_border(String, '*');
 
    if (NCState == TRUE)
    begin
       // --- Phase 1: primary CLOSED, override OPEN (1,0) ---
       String = str_sw_two_state(SWName, 'CLOSED', SWNameOverride, 'OPEN');
-      ConnectionTest(String, Pin1, Pin2);
+      ui_report_normal(StrAdd('Continuity: ', String));
+      ConnectionTest('SW', Pin1, Pin2);
 
       // Prompt operator to hold the primary switch
       String = StrAdd('PRESS AND HOLD ', SWName);
@@ -1434,7 +1431,8 @@ begin
 
       // --- Phase 2: both OPEN (0,0) ---
       String = str_sw_two_state(SWName, 'OPEN', SWNameOverride, 'OPEN');
-      NoConnectionLV(String, Pin1, Pin2);
+      ui_report_normal(StrAdd('NCLV: ', String));
+      NoConnectionLV('NCLV', Pin1, Pin2);
 
       // Prompt operator to hold the override switch
       String = StrAdd('PRESS AND HOLD ', SWNameOverride);
@@ -1442,7 +1440,8 @@ begin
 
       // --- Phase 3: primary OPEN, override CLOSED (0,1) ---
       String = str_sw_two_state(SWName, 'OPEN', SWNameOverride, 'CLOSED');
-      ConnectionTest(String, Pin1, Pin2);
+      ui_report_normal(StrAdd('Continuity: ', String));
+      ConnectionTest('SW', Pin1, Pin2);
    end
    else
    begin
@@ -1482,24 +1481,24 @@ begin
    String = StrAdd(String, SWName2);
 
    // Add spacing in UI and report for readability
-   UIWriteNormal(' ');
-   ReportWriteNormal(' ');
+   blank_line();
 
    // Display the header in UI and report
-   UIWriteNormal(String);
-   ReportWriteNormal(String);
+   msg_box_border(String, '*');
 
    if (NCState == TRUE)
    begin
       // --- Phase 1: both switches CLOSED (1,1) ---
       String = str_sw_two_state(SWName1, 'CLOSED', SWName2, 'CLOSED');
-      ConnectionTest(String, Pin1, Pin2);
+      ui_report_normal(StrAdd('Continuity: ', String));
+      ConnectionTest('SW', Pin1, Pin2);
 
       // --- Phase 2: first OPEN, second CLOSED (0,1) ---
       String = StrAdd('PRESS AND HOLD ', SWName1);
       ui_info_cancellable(String);
       String = str_sw_two_state(SWName1, 'OPEN', SWName2, 'CLOSED');
-      NoConnectionLV(String, Pin1, Pin2);
+      ui_report_normal(StrAdd('NCLV: ', String));
+      NoConnectionLV('NCLV', Pin1, Pin2);
 
       // --- Phase 3: first CLOSED, second OPEN (1,0) ---
       String = StrAdd('RELEASE ', SWName1);
@@ -1507,7 +1506,8 @@ begin
       String = StrAdd(String, SWName2);
       ui_info_cancellable(String);
       String = str_sw_two_state(SWName1, 'CLOSED', SWName2, 'OPEN');
-      NoConnectionLV(String, Pin1, Pin2);
+      ui_report_normal(StrAdd('NCLV: ', String));
+      NoConnectionLV('NCLV', Pin1, Pin2);
    end
    else
    begin
@@ -1550,25 +1550,25 @@ begin
    String = StrAdd(String, ', ');
    String = StrAdd(String, SWOverrideName);
 
-   // Add spacing in both UI and report for readability
-   UIWriteNormal(' ');
-   ReportWriteNormal(' ');
+   // Add spacing in UI and report for readability
+   blank_line();
 
-   // Display the header line in UI and report
-   UIWriteNormal(String);
-   ReportWriteNormal(String);
+   // Display the header in UI and report
+   msg_box_border(String, '*');
 
    if (NCState == TRUE)
    begin
       // --- Phase 1: S1 CLOSED, S2 CLOSED, Override OPEN (1,1,0) ---
       String = str_sw_three_state(SW1Name, 'CLOSED', SW2Name, 'CLOSED', SWOverrideName, 'OPEN');
-      ConnectionTest(String, Pin1, Pin2);
+      ui_report_normal(StrAdd('Continuity: ', String));
+      ConnectionTest('SW', Pin1, Pin2);
 
       // --- Phase 2: Prompt to hold S1, then test S1 OPEN, S2 CLOSED, Override OPEN (0,1,0) ---
       String = StrAdd('PRESS AND HOLD ', SW1Name);
       ui_info_cancellable(String);
       String = str_sw_three_state(SW1Name, 'OPEN',   SW2Name, 'CLOSED', SWOverrideName, 'OPEN');
-      NoConnectionLV(String, Pin1, Pin2);
+      ui_report_normal(StrAdd('NCLV: ', String));
+      NoConnectionLV('NCLV', Pin1, Pin2);
 
       // --- Phase 3: Prompt to release S1 and hold S2, then test S1 CLOSED, S2 OPEN, Override OPEN (1,0,0) ---
       String = StrAdd('RELEASE ', SW1Name);
@@ -1576,13 +1576,15 @@ begin
       String = StrAdd(String, SW2Name);
       ui_info_cancellable(String);
       String = str_sw_three_state(SW1Name, 'CLOSED', SW2Name, 'OPEN',   SWOverrideName, 'OPEN');
-      NoConnectionLV(String, Pin1, Pin2);
+      ui_report_normal(StrAdd('NCLV: ', String));
+      NoConnectionLV('NCLV', Pin1, Pin2);
 
       // --- Phase 4: Prompt to hold Override, then test S1 CLOSED, S2 OPEN, Override CLOSED (1,0,1) ---
       String = StrAdd('PRESS AND HOLD ', SWOverrideName);
       ui_info_cancellable(String);
       String = str_sw_three_state(SW1Name, 'CLOSED', SW2Name, 'OPEN',   SWOverrideName, 'CLOSED');
-      ConnectionTest(String, Pin1, Pin2);
+      ui_report_normal(StrAdd('Continuity: ', String));
+      ConnectionTest('WIRE', Pin1, Pin2);
    end
    else
    begin
@@ -1649,7 +1651,7 @@ end;
   @param   ReportTol   Optional flag to display tolerance info before testing (default FALSE).
   @return  TRUE if the capacitance falls within tolerance, FALSE otherwise.
 **}
-function rcl_test_cap(Name: string; FromPin: tpin; ToPin: tpin; CapAvg: real; TolPercent: integer; ReportTol: boolean = FALSE): boolean;
+function rcl_test_cap(Name: string; Pin1: tpin; Pin2: tpin; CapAvg: real; TolPercent: integer; ReportTol: boolean = FALSE): boolean; tests rlccombinations;
 begin
    Result = FALSE;  // default to failure
 
@@ -1667,7 +1669,7 @@ begin
       end;
 
       // Execute the actual RLC parallel capacitance test
-      Result = RLCParallelCapacitanceTest(Name, FromPin, ToPin, LowerTol, UpperTol);
+      Result = RLCParallelCapacitanceTest(Name, Pin1, Pin2, LowerTol, UpperTol);
    end
    else
    begin
@@ -1676,7 +1678,7 @@ begin
       MiscAbortTest();
    end;
 
-   blank_line(TRUE);  // spacing after test
+//   blank_line(TRUE);  // spacing after test
 end;
 
 
@@ -1713,7 +1715,7 @@ begin
       if (StrCompare(OperatorName, 'NULL') == 0)
       begin
          // No matching name found => log error, report, and abort
-         UIWriteError('OPERATOR ID NOT FOUND.<BR><BR>CONTACT TEST LAB');
+         UIWriteError('OPERATOR ID NOT FOUND. CONTACT TEST LAB');
          ReportWriteError('OPERATOR ID NOT FOUND, TEST AUTOMATICALLY ABORTED.');
          MiscAbortTest();
       end
