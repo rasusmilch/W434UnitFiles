@@ -88,9 +88,6 @@
 
   operator_name_from_id(): string
   //   Lookup and return the operator’s name based on the current operator ID from FILE_OPERATOR_ID_MAP, aborting on error.
-
-  timer_fails_check(Debug: boolean = FALSE): void
-  //   Report the main failure counter total to the timer.
 }
 
 constants
@@ -553,7 +550,7 @@ begin
          ui_report_warning(StrBoxTop);
       end;
 
-      if (Error == FALSE AND Warning == FALSE)
+      if ((Error == FALSE) AND (Warning == FALSE))
       begin
          ui_report_normal(StrBoxTop);
          ui_report_normal(String);
