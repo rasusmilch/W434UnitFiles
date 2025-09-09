@@ -121,6 +121,51 @@ begin
    Result = NameStr;
 end;
 
+function strip_list_empty_string(ListStr: string; Debug: boolean = FALSE): string;
+begin
+   Result = '';
+   Count = MiscListFromString(ListStr, PinList, ';');
+
+   if (Count)
+   begin
+      for Index = 1 to Count do
+      begin
+         PinNameStr = PinGetData(PinList[Index], PIN_Name);
+         if (Debug)
+         begin
+            Str = StrAdd('Name: "', PinNameStr);
+            Str = StrAdd(Str, '"');
+            UIWriteWarning(Str);
+         end;
+
+         if (StrCompare(PinNameStr, '') <> 0)
+         begin
+            if (Debug)
+            begin
+               Str = StrAdd('Adding: ', PinNameStr);
+               UIWriteWarning(Str);
+            end;
+
+            if (Index == 1)
+            begin
+               Pin = PinList[Index];
+               MiscCreateList(StrippedList, 1);
+               StrippedList[1] = Pin;
+            end
+            else
+            begin
+               Pin = PinList[Index];
+               MiscCreateList(PinListSingle, 1);
+               PinListSingle[1] = Pin;
+               MiscAddLists(StrippedList, StrippedList, PinListSingle);
+            end;
+         end;
+      end;
+
+      Result = MiscListToString(StrippedList, ';');
+   end;
+end;
+
 {**
   @brief   Retrieve a list of all primary named pins from the netlist.
   @details
@@ -135,6 +180,8 @@ begin
 
    // Convert the pin list to a semicolon-delimited string and return it
    Result = MiscListToString(PinList, ';');
+
+   Result = strip_list_empty_string(Result, Debug);
 
    if (Debug)
    begin
@@ -157,6 +204,8 @@ begin
 
    // Convert the pin list to a semicolon-delimited string and return it
    Result = MiscListToString(PinList, ';');
+
+   Result = strip_list_empty_string(Result, Debug);
 
    if (Debug)
    begin
@@ -188,7 +237,17 @@ begin
    NWGetNetworkPins(PinList, Pin, [COMPONENT_Wire], ANY, FALSE);
 
    // Convert the pin list to a semicolon-delimited string and assign to Result.
-   Result = MiscListToString(PinList, ';');
+   PinListStr = MiscListToString(PinList, ';');
+
+   Result = strip_list_empty_string(PinListStr, Debug);
+
+   if (Debug)
+   begin
+      UIWriteWarning(StrAdd('Incoming: ', PinListStr));
+      UIWriteWarning(StrAdd('Outgoing: ', Result));
+   end;
+
+   MiscListFromString(Result, PinList, ';');
 
    // If debugging is enabled, compose and emit a readable summary of the network.
    if (Debug)
@@ -415,6 +474,18 @@ end;
 **}
 function wire_test_guard(Name: string; Pin1: tpin; Pin2: tpin; Debug: boolean = FALSE): integer; tests wires;
 begin
+
+   if (Debug)
+   begin
+      Str = StrAdd('WireTest(', Name);
+      Str = StrAdd(Str, ',');
+      Str = StrAdd(Str, Pin1);
+      Str = StrAdd(Str, ',');
+      Str = StrAdd(Str, Pin2);
+      Str = StrAdd(Str, ');');
+      UIWriteWarning(Str);
+   end;
+
    // Execute the continuity test between Pin1 and Pin2; capture the result code.
    Result = WireTest(Name, Pin1, Pin2);
 
@@ -462,6 +533,11 @@ begin
    // Retrieve primary pins as a semicolon-delimited string (source of networks to test).
    AllPrimaryPinListStr = get_netlist_primary(Debug);
 
+   if (Debug)
+   begin
+      UIWriteWarning(AllPrimaryPinListStr);
+   end;
+
    // Parse primary pin list into ListAllPrimaryPins; Count receives the number of items.
    Count = MiscListFromString(AllPrimaryPinListStr,ListAllPrimaryPins,';');
 
@@ -477,6 +553,11 @@ begin
    begin
       // Resolve the full network string (all pins connected to the current primary pin).
       NetworkPinListStr = get_netlist_from_primary_pin(ListAllPrimaryPins[Index], Debug);
+
+      if (Debug)
+      begin
+         UIWriteWarning(NetworkPinListStr);
+      end;
 
       // Tokenize the network into ListAllNetworkPins; NWCount receives the network size.
       NWCount = MiscListFromString(NetworkPinListStr,ListAllNetworkPins,';');
@@ -498,7 +579,7 @@ begin
          SecondaryPin = ListAllNetworkPins[SecondIndex];
 
          // Run the continuity guard test between the primary and secondary pins.
-         TestResult = wire_test_guard('', PrimaryPin, SecondaryPin, Debug);
+         TestResult = wire_test_guard('WIRE', PrimaryPin, SecondaryPin, Debug);
 
          // On any non-passing outcome, record the failure and run timing/diagnostics.
          if (TestResult <> TESTSTEP_Passed)
