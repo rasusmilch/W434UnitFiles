@@ -37,6 +37,23 @@
 *                splitting of path.
 *   By: PB
 *
+* - Test Rev: 3.4
+*   Date: 2025-08-29
+*   Description: Have resolve_customer_name() check to ensure 'Test Eng/434'
+*                is in path.
+*   By: PB
+*
+* - Test Rev: 3.5
+*   Date: 2025-09-08
+*   Description: Change record_duration to include test time stamp to filter results in
+*                external ATS programs.
+*   By: RS
+*
+* - Test Rev: 3.6
+*   Date: 2025-09-09
+*   Description: Added guard sentinals for test options. Must use multipin_hv
+*   By: RS
+*
 * - Rev: (next version)
 *   Cust Doc Rev: (next revision)
 *   Date: YYYY-MM-DD
@@ -75,8 +92,7 @@ begin
    FILE_REPORT_PDF_AERO_DEFAULT = 'C:\REX\output\AS-DEFAULT.pdf';
    TMPL_ARCHIVE_PDF_AERO_DEFAULT = 'O:\Test Eng\DATA\W434\<Year>\$CUST$_PDF\<ProjectName>\<ProjectName>-<SerialNumber>-<Year><Month><Day>-<Hour><Minute><Second>.pdf';
 
-   //PYTHON_EXE = 'C:\Python\python.exe';
-   PYTHON_EXE = 'C:\Users\pbarton\scoop\apps\python\current\python.exe'; // For local testing
+   PYTHON_EXE = 'C:\Python\python.exe';
    REX_PARAMS_DEFAULT_AERO = 'C:\REX\rex.py -m default_as -r default_txt -o AS-DEFAULT.pdf';
    TMPL_REX_PARAMS_COLLINS_ATP = 'C:\REX\rex.py -m atp$ATPNUM$ -r ATP-$ATPNUM$_html.html -o ATP-$ATPNUM$.pdf';
 
@@ -123,8 +139,27 @@ begin
       TotalSeconds = HoursInSeconds + MinutesInSeconds + Seconds;
       TotalSeconds = StrAdd(TotalSeconds, 's');
 
+      Years = DTYear(StartTime);
+      Months = DTMonth(StartTime);
+      Days = DTDay(StartTime);
+      Hours = DTHour(StartTime);
+      Minutes = DTMinute(StartTime);
+      Seconds = DTSecond(StartTime);
+
       Line = StrAdd(Assembly, '|');
       Line = StrAdd(Line, TotalSeconds);
+      Line = StrAdd(Line, '|');
+      Line = StrAdd(Line, Years);
+      Line = StrAdd(Line, '-');
+      Line = StrAdd(Line, Months);
+      Line = StrAdd(Line, '-');
+      Line = StrAdd(Line, Days);
+      Line = StrAdd(Line, ' ');
+      Line = StrAdd(Line, Hours);
+      Line = StrAdd(Line, ':');
+      Line = StrAdd(Line, Minutes);
+      Line = StrAdd(Line, ':');
+      Line = StrAdd(Line, Seconds);
 
       FileAddText(Handle, Line);
       FileSaveText(Handle);
@@ -172,11 +207,13 @@ begin
          end
          else
          begin
-            // USE THE PARENT DIR NAME TO REMAP TO CUSTOMER NAME, ELSE USE
-            // PARENT DIR NAME
+            // USE THE PARENT DIR NAME TO REMAP TO CUSTOMER NAME
             MiscListFromString(ProjectFilename, PathParts, '\');
 
-            Customer = FileGetIni(Handle, 'DirectoryMap', PathParts[PARENT_INDEX], Customer);
+            if (StrCompare(PathParts[2], 'Test Eng') == 0 AND StrCompare(PathParts[3], '434') == 0)
+            begin
+               Customer = FileGetIni(Handle, 'DirectoryMap', PathParts[PARENT_INDEX], Customer);
+            end;
          end;
 
          FileCloseIni(Handle);
@@ -200,11 +237,12 @@ begin
    accidentally reuse the generated PDF.
 }
    ProjectFilename = ProjectGetFilename();
-   IsPretest = StrPosition('PRE', ProjectFilename);
+   IsPretest = StrContains('*PRE*', ProjectFilename, FALSE);
 
-   if (IsPretest == 0)
+   if (NOT IsPretest)
    begin
       // Execute external util for processing of report & forced print.
+      UIWriteNormal('LAUNCHING REX FOR REPORT PROCESSING...');
       Params = StrReplace(TMPL_REX_PARAMS_COLLINS_ATP, '$ATPNUM$', ATPNum, TRUE);
       CUPExecuteCommand('CEETIS_CUP_001', 'run program', [PYTHON_EXE, Params], 30s, ResultData);
 
@@ -255,6 +293,7 @@ begin
    if (IsPretest == 0)
    begin
       // Execute external util for processing of report & forced print.
+      UIWriteNormal('LAUNCHING REX FOR REPORT PROCESSING...');
       CUPExecuteCommand('CEETIS_CUP_001', 'run program', [PYTHON_EXE, REX_PARAMS_DEFAULT_AERO], 30s, ResultData);
 
       ReportDest = StrReplace(TMPL_ARCHIVE_PDF_AERO_DEFAULT, '$CUST$', Customer, FALSE);
@@ -267,139 +306,258 @@ begin
    end;
 end;
 
+{**
+  @brief Verify a guard option’s sentinel: if the option is required, it must have been tested.
 
-function main(): void;
+  @param OptionStr  Option key suffix used to form "REQUIRE_<OptionStr>" and "TESTED_<OptionStr>" entries.
+  @param Debug      Enables verbose/interactive behavior in user interface helpers.
+
+  @return boolean   TRUE if either (a) the option is not required, or (b) it is required and has been tested.
+                    FALSE if the option is required but has not been tested.
+
+  @details
+  Reads the requirement and tested state for a guard option from the "GUARDS" namespace.
+  If the option is marked required but not tested, an error string is constructed and both a
+  log entry and an error dialog are issued. Otherwise, the result is TRUE.
+
+  @pre GlobalDataRead, StrAdd, StrCompare, UIWriteError, and UIErrorDialog are available.
+  @post On required-but-untested, an error is logged and an error dialog is displayed.
+  @sideeffect Emits user interface feedback via UIWriteError and UIErrorDialog on failures.
+**}
+function test_options_sentinal(OptionStr: string; Debug: boolean = FALSE): boolean;
 begin
-   if (print_allowed())
-   begin
-      PrintAllReports();
-   end;
+   // Default pessimistically: assume sentinel not satisfied until checks pass.
+   Result = FALSE;
 
-   // Get test result
-   UserBreak = FALSE;
-   Passed = FALSE;
-   TestEndGetTestResult(UserBreak, Passed);
-   ArchiveTestResult();
+   // Read required/tested flags for this option from the "GUARDS" namespace.
+   Required = GlobalDataRead(StrAdd('REQUIRE_', OptionStr), 'NULL', 'GUARDS');
+   Tested = GlobalDataRead(StrAdd('TESTED_', OptionStr), 'NULL', 'GUARDS');
 
-   if (Passed)
+   // Branch: if this option is marked required, enforce that it was tested.
+   if (StrCompare(Required, 'TRUE') == 0)
    begin
-      record_duration();
-   end
-   else
-   begin
-      // Brief message if aborted by user
-      if (UserBreak)
+      // Required: pass only if the tested flag is explicitly TRUE.
+      if (StrCompare(Tested, 'TRUE') <> 0)
       begin
-         UIWriteNormal('');
-         Text = '----- ';
-         Text = StrAdd(Text, LocalText('49#Aborted by user'));
-         Text = StrAdd(Text, ' -----');
-         UIWriteWarning(Text);
+         // Compose and report the failure condition to the operator/log.
+         OptionErrorStr = StrAdd(OptionStr, ' TEST REQUIRED BUT NOT TESTED!');
+         UIWriteError(OptionErrorStr);
+
+         // Present an interactive error dialog to ensure visibility.
+         UIErrorDialog(OptionErrorStr);
       end
       else
       begin
-         unplug_check();
+         // Required and tested: sentinel satisfied.
+         Result = TRUE;
       end;
+   end
+   else
+   begin
+      // Not required: sentinel trivially satisfied.
+      Result = TRUE;
+   end;
+end;
+
+{**
+  @brief Check that all guard option sentinels are satisfied: continuity, low voltage, high voltage, and dielectric breakdown.
+
+  @param Debug  When TRUE, enables verbose/interactive behavior in called verification routines.
+
+  @return boolean  TRUE only if every required guard option is confirmed tested; FALSE if any required
+                   option (continuity, low voltage, high voltage, dielectric breakdown) is required
+                   but not tested.
+
+  @details
+  This routine delegates to test_options_sentinal for each guard category. It starts with an
+  optimistic TRUE and sets the overall result to FALSE upon any failing sentinel check. The four
+  categories validated are:
+   - Continuity
+   - Low voltage
+   - High voltage
+   - Dielectric breakdown
+
+  @pre test_options_sentinal is available and performs the required/tested verification, including
+       any user interface error reporting.
+  @post The called sentinel checks may emit user-facing errors or dialogs if requirements are unmet.
+**}
+function test_options_all_sentinals(Debug: boolean = FALSE): boolean;
+begin
+   // Start optimistic: assume all sentinels are satisfied until a check fails.
+   Result = TRUE;
+
+   // Continuity sentinel: fail overall if continuity is required but not tested.
+   if (test_options_sentinal('CONTINUITY', Debug) == FALSE)
+   begin
+      Result = FALSE;
    end;
 
-
-   {******************************************************************************
-   *   ARCHIVING SECTION REFERENCE
-   *   archive_protocol(SOURCE, DEST, PASS, FAIL, ABORT);
-   *      SOURCE (String): Full path to source report.
-   *      DEST (String): Destination string as template.
-   *      PASS (Boolean): Archive passing test.
-   *      FAIL (Boolean): Archive failing test.
-   *      ABORT (Boolean): Archive aborted test.
-   *
-   *   First archive all BJI reports (passing & failing, no aborts).
-   *   Second, check for additional customer-specific requirements.
-   *   Third, archvie all TSX reports (passing & failing, no aborts).
-   ******************************************************************************}
-
-   Customer = resolve_customer_name();
-
-   // ARCHIVE FOR BJI IN ALL PASS/FAIL CIRCUMSTANCES
-   BJIArchive = StrReplace(TMPL_ARCHIVE_TXT_BJI, '$CUST$', Customer, FALSE);
-   archive_protocol(FILE_REPORT_TXT_BJI, BJIArchive, TRUE, TRUE, FALSE);
-
-   // ARCHIVE & PROCESSING RULES FOR SPECIFIC CUSTOMERS
-   // NOTE: If matched against a customer, ensure all possible sub-cases are handled!
-   //       i.e. match against COLLINS and then handle ATPs, but also handle non-ATP 'AS'
-   //       assemblies. Base archive_protocol prior to switch/case block will ensure
-   //       default reports are preserved.
-   switch (Customer)
+   // Low voltage sentinel: fail overall if low voltage is required but not tested.
+   if (test_options_sentinal('LV', Debug) == FALSE)
    begin
-      case 'COLLINS':
+      Result = FALSE;
+   end;
+
+   // High voltage sentinel: fail overall if high voltage is required but not tested.
+   if (test_options_sentinal('HV', Debug) == FALSE)
+   begin
+      Result = FALSE;
+   end;
+
+   // Dielectric breakdown sentinel: fail overall if dielectric breakdown is required but not tested.
+   if (test_options_sentinal('DB', Debug) == FALSE)
+   begin
+      Result = FALSE;
+   end;
+
+end;
+
+
+function main(): void;
+begin
+
+   Sentinal = test_options_all_sentinals();
+
+   if (Sentinal == FALSE)
+   begin
+      UIWriteError('*************************************************************');
+      UIWriteError('* ERROR! A REQUIRED SENTINAL WAS NOT SET! CONTACT TEST LAB! *');
+      UIWriteError('*************************************************************');
+   end
+   else
+   begin
+
+      if (print_allowed())
       begin
-         // Only do extra work if covered by an ATP.
-         ATPNum = GlobalDataRead('Collins.ATP', 'NULL');
+         PrintAllReports();
+      end;
 
-         if (StrCompare(ATPNum, 'NULL') <> 0)
+      // Get test result
+      UserBreak = FALSE;
+      Passed = FALSE;
+      TestEndGetTestResult(UserBreak, Passed);
+      ArchiveTestResult();
+
+      if (Passed)
+      begin
+         record_duration();
+      end
+      else
+      begin
+         // Brief message if aborted by user
+         if (UserBreak)
          begin
-            CollinsReport = StrReplace(TMPL_REPORT_HTML_COLLINS, '$ATPNUM$', ATPNum, FALSE);
-            archive_protocol(CollinsReport, TMPL_ARCHIVE_HTML_COLLINS, TRUE, TRUE, FALSE);
-
-            // When passing, create the Collins data sheet PDF
-            if (Passed)
-            begin
-               archive_collins_atp_pass(ATPNum);
-            end;
+            UIWriteNormal('');
+            Text = '----- ';
+            Text = StrAdd(Text, LocalText('49#Aborted by user'));
+            Text = StrAdd(Text, ' -----');
+            UIWriteWarning(Text);
          end
          else
          begin
+            unplug_check();
+         end;
+      end;
+
+
+      {******************************************************************************
+      *   ARCHIVING SECTION REFERENCE
+      *   archive_protocol(SOURCE, DEST, PASS, FAIL, ABORT);
+      *      SOURCE (String): Full path to source report.
+      *      DEST (String): Destination string as template.
+      *      PASS (Boolean): Archive passing test.
+      *      FAIL (Boolean): Archive failing test.
+      *      ABORT (Boolean): Archive aborted test.
+      *
+      *   First archive all BJI reports (passing & failing, no aborts).
+      *   Second, check for additional customer-specific requirements.
+      *   Third, archvie all TSX reports (passing & failing, no aborts).
+      ******************************************************************************}
+
+      Customer = resolve_customer_name();
+
+      // ARCHIVE FOR BJI IN ALL PASS/FAIL CIRCUMSTANCES
+      BJIArchive = StrReplace(TMPL_ARCHIVE_TXT_BJI, '$CUST$', Customer, FALSE);
+      archive_protocol(FILE_REPORT_TXT_BJI, BJIArchive, TRUE, TRUE, FALSE);
+
+      // ARCHIVE & PROCESSING RULES FOR SPECIFIC CUSTOMERS
+      // NOTE: If matched against a customer, ensure all possible sub-cases are handled!
+      //       i.e. match against COLLINS and then handle ATPs, but also handle non-ATP 'AS'
+      //       assemblies. Base archive_protocol prior to switch/case block will ensure
+      //       default reports are preserved.
+      switch (Customer)
+      begin
+         case 'COLLINS':
+         begin
+            // Only do extra work if covered by an ATP.
+            ATPNum = GlobalDataRead('Collins.ATP', 'NULL');
+
+            if (StrCompare(ATPNum, 'NULL') <> 0)
+            begin
+               CollinsReport = StrReplace(TMPL_REPORT_HTML_COLLINS, '$ATPNUM$', ATPNum, FALSE);
+               archive_protocol(CollinsReport, TMPL_ARCHIVE_HTML_COLLINS, TRUE, TRUE, FALSE);
+
+               // When passing, create the Collins data sheet PDF
+               if (Passed)
+               begin
+                  archive_collins_atp_pass(ATPNum);
+               end;
+            end
+            else
+            begin
+               if (assembly_is_aerospace())
+               begin
+                  archive_default_aero_pdf(Customer);
+               end;
+            end;
+         end;
+         case 'TEST LAB':
+         begin
+            // Never write a TSX report for TEST LAB tests
+            GlobalDataWrite('Nortech.NOTSX', '1');
+         end;
+         default:
+         begin
+            // Default actions for tests not previously handled.
+            // For all 'AS-' assemblies, post-process to include header on each page
             if (assembly_is_aerospace())
             begin
                archive_default_aero_pdf(Customer);
             end;
          end;
       end;
-      case 'TEST LAB':
+
+      // LASTLY ARCHIVE FOR TSX IF THIS IS A NON-TEST LAB TEST RESULT
+      No_TSX = GlobalDataRead('Nortech.NOTSX', '0');
+      if (StrCompare(No_TSX, '1') <> 0)
       begin
-         // Never write a TSX report for TEST LAB tests
-         GlobalDataWrite('Nortech.NOTSX', '1');
+         archive_protocol(FILE_REPORT_TXT_TSX, TMPL_ARCHIVE_TXT_TSX, TRUE, TRUE, FALSE);
       end;
-      default:
+
+      timer_stop(FALSE, TRUE);
+
+      if (UserBreak)
       begin
-         // Default actions for tests not previously handled.
-         // For all 'AS-' assemblies, post-process to include header on each page
-         if (assembly_is_aerospace())
-         begin
-            archive_default_aero_pdf(Customer);
-         end;
-      end;
-   end;
-
-   // LASTLY ARCHIVE FOR TSX IF THIS IS A NON-TEST LAB TEST RESULT
-   No_TSX = GlobalDataRead('Nortech.NOTSX', '0');
-   if (StrCompare(No_TSX, '1') <> 0)
-   begin
-      archive_protocol(FILE_REPORT_TXT_TSX, TMPL_ARCHIVE_TXT_TSX, TRUE, TRUE, FALSE);
-   end;
-
-   timer_stop(FALSE, TRUE);
-
-   if (UserBreak)
-   begin
-      timer_disp_str('ABORT', FALSE, FALSE);
-   end
-   else
-   begin
-      if (Passed)
-      begin
-         timer_disp_str('PASS', FALSE, FALSE);
+         timer_disp_str('ABORT', FALSE, FALSE);
       end
       else
       begin
-         timer_disp_str('FAIL', FALSE, FALSE);
+         if (Passed)
+         begin
+            timer_disp_str('PASS', FALSE, FALSE);
+         end
+         else
+         begin
+            timer_disp_str('FAIL', FALSE, FALSE);
+         end;
       end;
+
+      // Show the test result if the test passed or failed
+      UITestResult(Passed, UserBreak, TRUE, 600s);
+
+      // If global data is not cleared, Operator ID will be preserved between
+      // unrelated tests. Last verified in CEETIS 4.13-08.
+      GlobalDataClear();
    end;
-
-   // Show the test result if the test passed or failed
-   UITestResult(Passed, UserBreak, TRUE, 600s);
-
-   // If global data is not cleared, Operator ID will be preserved between
-   // unrelated tests. Last verified in CEETIS 4.13-08.
-   GlobalDataClear();
 end;
 

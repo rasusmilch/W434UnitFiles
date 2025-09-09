@@ -35,6 +35,18 @@
   get_netlist_both(Debug: boolean = FALSE): string
   //  Retrieve a list of all named wire pins from the netlist.
 
+  get_netlist_from_primary_pin(Pin: tpin; Debug: boolean = FALSE): string
+  // Retrieve the full wire-connected network for a primary pin and return it as a semicolon-delimited string.
+
+  set_guard_tested(OptionStr: string; Debug: boolean = FALSE): void;
+  // Set the tested state for a guard option in the global "GUARDS" store.
+
+  wire_test_guard(Name: string; Pin1: tpin; Pin2: tpin; Debug: boolean = FALSE): integer; tests wires;
+  // Execute a wire continuity guard test and update guard bookkeeping after execution.
+
+  test_wires_guard(Debug: boolean = FALSE): integer;
+  // Execute continuity guard tests across all discovered pin networks and compute an overall result.
+
   no_conn_hv(Description: string; PinList: tpinarray)
   //  Execute a high-voltage �no-connection� (isolation) test across a list of pins.
 
@@ -66,12 +78,48 @@
    // HV isolation tests: treat switch contacts as HIGH against all others
    nc_hv_pin_info_high('SW1',ListAllPins);
    nc_hv_pin_info_high('SW2',ListAllPins);
-   �
 
  Typical applications include chassis isolation tests, switch contact verification, and multipin protocols.
  For further examples see Collins AS-0191-001, ONBOARD SYSTEMS AS-0192-001 and especially
  AS-0188-001 for multiple pins tested against all other pins (switch contacts against all others.)
 }
+
+{**
+  @brief   Convert an array of pin identifiers into a comma-separated string of their names.
+  @param   PinList  Array of pin handles to transform.
+  @return  A string containing each pin�s PIN_Name separated by commas (empty if PinList is empty).
+**}
+function transform_pinlist_name_str(PinList: tpinarray): string;
+begin
+   // Initialize result string
+   NameStr = '';
+
+   // Determine how many pins are in the input array
+   Count = MiscGetListSize(PinList);
+   //UIWriteNormal(Count);
+
+   // Seed NameStr with the first pin�s name, if any
+   if (Count >= 1)
+   begin
+      NameStr = PinGetData(PinList[1], PIN_Name); // get PIN_Name property
+      //UIWriteNormal(NameStr);
+   end;
+
+   // Append remaining pin names, each prefixed by a comma
+   if (Count >= 2)
+   begin
+      for Index = 2 to Count do
+      begin
+         PinName = PinGetData(PinList[Index], PIN_Name); // retrieve next pin name
+         //UIWriteNormal(PinName);
+         NameStr = StrAdd(NameStr, ',');     // add comma delimiter
+         NameStr = StrAdd(NameStr, PinName); // append pin name
+      end;
+   end;
+
+   // Return the combined list of names
+   Result = NameStr;
+end;
 
 {**
   @brief   Retrieve a list of all primary named pins from the netlist.
@@ -90,7 +138,8 @@ begin
 
    if (Debug)
    begin
-      UIWriteNormal(Result);
+      DebugNames = transform_pinlist_name_str(PinList);
+      UIWriteNormal(DebugNames);
    end;
 end;
 
@@ -111,7 +160,51 @@ begin
 
    if (Debug)
    begin
-      UIWriteNormal(Result);
+      DebugNames = transform_pinlist_name_str(PinList);
+      UIWriteNormal(DebugNames);
+   end;
+end;
+
+{**
+  @brief Retrieve the full wire-connected network for a primary pin and return it as a semicolon-delimited string.
+
+  @param Pin    Primary pin whose network is to be enumerated.
+  @param Debug  When TRUE, emits a debug message listing the primary pin name and all network pin names.
+
+  @return string  A semicolon-delimited list of pins in the same wire network as the primary pin.
+
+  @details
+  The routine queries the connectivity database for all pins electrically connected by wire
+  to the given primary pin, converts the resulting pin list into a semicolon-delimited string,
+  and returns that string. When debugging is enabled, it also formats and outputs a human-readable
+  message showing the primary pin and the resolved network pin names.
+
+  @pre NWGetNetworkPins, MiscListToString, transform_pinlist_name_str, PinGetData, StrAdd, and UIWriteNormal exist.
+  @post When Debug is TRUE, a diagnostic message is written to the user interface.
+**}
+function get_netlist_from_primary_pin(Pin: tpin; Debug: boolean = FALSE): string;
+begin
+   // Populate PinList with all pins connected by wire to the given primary pin.
+   NWGetNetworkPins(PinList, Pin, [COMPONENT_Wire], ANY, FALSE);
+
+   // Convert the pin list to a semicolon-delimited string and assign to Result.
+   Result = MiscListToString(PinList, ';');
+
+   // If debugging is enabled, compose and emit a readable summary of the network.
+   if (Debug)
+   begin
+      // Convert the pin list into a name-only, human-readable string.
+      DebugNames = transform_pinlist_name_str(PinList);
+
+      // Fetch the primary pin's display name (PIN_Name property).
+      PinNameStr = PinGetData(Pin, PIN_Name);
+      // Build "Primary pin: <name>, Network pins: <names>" for user feedback.
+      Str = StrAdd('Primary pin: ', PinNameStr);
+      Str = StrAdd(Str, ', Network pins: ');
+      Str = StrAdd(Str, DebugNames);
+
+      // Emit the composed diagnostic string.
+      UIWriteNormal(Str);
    end;
 end;
 
@@ -165,7 +258,6 @@ begin
    Result = Text;                       // return the final string
 end;
 
-
 {**
   @brief   Retrieve a semicolon-delimited string of named pins within a specified range.
   @details
@@ -209,42 +301,219 @@ begin
    Result = Text;
 end;
 
-
+// Entry point: marks a guard option as tested, or implicitly required if not already set.
 {**
-  @brief   Convert an array of pin identifiers into a comma-separated string of their names.
-  @param   PinList  Array of pin handles to transform.
-  @return  A string containing each pin�s PIN_Name separated by commas (empty if PinList is empty).
+  @brief Set the tested state for a guard option in the global "GUARDS" store.
+
+  @param OptionStr  Token appended to the "REQUIRE_" and "TESTED_" keys to select the guard option.
+  @param Debug      Optional flag for verbose behavior (currently unused by this routine).
+
+  @details
+  Reads "REQUIRE_<OptionStr>" and "TESTED_<OptionStr>" from the "GUARDS" namespace.
+  If the requirement is explicitly TRUE, the routine records "TESTED_<OptionStr>=TRUE".
+  If the requirement is not TRUE, the routine implicitly establishes the requirement by
+  setting "REQUIRE_<OptionStr>=TRUE". This allows callers that invoke the routine for an
+  option not yet declared required to bootstrap that requirement without separate setup.
+
+  @pre GlobalDataRead, GlobalDataWrite, StrAdd, and StrCompare are available and operational.
+  @sideeffect Writes to the "GUARDS" namespace in the global data store.
+  @return void
 **}
-function transform_pinlist_name_str(PinList: tpinarray): string;
+function set_guard_tested(OptionStr: string; Debug: boolean = FALSE): void;
 begin
-   // Initialize result string
-   NameStr = '';
+   // Read existing requirement state for this guard option from "GUARDS".
+   Required = GlobalDataRead(StrAdd('REQUIRE_', OptionStr), 'NULL', 'GUARDS');
 
-   // Determine how many pins are in the input array
-   Count = MiscGetListSize(PinList);
-   //UIWriteNormal(Count);
+   // Read prior tested state (may be 'NULL' if unset); retained for possible external use.
+   Tested = GlobalDataRead(StrAdd('TESTED_', OptionStr), 'NULL', 'GUARDS');
 
-   // Seed NameStr with the first pin�s name, if any
-   if (Count >= 1)
+   // Branch on explicit requirement: only mark as tested when requirement is affirmed.
+   if (StrCompare(Required, 'TRUE') == 0)
    begin
-      NameStr = PinGetData(PinList[1], PIN_Name); // get PIN_Name property
-      //UIWriteNormal(NameStr);
+      // Requirement is TRUE; record that this guard option has been tested.
+      GlobalDataWrite(StrAdd('TESTED_', OptionStr), 'TRUE', 'GUARDS');
+   end
+   else
+   begin
+      // Not required yet; implicitly declare the requirement to ensure future enforcement.
+      GlobalDataWrite(StrAdd('REQUIRE_', OptionStr), 'TRUE', 'GUARDS');
+   end;
+end;
+
+function no_conn_all_lv_guard(Name: string; Pin1: tpin; Debug: boolean = FALSE): integer;
+begin
+   Result = NoConnAllLV('Name', Pin1);
+
+   // If the test did not pass, run the standardized failure timing/diagnostic handler.
+   if (Result <> TESTSTEP_Passed)
+   begin
+      // Invoke diagnostic timing logic with the current debug setting.
+      timer_fails_check(Debug);
    end;
 
-   // Append remaining pin names, each prefixed by a comma
-   if (Count >= 2)
+   if (Result <> TESTSTEP_NotExecuted)
    begin
-      for Index = 2 to Count do
+      // Record that the guard was exercised for this run (post-test bookkeeping).
+      set_guard_tested('LV', Debug);
+   end;
+end;
+
+function no_conn_all_hv_guard(Name: string; Pin1: tpin; Debug: boolean = FALSE): integer;
+begin
+   Result = NoConnAllHV('Name', Pin1);
+
+   // If the test did not pass, run the standardized failure timing/diagnostic handler.
+   if (Result <> TESTSTEP_Passed)
+   begin
+      // Invoke diagnostic timing logic with the current debug setting.
+      timer_fails_check(Debug);
+   end;
+
+   if (Result <> TESTSTEP_NotExecuted)
+   begin
+      // Record that the guard was exercised for this run (post-test bookkeeping).
+      set_guard_tested('HV', Debug);
+   end;
+end;
+
+function no_conn_all_db_guard(Name: string; Pin1: tpin; Debug: boolean = FALSE): integer;
+begin
+   Result = NoConnAllDB('Name', Pin1);
+
+   // If the test did not pass, run the standardized failure timing/diagnostic handler.
+   if (Result <> TESTSTEP_Passed)
+   begin
+      // Invoke diagnostic timing logic with the current debug setting.
+      timer_fails_check(Debug);
+   end;
+
+   if (Result <> TESTSTEP_NotExecuted)
+   begin
+      // Record that the guard was exercised for this run (post-test bookkeeping).
+      set_guard_tested('DB', Debug);
+   end;
+end;
+
+{**
+  @brief Execute a wire continuity guard test and update guard bookkeeping after execution.
+
+  @param Name   Human-readable test identifier forwarded to the underlying wire test.
+  @param Pin1   First pin under test.
+  @param Pin2   Second pin under test.
+  @param Debug  When TRUE, enables verbose diagnostics in helper routines.
+
+  @return integer The status code returned by the wire test (e.g., TESTSTEP_Passed on success).
+
+  @details
+  Runs a continuity test between two pins using the standard wire test routine. If the
+  result is not a passing status, a standardized failure-timing/diagnostic handler is
+  invoked. After test execution (regardless of outcome), the routine records that the
+  continuity guard has been exercised for this run.
+
+  @pre WireTest, timer_fails_check, and set_guard_tested are available in the environment.
+  @post Guard bookkeeping is updated to reflect that the continuity was tested.
+**}
+function wire_test_guard(Name: string; Pin1: tpin; Pin2: tpin; Debug: boolean = FALSE): integer; tests wires;
+begin
+   // Execute the continuity test between Pin1 and Pin2; capture the result code.
+   Result = WireTest(Name, Pin1, Pin2);
+
+   // If the test did not pass, run the standardized failure timing/diagnostic handler.
+   if (Result <> TESTSTEP_Passed)
+   begin
+      // Invoke diagnostic timing logic with the current debug setting.
+      timer_fails_check(Debug);
+   end;
+
+   if (Result <> TESTSTEP_NotExecuted)
+   begin
+      // Record that the continuity guard was exercised for this run (post-test bookkeeping).
+      set_guard_tested('CONTINUITY', Debug);
+   end;
+end;
+
+
+{**
+  @brief Execute continuity guard tests across all discovered pin networks and compute an overall result.
+
+  @param Debug  When TRUE, enables verbose diagnostics in helper routines used by this procedure.
+
+  @return integer Overall step status: TESTSTEP_Passed if no continuity failures are detected; otherwise TESTSTEP_Failed.
+
+  @details
+  The routine enumerates primary pins from the netlist, then for each primary pin resolves its
+  full network (all interconnected pins). The first pin of each network is treated as the primary
+  reference; it is paired against each remaining pin in that network and evaluated via wire_test_guard.
+  Any non-passing result increments a failure counter and triggers the standardized failure timing/
+  diagnostic routine. If no failures are recorded across all discovered networks, the overall result
+  is set to TESTSTEP_Passed; otherwise it remains TESTSTEP_Failed.
+
+  @pre get_netlist_primary, get_netlist_from_primary_pin, MiscListFromString, wire_test_guard,
+       UIWriteError, MiscAbortTest, and timer_fails_check are present and operational.
+
+  @post On non-passing subtests, diagnostics/timing may be recorded by timer_fails_check.
+**}
+function test_wires_guard(Debug: boolean = FALSE): integer;
+begin
+   // Initialize failure counter and default overall result to failed.
+   Fails = 0;
+   Result = TESTSTEP_Failed;
+
+   // Retrieve primary pins as a semicolon-delimited string (source of networks to test).
+   AllPrimaryPinListStr = get_netlist_primary(Debug);
+
+   // Parse primary pin list into ListAllPrimaryPins; Count receives the number of items.
+   Count = MiscListFromString(AllPrimaryPinListStr,ListAllPrimaryPins,';');
+
+   // Abort the test sequence if no primary pins were found.
+   if (Count == 0)
+   begin
+      UIWriteError('NO PINS FOUND!');
+      MiscAbortTest();
+   end;
+
+   // Iterate over each primary pin to process its associated network.
+   for Index = 1 to Count do
+   begin
+      // Resolve the full network string (all pins connected to the current primary pin).
+      NetworkPinListStr = get_netlist_from_primary_pin(ListAllPrimaryPins[Index], Debug);
+
+      // Tokenize the network into ListAllNetworkPins; NWCount receives the network size.
+      NWCount = MiscListFromString(NetworkPinListStr,ListAllNetworkPins,';');
+
+      // A valid network must contain at least two pins (primary + one secondary).
+      if (NWCount < 2)
       begin
-         PinName = PinGetData(PinList[Index], PIN_Name); // retrieve next pin name
-         //UIWriteNormal(PinName);
-         NameStr = StrAdd(NameStr, ',');     // add comma delimiter
-         NameStr = StrAdd(NameStr, PinName); // append pin name
+         UIWriteError('NO SECONDARY PINS FOUND');
+         MiscAbortTest();
+      end;
+
+      // Select the first entry as the primary reference pin for pairwise continuity checks.
+      PrimaryPin = ListAllNetworkPins[1];
+
+      // Pair the primary pin against each remaining pin in the network.
+      for SecondIndex = 2 to NWCount do
+      begin
+         // Select the next secondary pin to test against the primary reference.
+         SecondaryPin = ListAllNetworkPins[SecondIndex];
+
+         // Run the continuity guard test between the primary and secondary pins.
+         TestResult = wire_test_guard('', PrimaryPin, SecondaryPin, Debug);
+
+         // On any non-passing outcome, record the failure and run timing/diagnostics.
+         if (TestResult <> TESTSTEP_Passed)
+         begin
+            Fails = Fails + 1;
+            timer_fails_check(Debug);
+         end;
       end;
    end;
 
-   // Return the combined list of names
-   Result = NameStr;
+   // If no failures were recorded across all networks, set overall result to passed.
+   if (Fails == 0)
+   begin
+      Result = TESTSTEP_Passed;
+   end;
 end;
 
 
@@ -305,6 +574,10 @@ begin
 
    // Invoke the no-connection dielectric breakdown group test with labels and lists.
    NoConnGroupDB('NCDB', HighName, HighList, LowName, LowList);
+
+   timer_fails_check(Debug);
+
+   set_guard_tested('DB');
 end;
 
 
@@ -511,6 +784,11 @@ begin
 
    // Execute the HV no-connection group test with the labeled HIGH and LOW groups.
    NoConnGroupHV('NCHV', HighName, PinHigh, LowName, PinLow);
+
+   timer_fails_check(Debug);
+   
+   set_guard_tested('HV');
+
 end;
 
 
@@ -586,8 +864,6 @@ begin
    no_conn_hv_lists(HighNames, HighPinList, 'ALL OTHER PINS', LowPinList, Debug);
 end;
 
-
-
 {**
  @brief Execute an HV no-connection test where LOW pins are selected by a PIN_Info substring.
 
@@ -662,9 +938,6 @@ begin
    no_conn_hv_lists('ALL OTHER PINS', HighPinList, LowNames, LowPinList, Debug);
 end;
 
-
-
-
 {**
  @brief Run a low-voltage isolation test and abort immediately if any new failure is detected.
 
@@ -729,15 +1002,14 @@ begin
    end;
 end;
 
-
 {**
- @brief Execute a high-voltage �no-connection� (isolation) test across a list of pins.
+ @brief Execute a high-voltage 'no-connection' (isolation) test across a list of pins.
 
  @details
  Iterates over @p PinList and invokes NoConnAllHV() per pin, passing through the
  human-readable @p Description for traceability in logs/reports. The routine tracks
  an aggregate status in AllPassed, which is initialized TRUE and flipped to FALSE
- if any individual pin test fails. The optional �abort on failure� section is
+ if any individual pin test fails. The optional 'abort on failure' section is
  currently commented out, so the function will complete the pass over all pins
  even if failures occur.
 
@@ -779,7 +1051,7 @@ begin
       begin
          PinName = PinGetData(PinList[Index], PIN_Name); // fetch pin name for context (logging)
          //UIWriteNormal(PinName); // optional: echo pin under test
-         Result = NoConnAllHV(Description, PinList[Index]); // test this pin (returns TRUE on pass)
+         Result = no_conn_all_hv_guard(Description, PinList[Index]); // test this pin (returns TRUE on pass)
          if (Result == FALSE)
          begin
             AllPassed = FALSE; // mark overall failure if any test fails
@@ -807,7 +1079,7 @@ end;
  - Invokes no_conn_hv() for each pin set, forwarding @p Description for report/log traceability.
 
  @param Description  Human-readable label/identifier forwarded to no_conn_hv() for consistent reporting.
- @param Tmeas        Measurement/hold time applied through ParamIsolationHV()�s fifth parameter (default 1s).
+ @param Tmeas        Measurement/hold time applied through ParamIsolationHV()'s fifth parameter (default 1s).
 
  @return void
 
@@ -990,7 +1262,7 @@ begin
       begin
          PinName = PinGetData(PinList[Index], PIN_Name); // fetch pin name for context (logging)
          //UIWriteNormal(PinName); // optional: echo pin under test
-         Result = NoConnAllHV(Description, PinList[Index]); // run HV DB current test for this pin; TRUE on pass
+         Result = no_conn_all_hv_guard(Description, PinList[Index]); // run HV DB current test for this pin; TRUE on pass
          if (Result == FALSE)
          begin
             AllPassed = FALSE; // mark overall failure if any test fails
@@ -1055,7 +1327,7 @@ begin
       begin
          PinName = PinGetData(PinList[Index], PIN_Name); // fetch pin name for context (logging)
          //UIWriteNormal(PinName); // optional: echo pin under test
-         Result = NoConnAllDB(Description, PinList[Index]); // run DB test for this pin; TRUE on pass
+         Result = no_conn_all_db_guard(Description, PinList[Index]); // run DB test for this pin; TRUE on pass
          if (Result == FALSE)
          begin
             AllPassed = FALSE; // mark overall failure if any test fails

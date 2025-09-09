@@ -5,6 +5,9 @@
   check_job_whitelist(Debug: boolean = FALSE): string
   //   Load the project’s job whitelist from FILE_JOB_WHITELIST, prompt and verify the operator’s job number, returning the raw whitelist or "NULL".
 
+  test_cont_option(): void
+  // Ensure the continuity test option is supported and enabled.
+
   test_db_option(): void
   //   Ensure the dielectric breakdown command group is supported and enabled, aborting the test if not.
 
@@ -177,7 +180,6 @@ begin
    Result = TestDuration;            // return the duration (or "NULL")
 end;
 
-
 {**
   @brief   Load and validate the job whitelist for the current project, prompting the operator as needed.
   @details
@@ -308,6 +310,37 @@ begin
    Result = JobWhitelist;             // return the raw whitelist or "NULL"
 end;
 
+{**
+  @brief   Ensure the continuity test option is supported and enabled.
+  @details
+    1. Verifies that the machine supports the continuity command group.
+    2. Verifies that the continuity command group is currently active/enabled.
+    If either check fails, an error dialog is shown and the test is aborted.
+  @return  void
+**}
+function test_cont_option(): void;
+begin
+   GlobalDataWrite('REQUIRE_CONTINUITY', 'TRUE', 'GUARDS');
+   GlobalDataWrite('TESTED_CONTINUITY', 'FALSE', 'GUARDS');
+
+   // Check if the command group is available
+   if (ParamIsCommandGroupAvailable(CMDGRP_Continuity) == FALSE)
+   begin
+      // Display an error dialog instructing use of an approved tester
+      UIErrorDialog('THIS MACHINE DOES NOT CURRENTLY SUPPORT A REQUIRED TESTING METHOD (CONTINUITY)<BR>PLEASE TEST ON AN APPROVED AEROSPACE TESTER');
+      // Abort the current test sequence
+      MiscAbortTest();
+   end;
+
+   // Check if the command group is active/enabled
+   if (ParamIsCommandGroupActive(CMDGRP_Continuity) == FALSE)
+   begin
+      // Display an error dialog indicating the command group is not enabled
+      UIErrorDialog('THIS TEST DOES NOT HAVE THE REQUIRED CONTINUITY COMMAND GROUP ENABLED!<BR>CONTACT TEST DEPARTMENT');
+      // Abort the current test sequence
+      MiscAbortTest();
+   end;
+end;
 
 {**
   @brief   Ensure the dielectric breakdown test option is supported and enabled.
@@ -404,9 +437,33 @@ end;
 **}
 function test_as_options(): void;
 begin
-   test_lv_option(); // Verify low-voltage isolation support and activation
-   test_hv_option(); // Verify high-voltage isolation support and activation
-   test_db_option(); // Verify dielectric breakdown support and activation
+   test_cont_option(); // Verify continuity support and activation
+   test_lv_option();   // Verify low-voltage isolation support and activation
+   test_hv_option();   // Verify high-voltage isolation support and activation
+   test_db_option();   // Verify dielectric breakdown support and activation
+end;
+
+function check_required_options(Continuity: string; LV: string; HV: string; DB: string; Debug: boolean = FALSE): void;
+begin
+   if (StrCompare(Continuity, 'FALSE') <> 0)
+   begin
+      test_cont_option();
+   end;
+
+   if (StrCompare(LV, 'FALSE') <> 0)
+   begin
+      test_lv_option();
+   end;
+
+   if (StrCompare(HV, 'FALSE') <> 0)
+   begin
+      test_hv_option();
+   end;
+
+   if (StrCompare(DB, 'FALSE') <> 0)
+   begin
+      test_db_option();
+   end;
 end;
 
 
