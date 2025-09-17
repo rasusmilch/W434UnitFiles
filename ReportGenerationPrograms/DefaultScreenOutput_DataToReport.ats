@@ -1,0 +1,53 @@
+//Output commands for the command ReportWriteMeasurementParameters
+template ReportWriteMeasurementParameters
+begin
+   Text = '';
+   Parameters = '';
+   switch (RES_CommandGroup)
+   begin
+      case CMDGRP_Continuity: begin
+         Text = LocalText('60#Parameters for continuity test');
+         Parameters = get_continuity_parameters_text(RES_CCurrent,
+            RES_CThreshold, RES_CTrise, RES_CTwait, RES_CTmeas, RES_CAutoRange,
+            RES_CVoltageLimit);
+      end;
+      case CMDGRP_IsolationLV: begin
+         Text = LocalText('65#Parameters for LV isolation test');
+         Parameters = get_isolationlv_parameters_text(RES_LVVoltage,
+            RES_LVThreshold, RES_LVTrise, RES_LVTwait, RES_LVTmeas,
+            RES_LVAutoRange, RES_LVCurrentLimit, RES_LVTmeasReduction);
+      end;
+      case CMDGRP_IsolationHV: begin
+         if (ParamGetIsolationHV(PARAM_IsolationHVValid))
+         begin
+            Text = LocalText('67#Parameters for HV isolation test');
+            Parameters = get_all_isolationhv_parameters_text(RES_HVVoltage,
+               RES_HVThreshold, RES_HVUseIThreshold, RES_HVIThreshold,
+               RES_HVTrise, RES_HVTwait, RES_HVTmeas, RES_HVAutoRange,
+               RES_HVCurrentLimit, RES_HVTmeasReduction, RES_HVTmeasFactor,
+               RES_HVVoltageRamp, RES_HVdIdtEnabled, RES_HVdIdtCurrentThreshold,
+               RES_dIdtTimeThresholdChanged);
+         end;
+      end;
+      case CMDGRP_DielectricBreakdown: begin
+         if (ParamGetDielectricBreakdown(PARAM_DielectricBreakdownValid))
+         begin
+            Text = LocalText('68#Parameters for dielectric breakdown test');
+            Parameters = get_dielectricbreakdown_parameters_text(RES_DBVoltage,
+               RES_DBTrise, RES_DBTwait, RES_DBTmeas, RES_DBTmeasFactor,
+               RES_DBVoltageRamp, RES_DBThresholdIr, RES_DBThresholdIi);
+         end;
+      end;
+   end;
+   if (StrCompare('Parameters', '') <> 0)
+   begin
+      UIWriteNormal(Text);
+      Line = StrCopy(Parameters, 1, 100);
+      UIWriteNormal(Line);
+      Parameters = StrDelete(Parameters, 1, 100);
+      if (StrLength(Parameters) > 0)
+      begin
+         UIWriteNormal(Parameters);
+      end;
+   end;
+end;

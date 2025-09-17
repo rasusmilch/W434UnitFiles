@@ -54,6 +54,11 @@
 *   Description: Added guard sentinals for test options. Must use multipin_hv
 *   By: RS
 *
+* - Test Rev: 3.7 
+*   Date: 2025-09-10
+*   Description: Switch from python.exe to pythonw.exe to suppress console.
+*   By: PB
+*
 * - Rev: (next version)
 *   Cust Doc Rev: (next revision)
 *   Date: YYYY-MM-DD
@@ -92,7 +97,7 @@ begin
    FILE_REPORT_PDF_AERO_DEFAULT = 'C:\REX\output\AS-DEFAULT.pdf';
    TMPL_ARCHIVE_PDF_AERO_DEFAULT = 'O:\Test Eng\DATA\W434\<Year>\$CUST$_PDF\<ProjectName>\<ProjectName>-<SerialNumber>-<Year><Month><Day>-<Hour><Minute><Second>.pdf';
 
-   PYTHON_EXE = 'C:\Python\python.exe';
+   PYTHON_EXE = 'C:\Python\pythonw.exe';
    REX_PARAMS_DEFAULT_AERO = 'C:\REX\rex.py -m default_as -r default_txt -o AS-DEFAULT.pdf';
    TMPL_REX_PARAMS_COLLINS_ATP = 'C:\REX\rex.py -m atp$ATPNUM$ -r ATP-$ATPNUM$_html.html -o ATP-$ATPNUM$.pdf';
 
@@ -307,7 +312,7 @@ begin
 end;
 
 {**
-  @brief Verify a guard option’s sentinel: if the option is required, it must have been tested.
+  @brief Verify a guard option's sentinel: if the option is required, it must have been tested.
 
   @param OptionStr  Option key suffix used to form "REQUIRE_<OptionStr>" and "TESTED_<OptionStr>" entries.
   @param Debug      Enables verbose/interactive behavior in user interface helpers.

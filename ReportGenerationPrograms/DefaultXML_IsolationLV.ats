@@ -1,0 +1,218 @@
+function write_isolationlv_result(TestStepResult: integer; IsExternalVoltage, IsArc: boolean): void;
+begin
+   Line = '<TestStepResult Type="IsolationLV">';
+   write_line(Line);
+   inc_indent();
+   switch (TestStepResult)
+   begin
+      case TESTSTEP_Passed:
+      begin
+         Text = 'Passed';
+      end;
+      case TESTSTEP_Failed:
+      begin
+         Text = 'Failed';
+      end;
+      default: begin
+         Text = 'Invalid';
+      end;
+   end;
+   Line = '<Result>' + Text + '</Result>';
+   write_line(Line);
+   Line = '<ExtVoltageFound>' + IsExternalVoltage + '</ExtVoltageFound>';
+   write_line(Line);
+   Line = '<Arc>' + IsArc + '</Arc>';
+   write_line(Line);
+   dec_indent();
+   write_line('</TestStepResult>');
+end;
+
+function write_isolationlv_fail(Pin1Addr, Pin2Addr: integer; IsArc: boolean; Prefix: string; Value: real): void;
+begin
+   write_line('<Fail>');
+   inc_indent();
+
+   Line = '<Pin1Addr>' + Pin1Addr + '</Pin1Addr>';
+   write_line(Line);
+   PinName = get_pin_name(Pin1Addr);
+   Line = '<Pin1Name>' + PinName + '</Pin1Name>';
+   write_line(Line);
+
+   Line = '<Pin2Addr>' + Pin2Addr + '</Pin2Addr>';
+   write_line(Line);
+   PinName = get_pin_name(Pin2Addr);
+   Line = '<Pin2Name>' + PinName + '</Pin2Name>';
+   write_line(Line);
+
+   Line = '<Arc>' + IsArc + '</Arc>';
+   write_line(Line);
+   Line = get_value_with_prefix('Resistance', 'Ohm', Prefix, Value);
+   write_line(Line);
+   dec_indent();
+   write_line('</Fail>');
+end;
+
+template ParamIsolationLV
+begin
+   write_line('<TestStep Cmd="ParamIsolationLV">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_isolationlv_parameters(RES_LVVoltage, RES_LVThreshold, RES_LVTrise, RES_LVTwait, RES_LVTmeas,
+      RES_LVAutoRange, RES_LVCurrentLimit, RES_LVTmeasReduction);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template ParamResetIsolationLV
+begin
+   write_line('<TestStep Cmd="ParamResetIsolationLV">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_isolationlv_parameters(RES_LVVoltage, RES_LVThreshold, RES_LVTrise, RES_LVTwait, RES_LVTmeas,
+      RES_LVAutoRange, RES_LVCurrentLimit, RES_LVTmeasReduction);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template NoConnectionLV
+begin
+   write_line('<TestStep Cmd="NoConnectionLV">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_two_pin_basics(RES_Name, RES_Pin1, RES_Pin2, RES_OriginalPin1, RES_OriginalPin2);
+   write_isolationlv_parameters(RES_LVVoltage, RES_LVThreshold, RES_LVTrise, RES_LVTwait, RES_LVTmeas,
+      RES_LVAutoRange, RES_LVCurrentLimit, RES_LVTmeasReduction);
+   write_isolationlv_result(RES_Result, RES_ExtVoltageFound, RES_Arc);
+   Line = get_value_with_prefix('Resistance', 'Ohm', RES_Prefix, RES_Value);
+   write_line(Line);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template NoConnAllLV
+begin
+   write_line('<TestStep Cmd="NoConnAllLV">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_one_pin_basics(RES_Name, RES_Pin, RES_OriginalPin);
+   write_isolationlv_parameters(RES_LVVoltage, RES_LVThreshold, RES_LVTrise, RES_LVTwait, RES_LVTmeas,
+      RES_LVAutoRange, RES_LVCurrentLimit, RES_LVTmeasReduction);
+
+   write_isolationlv_result(RES_Result, FALSE, FALSE);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      Line = get_value_with_prefix('Resistance', 'Ohm', RES_Prefix, RES_Value);
+      write_line(Line);
+   end
+   else
+   begin
+      if (RES_ErrorPinCount > 0)
+      begin
+         write_line('<Fails>');
+         inc_indent();
+         for Index = 1 to RES_ErrorPinCount do
+         begin
+            write_isolationlv_fail(RES_Pin, RES_ErrorPins[Index], RES_Arcs[Index],
+               RES_Prefixes[Index], RES_Values[Index]);
+         end;
+         dec_indent();
+         write_line('</Fails>');
+      end;
+   end;
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template NoConnLowerLV
+begin
+   write_line('<TestStep Cmd="NoConnLowerLV">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_one_pin_basics(RES_Name, RES_Pin, RES_OriginalPin);
+   write_isolationlv_parameters(RES_LVVoltage, RES_LVThreshold, RES_LVTrise, RES_LVTwait, RES_LVTmeas,
+      RES_LVAutoRange, RES_LVCurrentLimit, RES_LVTmeasReduction);
+
+   write_isolationlv_result(RES_Result, FALSE, FALSE);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      Line = get_value_with_prefix('Resistance', 'Ohm', RES_Prefix, RES_Value);
+      write_line(Line);
+   end
+   else
+   begin
+      if (RES_ErrorPinCount > 0)
+      begin
+         write_line('<Fails>');
+         inc_indent();
+         for Index = 1 to RES_ErrorPinCount do
+         begin
+            write_isolationlv_fail(RES_Pin, RES_ErrorPins[Index], RES_Arcs[Index],
+               RES_Prefixes[Index], RES_Values[Index]);
+         end;
+         dec_indent();
+         write_line('</Fails>');
+      end;
+   end;
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template PinScan
+begin
+end;
+
+template NoConnGroupLV
+begin
+   write_line('<TestStep Cmd="NoConnGroupLV">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_group_pin_basics(RES_Name, RES_HighGroup, RES_LowGroup, RES_HighGroupPinCount,
+      RES_LowGroupPinCount, RES_HighGroupPins, RES_LowGroupPins);
+   write_isolationlv_parameters(RES_LVVoltage, RES_LVThreshold, RES_LVTrise, RES_LVTwait, RES_LVTmeas,
+      RES_LVAutoRange, RES_LVCurrentLimit, RES_LVTmeasReduction);
+
+   write_isolationlv_result(RES_Result, FALSE, FALSE);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      Line = get_value_with_prefix('Resistance', 'Ohm', RES_Prefix, RES_Value);
+      write_line(Line);
+   end
+   else
+   begin
+      if (RES_ErrorCount > 0)
+      begin
+         write_line('<Fails>');
+         inc_indent();
+         for Index = 1 to RES_ErrorPinCount do
+         begin
+            write_isolationlv_fail(RES_ErrorHighPins[Index], RES_ErrorLowPins[Index], RES_Arcs[Index],
+               RES_Prefixes[Index], RES_Values[Index]);
+         end;
+         dec_indent();
+         write_line('</Fails>');
+      end;
+   end;
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template ConnectionTestLV
+begin
+   write_line('<TestStep Cmd="ConnectionTestLV">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_two_pin_basics(RES_Name, RES_Pin1, RES_Pin2, RES_OriginalPin1, RES_OriginalPin2);
+   write_isolationlv_parameters(RES_LVVoltage, RES_LVThreshold, RES_LVTrise, RES_LVTwait, RES_LVTmeas,
+      RES_LVAutoRange, RES_LVCurrentLimit, RES_LVTmeasReduction);
+   write_isolationlv_result(RES_Result, RES_ExtVoltageFound, RES_Arc);
+   Line = get_value_with_prefix('Resistance', 'Ohm', RES_Prefix, RES_Value);
+   write_line(Line);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+

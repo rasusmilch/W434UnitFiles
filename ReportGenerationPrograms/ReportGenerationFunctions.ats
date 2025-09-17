@@ -1,0 +1,660 @@
+//Returns the name of an optical pin
+function get_optical_pinname(Address: integer): string;
+begin
+   Result = OpticalPinGetData(Address, OPTICALPIN_AnyName);
+end;
+
+//Returns the name of a LV pin
+function get_lv_pinname(Address: integer): string;
+begin
+   Result = LV_PinGetData(Address, PIN_AnyName);
+end;
+
+//returns the text for the result of a command group
+function get_commandgroup_resultstring(Available, Active: boolean;
+   Errors, ExecutedCommands: integer): string;
+begin
+   Result = '';
+   if (Available)
+   begin
+      if (Active)
+      begin
+         switch (Errors)
+         begin
+            case 0:
+            begin
+               if (ExecutedCommands == 0)
+               begin
+                  Result = LocalText('73#No commands');
+               end
+               else
+               begin
+                  Result = LocalText('1#Pass');
+               end;
+            end;
+            case 1:
+            begin
+               Result = StrAdd('1 ', LocalText('2#error'));
+            end;
+            default:
+            begin
+               Result = StrAdd(Errors, ' ');
+               Result = StrAdd(Result, LocalText('3#errors'));
+            end;
+         end;
+      end
+      else
+      begin
+         Result = LocalText('4#not active');
+      end;
+   end;
+end;
+
+function get_command_group_result_string(CmdGroup, FailcounterID: integer): string;
+begin
+   Available = ParamIsCommandGroupAvailable(CmdGroup);
+   Active = ParamIsCommandGroupActive(CmdGroup);
+   Errors = FailCounterGet(FailcounterID);
+   ExecutedCommands = MiscGetNumberOfExecutedCommands(CmdGroup);
+   Result = get_commandgroup_resultstring(Available, Active, Errors, ExecutedCommands);
+end;
+
+
+//Returns measurement parameters for continuity test as text
+function get_continuity_parameters_text(Current: tcurrent;
+            Threshold: tresistance; Trise: ttime; Twait: ttime; Tmeas: ttime;
+            AutoRange: boolean; VoltageLimit: tvoltage): string;
+begin
+   Result = '';
+   Value = FormatCurrent(Current);
+   Result = StrAdd(Result, LocalText('51#Current'));
+   Result = StrAdd(Result, '=');
+   Result = StrAdd(Result, Value);
+   Result = StrAdd(Result, '; ');
+   Value = FormatResistance(Threshold);
+   Result = StrAdd(Result, LocalText('52#Threshold'));
+   Result = StrAdd(Result, '=');
+   Result = StrAdd(Result, Value);
+   Result = StrAdd(Result, '; ');
+   Value = FormatTime(Trise);
+   Result = StrAdd(Result, LocalText('53#Trise'));
+   Result = StrAdd(Result, '=');
+   Result = StrAdd(Result, Value);
+   Result = StrAdd(Result, '; ');
+   Value = FormatTime(Twait);
+   Result = StrAdd(Result, LocalText('54#Twait'));
+   Result = StrAdd(Result, '=');
+   Result = StrAdd(Result, Value);
+   Result = StrAdd(Result, '; ');
+   Value = FormatTime(Tmeas);
+   Result = StrAdd(Result, LocalText('55#Tmeas'));
+   Result = StrAdd(Result, '=');
+   Result = StrAdd(Result, Value);
+   Result = StrAdd(Result, '; ');
+   if (AutoRange)
+   begin
+      Value = LocalText('56#On');
+   end
+   else
+   begin
+      Value = LocalText('57#Off');
+   end;
+   Result = StrAdd(Result, LocalText('58#Auto ranging'));
+   Result = StrAdd(Result, '=');
+   Result = StrAdd(Result, Value);
+   Result = StrAdd(Result, '; ');
+   if (ParamGetContinuity(PARAM_ContinuityVoltageLimitValid))
+   begin
+      Value = FormatVoltage(VoltageLimit);
+      Result = StrAdd(Result, LocalText('59#Voltage limit'));
+      Result = StrAdd(Result, '=');
+      Result = StrAdd(Result, Value);
+      Result = StrAdd(Result, '; ');
+   end;
+   Pos = StrLength(Result) - 1;
+   Result = StrDelete(Result, Pos, 2);
+end;
+
+//Returns measurement parameters for continuity test
+function get_continuity_parameters(): string;
+begin
+   Result = get_continuity_parameters_text(
+               ParamGetContinuity(PARAM_ContinuityCurrent),
+               ParamGetContinuity(PARAM_ContinuityThreshold),
+               ParamGetContinuity(PARAM_ContinuityTrise),
+               ParamGetContinuity(PARAM_ContinuityTwait),
+               ParamGetContinuity(PARAM_ContinuityTmeas),
+               ParamGetContinuity(PARAM_ContinuityAutoRange),
+               ParamGetContinuity(PARAM_ContinuityVoltageLimit));
+end;
+
+//Returns measurement parameters for LV isolation test as text
+function get_isolationlv_parameters_text(Voltage: tvoltage;
+            Threshold: tresistance; Trise: ttime; Twait: ttime; Tmeas: ttime;
+            AutoRange: boolean; CurrentLimit: tcurrent;
+            TmeasReduction: boolean): string;
+begin
+   Result = '';
+   Value = FormatVoltage(Voltage);
+   Result = StrAdd(Result, LocalText('61#Voltage'));
+   Result = StrAdd(Result, '=');
+   Result = StrAdd(Result, Value);
+   Result = StrAdd(Result, '; ');
+   Value = FormatResistance(Threshold);
+   Result = StrAdd(Result, LocalText('52#Threshold'));
+   Result = StrAdd(Result, '=');
+   Result = StrAdd(Result, Value);
+   Result = StrAdd(Result, '; ');
+   Value = FormatTime(Trise);
+   Result = StrAdd(Result, LocalText('53#Trise'));
+   Result = StrAdd(Result, '=');
+   Result = StrAdd(Result, Value);
+   Result = StrAdd(Result, '; ');
+   Value = FormatTime(Twait);
+   Result = StrAdd(Result, LocalText('54#Twait'));
+   Result = StrAdd(Result, '=');
+   Result = StrAdd(Result, Value);
+   Result = StrAdd(Result, '; ');
+   Value = FormatTime(Tmeas);
+   Result = StrAdd(Result, LocalText('55#Tmeas'));
+   Result = StrAdd(Result, '=');
+   Result = StrAdd(Result, Value);
+   Result = StrAdd(Result, '; ');
+   if (AutoRange)
+   begin
+      Value = LocalText('56#On');
+   end
+   else
+   begin
+      Value = LocalText('57#Off');
+   end;
+   Result = StrAdd(Result, LocalText('58#Auto ranging'));
+   Result = StrAdd(Result, '=');
+   Result = StrAdd(Result, Value);
+   Result = StrAdd(Result, '; ');
+   if (ParamGetIsolationLV(PARAM_IsolationLVCurrentLimitValid))
+   begin
+      Value = FormatCurrent(CurrentLimit);
+      Result = StrAdd(Result, LocalText('62#Current limit'));
+      Result = StrAdd(Result, '=');
+      Result = StrAdd(Result, Value);
+      Result = StrAdd(Result, '; ');
+   end;
+   if (TmeasReduction)
+   begin
+      Value = LocalText('56#On');
+   end
+   else
+   begin
+      Value = LocalText('57#Off');
+   end;
+   Result = StrAdd(Result, LocalText('63#Tmeas red.'));
+   Result = StrAdd(Result, '=');
+   Result = StrAdd(Result, Value);
+   Result = StrAdd(Result, '; ');
+   Pos = StrLength(Result) - 1;
+   Result = StrDelete(Result, Pos, 2);
+end;
+
+
+//Returns measurement parameters for LV isolation test
+function get_isolationlv_parameters(): string;
+begin
+   Result = get_isolationlv_parameters_text(
+               ParamGetIsolationLV(PARAM_IsolationLVVoltage),
+               ParamGetIsolationLV(PARAM_IsolationLVThreshold),
+               ParamGetIsolationLV(PARAM_IsolationLVTrise),
+               ParamGetIsolationLV(PARAM_IsolationLVTwait),
+               ParamGetIsolationLV(PARAM_IsolationLVTmeas),
+               ParamGetIsolationLV(PARAM_IsolationLVAutoRange),
+               ParamGetIsolationLV(PARAM_IsolationLVCurrentLimit),
+               ParamGetIsolationLV(PARAM_IsolationLVTmeasReduction));
+end;
+
+//Returns measurement parameters for HV isolation test as text
+function get_isolationhv_parameters_text(VoltageChanged, Voltage, ThresholdChanged, RThreshold,
+   UseIThreshold, IThreshold, TriseChanged, Trise, TwaitChanged, Twait, TmeasChanged, Tmeas,
+   AutoRangeChanged, AutoRange, CurrentLimitChanged, CurrentLimit, TmeasReductionChanged, TmeasReduction,
+   TmeasFactorChanged, TmeasFactor, VoltageRampChanged, VoltageRamp, DIdtEnabledChanged, DIdtEnabled,
+   DIdtCurrentThresholdChanged, DIdtCurrentThreshold, DIdtTimeThresholdChanged, DIdtTimeThreshold: real): string;
+begin
+   Result = '';
+   if (VoltageChanged)
+   begin
+      Value = FormatVoltage(Voltage);
+      Result = StrAdd(Result, LocalText('61#Voltage'));
+      Result = Result + '=' + Value + '; ';
+   end;
+   if (ThresholdChanged)
+   begin
+      if (UseIThreshold)
+      begin
+         Value = FormatCurrent(IThreshold);
+      end
+      else
+      begin
+         Value = FormatResistance(RThreshold);
+      end;
+      Result = StrAdd(Result, LocalText('52#Threshold'));
+      Result = Result + '=' + Value + '; ';
+   end;
+   if (TriseChanged)
+   begin
+      Value = FormatTime(Trise);
+      Result = StrAdd(Result, LocalText('53#Trise'));
+      Result = Result + '=' + Value + '; ';
+   end;
+   if (TwaitChanged)
+   begin
+      Value = FormatTime(Twait);
+      Result = StrAdd(Result, LocalText('54#Twait'));
+      Result = Result + '=' + Value + '; ';
+   end;
+   if (TmeasChanged)
+   begin
+      Value = FormatTime(Tmeas);
+      Result = StrAdd(Result, LocalText('55#Tmeas'));
+      Result = Result + '=' + Value + '; ';
+   end;
+   if (AutoRangeChanged)
+   begin
+      if (AutoRange)
+      begin
+         Value = LocalText('56#On');
+      end
+      else
+      begin
+         Value = LocalText('57#Off');
+      end;
+      Result = StrAdd(Result, LocalText('58#Auto ranging'));
+      Result = Result + '=' + Value + '; ';
+   end;
+   if (CurrentLimitChanged)
+   begin
+      Value = FormatCurrent(CurrentLimit);
+      Result = StrAdd(Result, LocalText('62#Current limit'));
+      Result = Result + '=' + Value + '; ';
+   end;
+   if (TmeasReductionChanged)
+   begin
+      if (TmeasReduction)
+      begin
+         Value = LocalText('56#On');
+      end
+      else
+      begin
+         Value = LocalText('57#Off');
+      end;
+      Result = StrAdd(Result, LocalText('63#Tmeas red.'));
+      Result = Result + '=' + Value + '; ';
+   end;
+   if (TmeasFactorChanged)
+   begin
+      Value = TmeasFactor;
+      Result = StrAdd(Result, LocalText('64#Tmeas fact.'));
+      Result = Result + '=' + Value + '; ';
+   end;
+   if (VoltageRampChanged)
+   begin
+      Value = FormatVoltageRamp(VoltageRamp);
+      Result = StrAdd(Result, LocalText('66#Voltage ramp'));
+      Result = Result + '=' + Value + '; ';
+   end;
+   if (DIdtEnabledChanged)
+   begin
+      if (DIdtEnabled)
+      begin
+         Result = StrAdd(Result, LocalText('157#dIdt enabled'));
+      end
+      else
+      begin
+         Result = StrAdd(Result, LocalText('158#dIdt disabled'));
+      end;
+      Result = StrAdd(Result, '; ');
+   end;
+   if (DIdtCurrentThresholdChanged)
+   begin
+      Value = FormatCurrent(DIdtCurrentThreshold);
+      Result = StrAdd(Result, LocalText('159#dIdt current threshold'));
+      Result = Result + '=' + Value + '; ';
+   end;
+   if (DIdtTimeThresholdChanged)
+   begin
+      Value = FormatTime(DIdtTimeThreshold);
+      Result = StrAdd(Result, LocalText('160#dIdt time threshold'));
+      Result = Result + '=' + Value + '; ';
+   end;
+   if (StrCompare(Result, '') <> 0)
+   begin
+      Pos = StrLength(Result) - 1;
+      Result = StrDelete(Result, Pos, 2);
+   end;
+end;
+
+function get_all_isolationhv_parameters_text(Voltage, RThreshold, UseIThreshold, IThreshold,
+   Trise, Twait, Tmeas, AutoRange, CurrentLimit, TmeasReduction, TmeasFactor, VoltageRamp,
+   DIdtEnabled, DIdtCurrentThreshold, DIdtTimeThresholdChanged: real): string;
+begin
+   Result = get_isolationhv_parameters_text(TRUE, Voltage, TRUE, RThreshold, UseIThreshold, IThreshold,
+      TRUE, Trise, TRUE, Twait, TRUE, Tmeas, TRUE, AutoRange, TRUE, CurrentLimit, TRUE, TmeasReduction,
+      TRUE, TmeasFactor, TRUE, VoltageRamp, DIdtEnabled, DIdtEnabled, DIdtEnabled,
+      DIdtCurrentThreshold, DIdtEnabled, DIdtTimeThresholdChanged);
+end;
+
+//Returns measurement parameters for HV isolation test
+function get_isolationhv_parameters(): string;
+begin
+   Result = '';
+   if (ParamGetIsolationHV(PARAM_IsolationHVValid))
+   begin
+      Result = get_all_isolationhv_parameters_text(
+         ParamGetIsolationHV(PARAM_IsolationHVVoltage),
+         ParamGetIsolationHV(PARAM_IsolationHVThreshold),
+         ParamGetIsolationHV(PARAM_IsolationHVUseIThreshold),
+         ParamGetIsolationHV(PARAM_IsolationHVIThreshold),
+         ParamGetIsolationHV(PARAM_IsolationHVTrise),
+         ParamGetIsolationHV(PARAM_IsolationHVTwait),
+         ParamGetIsolationHV(PARAM_IsolationHVTmeas),
+         ParamGetIsolationHV(PARAM_IsolationHVAutoRange),
+         ParamGetIsolationHV(PARAM_IsolationHVCurrentLimit),
+         ParamGetIsolationHV(PARAM_IsolationHVTmeasReduction),
+         ParamGetIsolationHV(PARAM_IsolationHVTmeasFactor),
+         ParamGetIsolationHV(PARAM_IsolationHVVoltageRamp),
+         ParamGetIsolationHV(PARAM_IsolationHVdIdtEnabled),
+         ParamGetIsolationHV(PARAM_IsolationHVdIdtCurrentThreshold),
+         ParamGetIsolationHV(PARAM_IsolationHVdIdtTimeThreshold));
+   end;
+end;
+
+
+//Returns measurement parameters for dielectric breakdown test as text
+function get_dielectricbreakdown_parameters_text(Voltage: tvoltage;
+            Trise: ttime; Twait: ttime; Tmeas: ttime; TmeasFactor: real;
+            VoltageRamp: tvoltageramp; ThresholdIr: tcurrent;
+            ThresholdIi: tcurrent): string;
+begin
+   Result = '';
+   Value = FormatVoltage(Voltage);
+   Result = StrAdd(Result, LocalText('61#Voltage'));
+   Result = StrAdd(Result, '=');
+   Result = StrAdd(Result, Value);
+   Result = StrAdd(Result, '; ');
+   Value = FormatTime(Trise);
+   Result = StrAdd(Result, LocalText('53#Trise'));
+   Result = StrAdd(Result, '=');
+   Result = StrAdd(Result, Value);
+   Result = StrAdd(Result, '; ');
+   Value = FormatTime(Twait);
+   Result = StrAdd(Result, LocalText('54#Twait'));
+   Result = StrAdd(Result, '=');
+   Result = StrAdd(Result, Value);
+   Result = StrAdd(Result, '; ');
+   Value = FormatTime(Tmeas);
+   Result = StrAdd(Result, LocalText('55#Tmeas'));
+   Result = StrAdd(Result, '=');
+   Result = StrAdd(Result, Value);
+   Result = StrAdd(Result, '; ');
+   Value = TmeasFactor;
+   Result = StrAdd(Result, LocalText('64#Tmeas fact.'));
+   Result = StrAdd(Result, '=');
+   Result = StrAdd(Result, Value);
+   Result = StrAdd(Result, '; ');
+   Value = FormatVoltageRamp(VoltageRamp);
+   Result = StrAdd(Result, LocalText('66#Voltage ramp'));
+   Result = StrAdd(Result, '=');
+   Result = StrAdd(Result, Value);
+   Result = StrAdd(Result, '; ');
+   if (ParamGetDielectricBreakdown(PARAM_DielectricBreakdownCurrentThresholdsValid))
+   begin
+      Value = FormatCurrent(ThresholdIr);
+      Result = StrAdd(Result, 'Ir');
+      Result = StrAdd(Result, '=');
+      Result = StrAdd(Result, Value);
+      Result = StrAdd(Result, '; ');
+      Value = FormatCurrent(ThresholdIi);
+      Result = StrAdd(Result, 'Ii');
+      Result = StrAdd(Result, '=');
+      Result = StrAdd(Result, Value);
+      Result = StrAdd(Result, '; ');
+   end;
+   Pos = StrLength(Result) - 1;
+   Result = StrDelete(Result, Pos, 2);
+end;
+
+//Returns measurement parameters for dielectric breakdown test
+function get_dielectricbreakdown_parameters(): string;
+begin
+   Result = '';
+   if (ParamGetDielectricBreakdown(PARAM_DielectricBreakdownValid))
+   begin
+      Result = get_dielectricbreakdown_parameters_text(
+         ParamGetDielectricBreakdown(PARAM_DielectricBreakdownVoltage),
+         ParamGetDielectricBreakdown(PARAM_DielectricBreakdownTrise),
+         ParamGetDielectricBreakdown(PARAM_DielectricBreakdownTwait),
+         ParamGetDielectricBreakdown(PARAM_DielectricBreakdownTmeas),
+         ParamGetDielectricBreakdown(PARAM_DielectricBreakdownTmeasFactor),
+         ParamGetDielectricBreakdown(PARAM_DielectricBreakdownVoltageRamp),
+         ParamGetDielectricBreakdown(PARAM_DielectricBreakdownThresholdIr),
+         ParamGetDielectricBreakdown(PARAM_DielectricBreakdownThresholdIi));
+   end;
+end;
+
+//Return the Filename with a relative path if the file is located in
+//the CEETIS data folder
+function get_relative_filename(Filename: string): string;
+begin
+   DataFolder = FileExpandName('.');
+   DataFolder = StrLowerCase(DataFolder);
+   FilenameLowerCase = StrLowerCase(Filename);
+   if (StrPosition(DataFolder, FilenameLowerCase) == 1)
+   begin
+      Result = FileMakePathRelative(Filename);
+   end
+   else
+   begin
+      Result = Filename;
+   end;
+end;
+
+//Returns the error text for HV isolation test steps
+function get_hv_isolation_error_text(IsArc, IsdIdt, IsEnergyLimit: boolean): string;
+begin
+   if (IsArc)
+   begin
+      Result = 'Arc';
+   end
+   else
+   begin
+      if (IsdIdt)
+      begin
+         Result = 'dIdt';
+      end
+      else
+      begin
+         if (IsEnergyLimit)
+         begin
+            Result = LocalText('164#Energy > 315 mJ');
+         end
+         else
+         begin
+            Result = LocalText('15#Short');
+         end;
+      end;
+   end;
+end;
+
+function get_idd_tx_result(TxResult: string; var Text: string): boolean;
+begin
+   Result = FALSE;
+   switch (TxResult)
+   begin
+      case IDD_TX_RESULT_pass: begin
+         Result = TRUE;
+         Text = LocalText('166#Passed');
+      end;
+      case IDD_TX_RESULT_noRx: begin
+         Result = TRUE;
+         Text = LocalText('167#No Rx');
+      end;
+      case IDD_TX_RESULT_notTested: begin
+         Text = LocalText('168#Not tested');
+      end;
+      case IDD_TX_RESULT_PretestFailed: begin
+         Text = LocalText('169#Open (Pre)');
+      end;
+      case IDD_TX_RESULT_IDDFailed: begin
+         Text = LocalText('114#Failed');
+      end;
+      case IDD_TX_RESULT_IDD_ContinuityMonitoring_Failed: begin
+         Text = LocalText('176#Breaks');
+      end;
+      case IDD_TX_RESULT_IDD_ContinuityMonitoring_RxFailed: begin
+         Text = LocalText('171#Rx-Breaks');
+      end;
+      case IDD_TX_RESULT_IDD_ContinuityMonitoring_NWFailed: begin
+         Text = LocalText('172#NW-Breaks');
+      end;
+      case IDD_TX_RESULT_IDD_IsolationMonitoring_Failed: begin
+         Text = LocalText('195#Shorts');
+      end;
+      case IDD_TX_RESULT_IDD_IsolationMonitoring_RxFailed: begin
+         Text = LocalText('170#Rx Shorts');
+      end;
+      case IDD_TX_RESULT_IDD_IsolationMonitoring_NWFailed: begin
+         Text = LocalText('175#NW Shorts');
+      end;
+      case IDD_TX_RESULT_FinalizationFailed: begin
+         Text = LocalText('173#Open (Fin)');
+      end;
+      default: begin
+         Text = LocalText('174#Invalid');
+      end;
+   end;
+end;
+
+function get_idd_rx_fail_text(RxResult: string): string;
+begin
+   switch (RxResult)
+   begin
+      case IDD_RX_RESULT_Pretest_Failed: begin
+         Result = LocalText('169#Open (Pre)');
+      end;
+      case IDD_RX_RESULT_IDD_Failed: begin
+         Result = LocalText('114#Failed');
+      end;
+      case IDD_RX_RESULT_Finalization_Failed: begin
+         Result = LocalText('173#Open (Fin)');
+      end;
+      case IDD_RX_RESULT_ContinuityMonitoring_Failed: begin
+         Result = LocalText('176#Breaks');
+      end;
+      case IDD_RX_RESULT_IsolationMonitoring_Failed: begin
+         Result = LocalText('195#Shorts');
+      end;
+      default: begin
+         Result = LocalText('178#Invalid');
+      end;
+   end;
+end;
+
+function get_hv_combi_fail_text(ErrorInfo: integer): string;
+begin
+   Result = '';
+   switch (ErrorInfo)
+   begin
+      case HV_COMBI_HV1Error: begin
+         Result = LocalText('205#HV1');
+      end;
+      case HV_COMBI_DBError: begin
+         Result = LocalText('204#DB');
+      end;
+      case HV_COMBI_HV2Error: begin
+         Result = LocalText('206#HV2');
+      end;
+      case HV_COMBI_HV1HV2Error: begin
+         Result = LocalText('207#HV1/HV2');
+      end;
+   end;
+end;
+
+function get_double_dash_text(Text: string): string;
+begin
+   Result = '  --  ' + Text;
+   Result = Result +  ': ';
+end;
+
+function get_teststep_name(RESName, Default: string): string;
+begin
+   if (StrCompare('', RESName) == 0)
+   begin
+      Result = Default;
+   end
+   else
+   begin
+      Result = RESName;
+   end;
+end;
+
+function get_3xhv_fail_text(ErrorInfo: integer): string;
+begin
+   Result = '';
+   switch (ErrorInfo)
+   begin
+      case ISOLATION_3xHV_1_Error: begin
+         Result = LocalText('211#HV1');
+      end;
+      case ISOLATION_3xHV_2_Error: begin
+         Result = LocalText('212#HV2');
+      end;
+      case ISOLATION_3xHV_3_Error: begin
+         Result = LocalText('213#HV3');
+      end;
+      case ISOLATION_3xHV_1_3_Error: begin
+         Result = LocalText('214#HV1/HV3');
+      end;
+   end;
+end;
+
+function get_hv_two_levels_fail_text(IsLevel1Error: boolean): string;
+begin
+   if (IsLevel1Error)
+   begin
+      Result = LocalText('220#Lvl1');
+   end
+   else
+   begin
+      Result = LocalText('222#Lvl2');
+   end;
+end;
+
+function get_twisted_pair_cat_text(CATCode: integer): string;
+begin
+   Result = 'Unknown';
+   switch (CATCode)
+   begin
+      case TWISTED_PAIR_CAT4: begin
+         Result = LocalText('282#CAT 4');
+      end;
+      case TWISTED_PAIR_CAT5: begin
+         Result = LocalText('283#CAT 5');
+      end;
+      case TWISTED_PAIR_CAT6: begin
+         Result = LocalText('284#CAT 6');
+      end;
+      case TWISTED_PAIR_CAT6A: begin
+         Result = LocalText('285#CAT 6a');
+      end;
+      case TWISTED_PAIR_CAT7: begin
+         Result = LocalText('286#CAT 7');
+      end;
+      case TWISTED_PAIR_CAT7A: begin
+         Result = LocalText('287#CAT 7a');
+      end;
+      case TWISTED_PAIR_CAT8_1: begin
+         Result = LocalText('288#CAT 8.1');
+      end;
+      case TWISTED_PAIR_CAT8_2: begin
+         Result = LocalText('289#CAT 8.2');
+      end;
+   end;
+end;

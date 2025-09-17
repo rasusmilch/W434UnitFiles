@@ -1,0 +1,456 @@
+function write_electrical_component_result(Component: string; TestStepResult: integer; IsExternalVoltage,
+   IsArc: boolean; ErrorInfo: string = ''): void;
+begin
+   Line = '<TestStepResult Type="' + Component + '">';
+   write_line(Line);
+   inc_indent();
+   switch (TestStepResult)
+   begin
+      case TESTSTEP_Passed:
+      begin
+         Text = 'Passed';
+      end;
+      case TESTSTEP_Failed:
+      begin
+         Text = 'Failed';
+      end;
+      default: begin
+         Text = 'Invalid';
+      end;
+   end;
+   Line = '<Result>' + Text + '</Result>';
+   write_line(Line);
+   Line = '<ExtVoltageFound>' + IsExternalVoltage + '</ExtVoltageFound>';
+   write_line(Line);
+   Line = '<Arc>' + IsArc + '</Arc>';
+   write_line(Line);
+   if (StrCompare(ErrorInfo, '') <> 0)
+   begin
+      Line = '<ErrorInfo>' + ErrorInfo + '</ErrorInfo>';
+      write_line(Line);
+   end;
+   dec_indent();
+   write_line('</TestStepResult>');
+end;
+
+template ResistorTest
+begin
+   write_line('<TestStep Cmd="ResistorTest">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_two_pin_basics(RES_Name, RES_Pin1, RES_Pin2, RES_OriginalPin1, RES_OriginalPin2);
+   write_value_and_tolerances(RES_Resistance, RES_LowerTol, RES_UpperTol, 'Ohm');
+   write_electrical_component_result('Resistor', RES_Result, RES_ExtVoltageFound, RES_Arc);
+   Line = get_value_with_prefix('Resistance', 'Ohm', RES_Prefix, RES_Value);
+   write_line(Line);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template ResistorTestCustom
+begin
+   write_line('<TestStep Cmd="ResistorTestCustom">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_two_pin_basics(RES_Name, RES_Pin1, RES_Pin2, RES_OriginalPin1, RES_OriginalPin2);
+   write_value_and_tolerances(RES_Resistance, RES_LowerTol, RES_UpperTol, 'Ohm');
+   write_electrical_component_result('Resistor', RES_Result, RES_ExtVoltageFound, RES_Arc);
+   Line = get_value_with_prefix('Resistance', 'Ohm', RES_Prefix, RES_Value);
+   write_line(Line);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template CapacitorTest
+begin
+   write_line('<TestStep Cmd="CapacitorTest">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_two_pin_basics(RES_Name, RES_Pin1, RES_Pin2, RES_OriginalPin1, RES_OriginalPin2);
+   write_value_and_tolerances(RES_Capacitance, RES_LowerTol, RES_UpperTol, 'F');
+   write_electrical_component_result('Capacitor', RES_Result, RES_ExtVoltageFound, RES_Arc);
+   Line = get_value_with_prefix('Capacitance', 'F', RES_Prefix, RES_Value);
+   write_line(Line);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template DiodeTest
+begin
+   write_line('<TestStep Cmd="DiodeTest">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_two_pin_basics(RES_Name, RES_Pin1, RES_Pin2, RES_OriginalPin1, RES_OriginalPin2);
+   ErroInfo = '';
+   if (RES_Result == TESTSTEP_Failed)
+   begin
+      if (RES_U1Ok AND (NOT RES_U2Ok) AND RES_U3Ok)
+      begin
+         ErroInfo = 'Open';
+      end
+      else
+      begin
+         if ((NOT RES_U1Ok) AND RES_U2Ok AND (NOT RES_U3Ok))
+         begin
+            ErroInfo = 'Short';
+         end
+         else
+         begin
+            if (RES_U1Ok AND (NOT RES_U2Ok) AND (NOT RES_U3Ok))
+            begin
+               ErroInfo = 'Reversed';
+            end
+            else
+            begin
+               ErroInfo = 'Defective';
+            end;
+         end;
+      end;
+   end;
+   write_electrical_component_result('Diode', RES_Result, RES_ExtVoltageFound, RES_Arc, ErroInfo);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template DiodeTestCustom
+begin
+   write_line('<TestStep Cmd="DiodeTestCustom">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_two_pin_basics(RES_Name, RES_Pin1, RES_Pin2, RES_OriginalPin1, RES_OriginalPin2);
+   ErroInfo = '';
+   if (RES_Result == TESTSTEP_Failed)
+   begin
+      if (RES_U1Ok AND (NOT RES_U2Ok) AND RES_U3Ok)
+      begin
+         ErroInfo = 'Open';
+      end
+      else
+      begin
+         if ((NOT RES_U1Ok) AND RES_U2Ok AND (NOT RES_U3Ok))
+         begin
+            ErroInfo = 'Short';
+         end
+         else
+         begin
+            if (RES_U1Ok AND (NOT RES_U2Ok) AND (NOT RES_U3Ok))
+            begin
+               ErroInfo = 'Reversed';
+            end
+            else
+            begin
+               ErroInfo = 'Defective';
+            end;
+         end;
+      end;
+   end;
+   write_electrical_component_result('Diode', RES_Result, RES_ExtVoltageFound, RES_Arc, ErroInfo);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template ZDiodeTest
+begin
+   write_line('<TestStep Cmd="ZDiodeTest">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_two_pin_basics(RES_Name, RES_Pin1, RES_Pin2, RES_OriginalPin1, RES_OriginalPin2);
+   ErroInfo = '';
+   if (RES_Result == TESTSTEP_Failed)
+   begin
+      if (RES_U1Ok AND (NOT RES_U2Ok) AND RES_U3Ok)
+      begin
+         ErroInfo = 'Open';
+      end
+      else
+      begin
+         if ((NOT RES_U1Ok) AND RES_U2Ok AND (NOT RES_U3Ok))
+         begin
+            ErroInfo = 'Short';
+         end
+         else
+         begin
+            if (RES_U1Ok AND (NOT RES_U2Ok) AND (NOT RES_U3Ok))
+            begin
+               ErroInfo = 'Reversed';
+            end
+            else
+            begin
+               ErroInfo = 'Defective';
+            end;
+         end;
+      end;
+   end;
+   write_electrical_component_result('ZDiode', RES_Result, RES_ExtVoltageFound, RES_Arc, ErroInfo);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template ZDiodeTestCustom
+begin
+   write_line('<TestStep Cmd="ZDiodeTestCustom">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_two_pin_basics(RES_Name, RES_Pin1, RES_Pin2, RES_OriginalPin1, RES_OriginalPin2);
+   ErroInfo = '';
+   if (RES_Result == TESTSTEP_Failed)
+   begin
+      if (RES_U1Ok AND (NOT RES_U2Ok) AND RES_U3Ok)
+      begin
+         ErroInfo = 'Open';
+      end
+      else
+      begin
+         if ((NOT RES_U1Ok) AND RES_U2Ok AND (NOT RES_U3Ok))
+         begin
+            ErroInfo = 'Short';
+         end
+         else
+         begin
+            if (RES_U1Ok AND (NOT RES_U2Ok) AND (NOT RES_U3Ok))
+            begin
+               ErroInfo = 'Reversed';
+            end
+            else
+            begin
+               ErroInfo = 'Defective';
+            end;
+         end;
+      end;
+   end;
+   write_electrical_component_result('ZDiode', RES_Result, RES_ExtVoltageFound, RES_Arc, ErroInfo);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template CTwistTestAC
+begin
+   write_line('<TestStep Cmd="CTwistTestAC">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_two_pin_basics(RES_Name, RES_Pin1, RES_Pin2, RES_OriginalPin1, RES_OriginalPin2);
+   write_value_and_tolerances(RES_Capacitance, RES_LowerTol, RES_UpperTol, 'F');
+   write_electrical_component_result('CTwist', RES_Result, RES_ExtVoltageFound, RES_Arc);
+   Line = get_value_with_prefix('Capacitance', 'F', RES_Prefix, RES_Value);
+   write_line(Line);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template RLCSerialInductanceTest
+begin
+   write_line('<TestStep Cmd="RLCSerialInductanceTest">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_two_pin_basics(RES_Name, RES_Pin1, RES_Pin2, RES_OriginalPin1, RES_OriginalPin2);
+   write_limits(RES_Lmin, RES_Lmax, 'H');
+   write_electrical_component_result('RLC', RES_Result, RES_ExtVoltageFound, RES_Arc);
+   Line = get_value_with_prefix('Inductance', 'H', RES_Prefix, RES_Value);
+   write_line(Line);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template RLCSerialCapacitanceTest
+begin
+   write_line('<TestStep Cmd="RLCSerialCapacitanceTest">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_two_pin_basics(RES_Name, RES_Pin1, RES_Pin2, RES_OriginalPin1, RES_OriginalPin2);
+   write_limits(RES_Cmin, RES_Cmax, 'F');
+   write_electrical_component_result('RLC', RES_Result, RES_ExtVoltageFound, RES_Arc);
+   Line = get_value_with_prefix('Capacitance', 'F', RES_Prefix, RES_Value);
+   write_line(Line);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template RLCSerialResistanceTest
+begin
+   write_line('<TestStep Cmd="RLCSerialResistanceTest">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_two_pin_basics(RES_Name, RES_Pin1, RES_Pin2, RES_OriginalPin1, RES_OriginalPin2);
+   write_limits(RES_Rmin, RES_Rmax, 'Ohm');
+   write_electrical_component_result('RLC', RES_Result, RES_ExtVoltageFound, RES_Arc);
+   Line = get_value_with_prefix('Resistance', 'Ohm', RES_Prefix, RES_Value);
+   write_line(Line);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template RLCParallelInductanceTest
+begin
+   write_line('<TestStep Cmd="RLCParallelInductanceTest">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_two_pin_basics(RES_Name, RES_Pin1, RES_Pin2, RES_OriginalPin1, RES_OriginalPin2);
+   write_limits(RES_Lmin, RES_Lmax, 'H');
+   write_electrical_component_result('RLC', RES_Result, RES_ExtVoltageFound, RES_Arc);
+   Line = get_value_with_prefix('Inductance', 'H', RES_Prefix, RES_Value);
+   write_line(Line);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template RLCParallelCapacitanceTest
+begin
+   write_line('<TestStep Cmd="RLCParallelCapacitanceTest">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_two_pin_basics(RES_Name, RES_Pin1, RES_Pin2, RES_OriginalPin1, RES_OriginalPin2);
+   write_limits(RES_Cmin, RES_Cmax, 'F');
+   write_electrical_component_result('RLC', RES_Result, RES_ExtVoltageFound, RES_Arc);
+   Line = get_value_with_prefix('Capacitance', 'F', RES_Prefix, RES_Value);
+   write_line(Line);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template RLCParallelResistanceTest
+begin
+   write_line('<TestStep Cmd="RLCParallelResistanceTest">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_two_pin_basics(RES_Name, RES_Pin1, RES_Pin2, RES_OriginalPin1, RES_OriginalPin2);
+   write_limits(RES_Rmin, RES_Rmax, 'Ohm');
+   write_electrical_component_result('RLC', RES_Result, RES_ExtVoltageFound, RES_Arc);
+   Line = get_value_with_prefix('Resistance', 'Ohm', RES_Prefix, RES_Value);
+   write_line(Line);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template RLCDissipationTest
+begin
+   write_line('<TestStep Cmd="RLCDissipationTest">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_two_pin_basics(RES_Name, RES_Pin1, RES_Pin2, RES_OriginalPin1, RES_OriginalPin2);
+   write_limits(RES_Dismin, RES_Dismax);
+   write_electrical_component_result('RLC', RES_Result, RES_ExtVoltageFound, RES_Arc);
+   Line = get_value_with_prefix('Dissipation', '', RES_Prefix, RES_Value);
+   write_line(Line);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template RLCQualityTest
+begin
+   write_line('<TestStep Cmd="RLCQualityTest">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_two_pin_basics(RES_Name, RES_Pin1, RES_Pin2, RES_OriginalPin1, RES_OriginalPin2);
+   write_limits(RES_Qmin, RES_Qmax);
+   write_electrical_component_result('RLC', RES_Result, RES_ExtVoltageFound, RES_Arc);
+   Line = get_value_with_prefix('Quality', '', RES_Prefix, RES_Value);
+   write_line(Line);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template RLCPhaseAngleTest
+begin
+   write_line('<TestStep Cmd="RLCPhaseAngleTest">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_two_pin_basics(RES_Name, RES_Pin1, RES_Pin2, RES_OriginalPin1, RES_OriginalPin2);
+   write_limits(RES_PAmin, RES_PAmax, 'Deg');
+   write_electrical_component_result('RLC', RES_Result, RES_ExtVoltageFound, RES_Arc);
+   Line = get_value_with_prefix('PhaseAngle', 'Deg', RES_Prefix, RES_Value);
+   write_line(Line);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template RLCImpedanceImaginaryTest
+begin
+   write_line('<TestStep Cmd="RLCImpedanceImaginaryTest">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_two_pin_basics(RES_Name, RES_Pin1, RES_Pin2, RES_OriginalPin1, RES_OriginalPin2);
+   write_limits(RES_Zmin, RES_Zmax, 'Ohm');
+   write_electrical_component_result('RLC', RES_Result, RES_ExtVoltageFound, RES_Arc);
+   Line = get_value_with_prefix('Impedance', 'Ohm', RES_Prefix, RES_Value);
+   write_line(Line);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template RLCImpedanceRealTest
+begin
+   write_line('<TestStep Cmd="RLCImpedanceRealTest">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_two_pin_basics(RES_Name, RES_Pin1, RES_Pin2, RES_OriginalPin1, RES_OriginalPin2);
+   write_limits(RES_Zmin, RES_Zmax, 'Ohm');
+   write_electrical_component_result('RLC', RES_Result, RES_ExtVoltageFound, RES_Arc);
+   Line = get_value_with_prefix('Impedance', 'Ohm', RES_Prefix, RES_Value);
+   write_line(Line);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template RLCImpedanceAbsoluteTest
+begin
+   write_line('<TestStep Cmd="RLCImpedanceAbsoluteTest">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_two_pin_basics(RES_Name, RES_Pin1, RES_Pin2, RES_OriginalPin1, RES_OriginalPin2);
+   write_limits(RES_Zmin, RES_Zmax, 'Ohm');
+   write_electrical_component_result('RLC', RES_Result, RES_ExtVoltageFound, RES_Arc);
+   Line = get_value_with_prefix('Impedance', 'Ohm', RES_Prefix, RES_Value);
+   write_line(Line);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template AttenuatorTest
+begin
+   write_line('<TestStep Cmd="AttenuatorTest">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_two_pin_basics(RES_Name, RES_PinA1, RES_PinA2, RES_OriginalPinA1, RES_OriginalPinA2);
+   write_limits(RES_Zmin, RES_Zmax, 'Ohm');
+   write_electrical_component_result('VariableResistor', RES_Result, RES_ExtVoltageFound, FALSE);
+   Line = get_value_with_prefix('Resistance', 'Ohm', RES_Prefix, RES_Value);
+   write_line(Line);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template VariableResistorTest
+begin
+   write_line('<TestStep Cmd="VariableResistorTest">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_two_pin_basics(RES_Name, RES_Pin1, RES_Pin2, RES_OriginalPin1, RES_OriginalPin2);
+   write_limits(RES_Zmin, RES_Zmax, 'Ohm');
+   write_electrical_component_result('VariableResistor', RES_Result, RES_ExtVoltageFound, RES_Arc);
+   Line = get_value_with_prefix('Resistance', 'Ohm', RES_Prefix, RES_Value);
+   write_line(Line);
+   dec_indent();
+   write_line('</TestStep>');
+end;

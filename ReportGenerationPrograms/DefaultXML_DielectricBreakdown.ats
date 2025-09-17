@@ -1,0 +1,293 @@
+function write_dielectricbreakdown_result(TestStepResult: integer; IsExternalVoltage, IsArc: boolean): void;
+begin
+   Line = '<TestStepResult Type="IsolationHV">';
+   write_line(Line);
+   inc_indent();
+   switch (TestStepResult)
+   begin
+      case TESTSTEP_Passed:
+      begin
+         Text = 'Passed';
+      end;
+      case TESTSTEP_Failed:
+      begin
+         Text = 'Failed';
+      end;
+      default: begin
+         Text = 'Invalid';
+      end;
+   end;
+   Line = '<Result>' + Text + '</Result>';
+   write_line(Line);
+   Line = '<ExtVoltageFound>' + IsExternalVoltage + '</ExtVoltageFound>';
+   write_line(Line);
+   Line = '<Arc>' + IsArc + '</Arc>';
+   write_line(Line);
+   dec_indent();
+   write_line('</TestStepResult>');
+end;
+
+function write_dielectricbreakdown_fail(Pin1Addr, Pin2Addr: integer; IsArc: boolean;
+   IsValueValid: boolean; IrPrefix: string; IrValue: real; IiPrefix: string; IiValue: real): void;
+begin
+   write_line('<Fail>');
+   inc_indent();
+
+   Line = '<Pin1Addr>' + Pin1Addr + '</Pin1Addr>';
+   write_line(Line);
+   PinName = get_pin_name(Pin1Addr);
+   Line = '<Pin1Name>' + PinName + '</Pin1Name>';
+   write_line(Line);
+
+   Line = '<Pin2Addr>' + Pin2Addr + '</Pin2Addr>';
+   write_line(Line);
+   PinName = get_pin_name(Pin2Addr);
+   Line = '<Pin2Name>' + PinName + '</Pin2Name>';
+   write_line(Line);
+
+   Line = '<Arc>' + IsArc + '</Arc>';
+   write_line(Line);
+
+   if (IsValueValid)
+   begin
+      Line = get_value_with_prefix('Current_r', 'A', IrPrefix, IrValue);
+      write_line(Line);
+      Line = get_value_with_prefix('Current_i', 'A', IiPrefix, IiValue);
+      write_line(Line);
+   end;
+
+   dec_indent();
+   write_line('</Fail>');
+end;
+
+template ParamDielectricBreakdown
+begin
+   write_line('<TestStep Cmd="ParamDielectricBreakdown">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_dielectricbreakdown_parameters(RES_DBVoltage, RES_DBTrise, RES_DBTwait, RES_DBTmeas,
+      RES_DBTmeasFactor, RES_DBVoltageRamp, RES_DBThresholdIr, RES_DBThresholdIi);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template ParamResetDielectricBreakdown
+begin
+   write_line('<TestStep Cmd="ParamResetDielectricBreakdown">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_dielectricbreakdown_parameters(RES_DBVoltage, RES_DBTrise, RES_DBTwait, RES_DBTmeas,
+      RES_DBTmeasFactor, RES_DBVoltageRamp, RES_DBThresholdIr, RES_DBThresholdIi);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template NoConnectionDB
+begin
+   write_line('<TestStep Cmd="NoConnectionDB">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_two_pin_basics(RES_Name, RES_Pin1, RES_Pin2, RES_OriginalPin1, RES_OriginalPin2);
+   write_dielectricbreakdown_parameters(RES_DBVoltage, RES_DBTrise, RES_DBTwait, RES_DBTmeas,
+      RES_DBTmeasFactor, RES_DBVoltageRamp, RES_DBThresholdIr, RES_DBThresholdIi);
+   write_dielectricbreakdown_result(RES_Result, RES_ExtVoltageFound, RES_Arc);
+   if (RES_ValueValid)
+   begin
+      Line = get_value_with_prefix('Current_r', 'A', RES_Prefix, RES_Value);
+      write_line(Line);
+      Line = get_value_with_prefix('Current_i', 'A', RES_Prefix, RES_Value);
+      write_line(Line);
+   end;
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template NoConnAllDB
+begin
+   write_line('<TestStep Cmd="NoConnAllDB">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_one_pin_basics(RES_Name, RES_Pin, RES_OriginalPin);
+   write_dielectricbreakdown_parameters(RES_DBVoltage, RES_DBTrise, RES_DBTwait, RES_DBTmeas,
+      RES_DBTmeasFactor, RES_DBVoltageRamp, RES_DBThresholdIr, RES_DBThresholdIi);
+
+   write_dielectricbreakdown_result(RES_Result, FALSE, FALSE);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      if (RES_ValueValid)
+      begin
+         Line = get_value_with_prefix('Current_r', 'A', RES_Prefix, RES_Value);
+         write_line(Line);
+         Line = get_value_with_prefix('Current_i', 'A', RES_Prefix, RES_Value);
+         write_line(Line);
+      end;
+   end
+   else
+   begin
+      if (RES_ErrorPinCount > 0)
+      begin
+         write_line('<Fails>');
+         inc_indent();
+         for Index = 1 to RES_ErrorPinCount do
+         begin
+            write_dielectricbreakdown_fail(RES_Pin, RES_ErrorPins[Index], RES_Arcs[Index],
+               RES_ValuesValid[Index], RES_PrefixesIr[Index], RES_ValuesIr[Index],
+               RES_IiPrefixes[Index], RES_IiValues[Index]);
+         end;
+         dec_indent();
+         write_line('</Fails>');
+      end;
+   end;
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template NoConnLowerDB
+begin
+   write_line('<TestStep Cmd="NoConnLowerDB">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_one_pin_basics(RES_Name, RES_Pin, RES_OriginalPin);
+   write_dielectricbreakdown_parameters(RES_DBVoltage, RES_DBTrise, RES_DBTwait, RES_DBTmeas,
+      RES_DBTmeasFactor, RES_DBVoltageRamp, RES_DBThresholdIr, RES_DBThresholdIi);
+
+   write_dielectricbreakdown_result(RES_Result, FALSE, FALSE);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      if (RES_ValueValid)
+      begin
+         Line = get_value_with_prefix('Current_r', 'A', RES_Prefix, RES_Value);
+         write_line(Line);
+         Line = get_value_with_prefix('Current_i', 'A', RES_Prefix, RES_Value);
+         write_line(Line);
+      end;
+   end
+   else
+   begin
+      if (RES_ErrorPinCount > 0)
+      begin
+         write_line('<Fails>');
+         inc_indent();
+         for Index = 1 to RES_ErrorPinCount do
+         begin
+            write_dielectricbreakdown_fail(RES_Pin, RES_ErrorPins[Index], RES_Arcs[Index],
+               RES_ValuesValid[Index], RES_PrefixesIr[Index], RES_ValuesIr[Index],
+               RES_IiPrefixes[Index], RES_IiValues[Index]);
+         end;
+         dec_indent();
+         write_line('</Fails>');
+      end;
+   end;
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template NoConnGroupDB
+begin
+   write_line('<TestStep Cmd="NoConnGroupDB">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_group_pin_basics(RES_Name, RES_HighGroup, RES_LowGroup, RES_HighGroupPinCount,
+      RES_LowGroupPinCount, RES_HighGroupPins, RES_LowGroupPins);
+   write_dielectricbreakdown_parameters(RES_DBVoltage, RES_DBTrise, RES_DBTwait, RES_DBTmeas,
+      RES_DBTmeasFactor, RES_DBVoltageRamp, RES_DBThresholdIr, RES_DBThresholdIi);
+
+   write_dielectricbreakdown_result(RES_Result, FALSE, FALSE);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      if (RES_ValueValid)
+      begin
+         Line = get_value_with_prefix('Current_r', 'A', RES_Prefix, RES_Value);
+         write_line(Line);
+         Line = get_value_with_prefix('Current_i', 'A', RES_Prefix, RES_Value);
+         write_line(Line);
+      end;
+   end
+   else
+   begin
+      if (RES_ErrorCount > 0)
+      begin
+         write_line('<Fails>');
+         inc_indent();
+         for Index = 1 to RES_ErrorCount do
+         begin
+            write_dielectricbreakdown_fail(RES_ErrorHighPins[Index], RES_ErrorLowPins[Index],
+               RES_Arcs[Index], RES_ValuesValid[Index], RES_PrefixesIr[Index], RES_ValuesIr[Index],
+               RES_IiPrefixes[Index], RES_IiValues[Index]);
+         end;
+         dec_indent();
+         write_line('</Fails>');
+      end;
+   end;
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template ConnectionTestDB
+begin
+   write_line('<TestStep Cmd="ConnectionTestDB">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   write_two_pin_basics(RES_Name, RES_Pin1, RES_Pin2, RES_OriginalPin1, RES_OriginalPin2);
+   write_dielectricbreakdown_parameters(RES_DBVoltage, RES_DBTrise, RES_DBTwait, RES_DBTmeas,
+      RES_DBTmeasFactor, RES_DBVoltageRamp, RES_DBThresholdIr, RES_DBThresholdIi);
+   write_dielectricbreakdown_result(RES_Result, RES_ExtVoltageFound, RES_Arc);
+   if (RES_ValueValid)
+   begin
+      Line = get_value_with_prefix('Current_r', 'A', RES_Prefix, RES_Value);
+      write_line(Line);
+      Line = get_value_with_prefix('Current_i', 'A', RES_Prefix, RES_Value);
+      write_line(Line);
+   end;
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template SimpleNoConnPinVsGroupDB
+begin
+   write_line('<TestStep Cmd="SimpleNoConnPinVsGroupDB">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   write_teststep_comment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   MiscCreateList(HighGroupPins, 1);
+   HighGroupPins[1] = RES_Pin;
+   write_group_pin_basics(RES_Name, '', RES_LowGroup, 1, RES_LowGroupPinCount, HighGroupPins,
+      RES_LowGroupPins);
+   write_dielectricbreakdown_parameters(RES_DBVoltage, RES_DBTrise, RES_DBTwait, RES_DBTmeas,
+      RES_DBTmeasFactor, RES_DBVoltageRamp, RES_DBThresholdIr, RES_DBThresholdIi);
+
+   write_dielectricbreakdown_result(RES_Result, FALSE, FALSE);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      if (RES_ValueValid)
+      begin
+         Line = get_value_with_prefix('Current_r', 'A', RES_Prefix, RES_Value);
+         write_line(Line);
+         Line = get_value_with_prefix('Current_i', 'A', RES_Prefix, RES_Value);
+         write_line(Line);
+      end;
+   end
+   else
+   begin
+      if (RES_ErrorPinCount > 0)
+      begin
+         write_line('<Fails>');
+         inc_indent();
+         for Index = 1 to RES_ErrorPinCount do
+         begin
+            write_dielectricbreakdown_fail(RES_Pin, RES_ErrorPins[Index], RES_Arcs[Index],
+               RES_ValuesValid[Index], RES_PrefixesIr[Index], RES_ValuesIr[Index],
+               RES_IiPrefixes[Index], RES_IiValues[Index]);
+         end;
+         dec_indent();
+         write_line('</Fails>');
+      end;
+   end;
+   dec_indent();
+   write_line('</TestStep>');
+end;

@@ -1,0 +1,1161 @@
+//Returns the name of a pin
+function get_pinname(Address: integer): string;
+begin
+   switch (Address)
+   begin
+      case PINADDRESS_SystemGround: begin
+         Result = LocalText('276#SystemGround');
+      end;
+      case PINADDRESS_Invalid: begin
+         Result = LocalText('272#!Invalid!');
+      end;
+      case PINADDRESS_NotSearched: begin
+         Result = LocalText('273#?NotSearched?');
+      end;
+      case PINADDRESS_NotFound: begin
+         Result = LocalText('274#?NotFound?');
+      end;
+      case PINADDRESS_None: begin
+         Result = LocalText('275#!None!');
+      end;
+      case PINADDRESS_None: begin
+         Result = LocalText('275#!None!');
+      end;
+      default: begin
+         Result = PinGetData(Address, PIN_AnyName);
+         if (StrContains('*<*', Result))
+         begin
+              Result = StrReplace(Result, '<', '&#60;');
+         end;
+      end;
+   end;
+end;
+
+//Returns a resistance value with prefix
+function get_resistance_value(Prefix: string; Value: real): string;
+begin
+   if (StrCompare(Prefix, '%') == 0)
+   begin
+      Result = '&nbsp;';
+   end
+   else
+   begin
+      Result = FormatResistance(Value);
+      Result = StrAdd(Prefix, Result);
+   end;
+end;
+
+//Returns a capacitance value with prefix
+function get_capacitance_value(Prefix: string; Value: real): string;
+begin
+   if (StrCompare(Prefix, '%') == 0)
+   begin
+      Result = '&nbsp;';
+   end
+   else
+   begin
+      Result = FormatCapacitance(Value);
+      Result = StrAdd(Prefix, Result);
+   end;
+end;
+
+//Returns a inductance value with prefix
+function get_inductance_value(Prefix: string; Value: real): string;
+begin
+   if (StrCompare(Prefix, '%') == 0)
+   begin
+      Result = '&nbsp;';
+   end
+   else
+   begin
+      Result = FormatInductance(Value);
+      Result = StrAdd(Prefix, Result);
+   end;
+end;
+
+//Returns a voltage value with prefix
+function get_voltage_value(Prefix: string; Value: real): string;
+begin
+   if (StrCompare(Prefix, '%') == 0)
+   begin
+      Result = '&nbsp;';
+   end
+   else
+   begin
+      Result = FormatVoltage(Value);
+      Result = StrAdd(Prefix, Result);
+   end;
+end;
+
+//Returns a current value with prefix
+function get_current_value(Prefix: string; Value: real): string;
+begin
+   if (StrCompare(Prefix, '%') == 0)
+   begin
+      Result = '&nbsp;';
+   end
+   else
+   begin
+      Result = FormatCurrent(Value);
+      Result = StrAdd(Prefix, Result);
+   end;
+end;
+
+//Returns an attenuation value with prefix
+function get_attenuation_value(Prefix: string; Value: real): string;
+begin
+   if (StrCompare(Prefix, '%') == 0)
+   begin
+      Result = '&nbsp;';
+   end
+   else
+   begin
+      Result = FormatAttenuation(Value);
+      Result = StrAdd(Prefix, Result);
+   end;
+end;
+
+//Returns a power level value with prefix
+function get_powerlevel_value(Prefix: string; Value: real): string;
+begin
+   if (StrCompare(Prefix, '%') == 0)
+   begin
+      Result = '&nbsp;';
+   end
+   else
+   begin
+      Result = FormatPowerLevel(Value);
+      Result = StrAdd(Prefix, Result);
+   end;
+end;
+
+//Returns a frequency value with prefix
+function get_frequency_value(Prefix: string; Value: real): string;
+begin
+   if (StrCompare(Prefix, '%') == 0)
+   begin
+      Result = '&nbsp;';
+   end
+   else
+   begin
+      Result = FormatFrequency(Value);
+      Result = StrAdd(Prefix, Result);
+   end;
+end;
+
+//Returns the value for a dielectric breakdown measurement
+function get_dielectric_breakdown_value(Arc: boolean;
+            ValueValid: boolean; ValueIr: real; PrefixIr: string;
+            ValueIi: real; PrefixIi: string): string;
+begin
+   if (Arc)
+   begin
+      Result = '&nbsp;';
+   end
+   else
+   begin
+      if (ValueValid)
+      begin
+         ValueIr = get_current_value(PrefixIr, ValueIr);
+         ValueIi = get_current_value(PrefixIi, ValueIi);
+         if (StrCompare(ValueIr, '&nbsp;') == 0)
+         begin
+            if (StrCompare(ValueIi, '&nbsp;') == 0)
+            begin
+               Result = '&nbsp;';
+            end
+            else
+            begin
+               Result = StrAdd('Ii=', ValueIi);
+            end;
+         end
+         else
+         begin
+            if (StrCompare(ValueIi, '&nbsp;') == 0)
+            begin
+               Result = StrAdd('Ir=', ValueIr);
+            end
+            else
+            begin
+               Result = StrAdd('Ir=', ValueIr);
+               Result = StrAdd(Result, '; Ii=');
+               Result = StrAdd(Result, ValueIi);
+            end;
+         end;
+      end
+      else
+      begin
+         Result = '&nbsp;';
+      end;
+   end;
+end;
+
+//writes the header for the HTML document
+function write_html_header(WindowCaption: string): void;
+begin
+   WriteLn('<HTML>');
+   WriteLn('<HEAD>');
+   //The next line is required for cyrillic characters
+   //WriteLn('<meta http-equiv="content-type" content="text/html; charset=Windows-1251">');
+   WriteLn('<LINK REL="stylesheet" TYPE="text/css" HREF="..\..\images\Report.css">');
+   Write('<TITLE>');
+   Text = WindowCaption;
+   Write(Text);
+   WriteLn('</TITLE>');
+   WriteLn('</HEAD>');
+   WriteLn('<BODY BGCOLOR="#FFFFFF" FONTCOLOR="#000000">');
+   WriteLn('');
+end;
+
+//writes the footer for the HTML document
+function write_html_footer(): void;
+begin
+   WriteLn('</BODY>');
+   WriteLn('</HTML>');
+end;
+
+//returns the picture for a test step
+function get_teststepimage(StepResult: integer; ManualTest: boolean): string;
+begin
+   if (ManualTest)
+   begin
+      if (StepResult == TESTSTEP_Passed)
+      begin
+         Result = '..\..\images\ManualTestPass.jpg';
+      end
+      else
+      begin
+         Result = '..\..\images\ManualTestFail.jpg';
+      end;
+   end
+   else
+   begin
+      if (StepResult == TESTSTEP_Passed)
+      begin
+         Result = '..\..\images\TeststepPass.jpg';
+      end
+      else
+      begin
+         Result = '..\..\images\TeststepFail.jpg';
+      end;
+   end;
+end;
+
+//returns the style for the output of a command group
+function get_commandgroup_resultstyle(Available, Active: boolean; Errors,
+   ExecutedCommands: integer): string;
+begin
+   Result = '';
+   if (Available)
+   begin
+      if (Active)
+      begin
+         if (Errors == 0)
+         begin
+            if (ExecutedCommands == 0)
+            begin
+               Result = 'commandgroupnocommands';
+            end
+            else
+            begin
+               Result = 'commandgrouppass';
+            end;
+         end
+         else
+         begin
+            Result = 'commandgroupfail';
+         end;
+      end
+      else
+      begin
+         Result = 'commandgroupdisabled';
+      end;
+   end;
+end;
+
+function get_command_group_result_style(CmdGroup, FailcounterID: integer): string;
+begin
+   Available = ParamIsCommandGroupAvailable(CmdGroup);
+   Active = ParamIsCommandGroupActive(CmdGroup);
+   Errors = FailCounterGet(FailcounterID);
+   ExecutedCommands = MiscGetNumberOfExecutedCommands(CmdGroup);
+   Result = get_commandgroup_resultstyle(Available, Active, Errors, ExecutedCommands);
+end;
+
+//returns the text and the style for the output of a command group
+function get_commandgroup_result(Available, Active: boolean; Errors: integer;
+   ExecutedCommands: integer; var Style: string): string;
+begin
+   Result = get_commandgroup_resultstring(Available, Active, Errors, 
+      ExecutedCommands);
+   Style = get_commandgroup_resultstyle(Available, Active, Errors, 
+      ExecutedCommands);
+end;
+
+function get_command_group_result(CmdGroup, FailcounterID: integer;
+   var Style: string): string;
+begin
+   Result = get_command_group_result_string(CmdGroup, FailcounterID);
+   Style = get_command_group_result_style(CmdGroup, FailcounterID); 
+end;   
+
+//Output if external voltage was detected
+function external_voltage_error(Name: string; Pin1: integer;
+            Pin2: integer; Value: real; ValuePrefix: string): void;
+begin
+   ResultText = LocalText('50#Ext. Volt.');
+   Style = 'teststepfail';
+   File = get_teststepimage(RES_Result, RES_ManualTest);
+   Write('<TABLE Border=0 Width=640 class=');
+   Write(Style);
+   WriteLn('>');
+   Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+   Write('<IMG SRC="');
+   Write(File);
+   WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+   Write('<TD Width=100 class=bold>');
+   Write(ResultText);
+   WriteLn('</TD>');
+   Write('<TD Width=130>');
+   Write(Name);
+   WriteLn('</TD>');
+   PinStr1 = get_pinname(Pin1);
+   PinStr2 = get_pinname(Pin2);
+   Write('<TD Width=130>');
+   Write(PinStr1);
+   WriteLn('</TD>');
+   Write('<TD Width=130>');
+   Write(PinStr2);
+   WriteLn('</TD>');
+   Value = get_voltage_value(ValuePrefix, Value);
+   Write('<TD Align=RIGHT>');
+   Write(Value);
+   WriteLn('</TD></TR>');
+   WriteLn('</TABLE>');
+end;
+
+//writes section information into the report
+function display_sections(): void;
+begin
+   Count = ProjectGetSectionCount();
+   if (Count > 0)
+   begin
+      WriteLn('<TABLE Width=640 class=header>');
+      Write('<TR><TD Width=300 class=bold>');
+      Write(LocalText('70#Sections'));
+      Write('</TD><TD>&nbsp;</TD></TR>');
+      for Index = 1 to Count do
+      begin
+         Name = ProjectGetSectionName(Index);
+         Enabled = ProjectSectionEnabled(Name);
+         if (Enabled == TRUE)
+         begin
+            State = LocalText('71#enabled');
+         end
+         else
+         begin
+            State = LocalText('72#disabled');
+         end;
+
+         Write('<TR><TD Width=300>');
+         Write(Name);
+         Write('</TD><TD>');
+         Write(State);
+         WriteLn('</TD></TR>');
+      end;
+      WriteLn('</TABLE>');
+      WriteLn('<BR>');
+   end;
+end;
+
+//Writes a warning into the report if not all required adapter cables were connected
+function check_adaptercables(): boolean;
+begin
+   Result = TRUE;
+   AllCableCount = AdapterCablesGetList(AllCables, ADAPTERCABLES_All);
+   ConnectedCableCount = 0;
+   NotConnectedCableCount = 0;
+   if (AllCableCount > 0)
+   begin
+      ConnectedCableCount = AdapterCablesGetList(ConnectedCables,
+                               ADAPTERCABLES_Connected);
+      MissingCableCount = AdapterCablesGetList(NotConnectedCables,
+                             ADAPTERCABLES_Missing);
+   end;
+   if (ConnectedCableCount <> AllCableCount)
+   begin
+      Result = FALSE;
+      WriteLn('<BR>');
+      WriteLn('<TABLE Width=640 class=testheaderwarningtable>');
+      Write('<TR>');
+      Write('<TD COLSPAN=3 ALIGN=CENTER class=testheaderwarningtitle>');
+      Write(LocalText('75#Test incomplete'));
+      WriteLn('</TD></TR>');
+
+
+      WriteLn('<TR class=testheaderwarningtext>');
+      Write('<TD class=center>');
+      Write(LocalText('76#Required adapter cables'));
+      Write(':&nbsp;');
+      Write(AllCableCount);
+      WriteLn('</TD>');
+
+      Write('<TD class=center>');
+      Write(LocalText('77#Connected adapter cables'));
+      Write(':&nbsp;');
+      Write(ConnectedCableCount);
+      WriteLn('</TD>');
+
+      Write('<TD class=center>');
+      Write(LocalText('78#Missing adapter cables'));
+      Write(':&nbsp;');
+      Write(MissingCableCount);
+      WriteLn('</TD>');
+
+      WriteLn('</TR>');
+      WriteLn('</TABLE>');
+   end;
+end;
+
+function show_lastisolationtestcable(): void;
+begin
+   CableCount = AdapterCablesGetList(Cables, ADAPTERCABLES_All);
+   if (CableCount > 0)
+   begin
+      Pin = PinGetLastIsolationtestPin();
+      if (Pin <> PINADDRESS_Invalid)
+      begin
+         Cable = PinGetData(Pin, PIN_AdapterCableName);
+         WriteLn('<TABLE Width=640 class=header><TR><TD>');
+         Line = StrAdd(LocalText('86#Last cable tested in isolation test:'), ' ');
+         Line = StrAdd(Line, Cable);
+         WriteLn(Line);
+         WriteLn('</TD></TR></TABLE>');
+      end;
+   end;
+end;
+
+
+//Writes measurement parameters for continuity test
+function write_continuity_parameters(): void;
+begin
+   CommandsExecuted = (MiscGetNumberOfExecutedCommands(CMDGRP_Continuity) > 0);
+   if (ParamIsCommandGroupActive(CMDGRP_Continuity) AND CommandsExecuted)
+   begin
+      Line = get_continuity_parameters();
+      WriteLn('<TABLE Border=0 Width=640 class=header>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD class=bold>');
+      Write(LocalText('60#Parameters for continuity test'));
+      WriteLn('</TD></TR>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD>');
+      Write(Line);
+      WriteLn('</TD></TR>');
+      WriteLn('</TABLE>');
+      WriteLn('<BR>');
+   end;
+end;
+
+//Writes measurement parameters for LV isolation test
+function write_isolationlv_parameters(): void;
+begin
+   CommandsExecuted = (MiscGetNumberOfExecutedCommands(CMDGRP_IsolationLV) > 0);
+   if (ParamIsCommandGroupActive(CMDGRP_IsolationLV) AND CommandsExecuted)
+   begin
+      Line = get_isolationlv_parameters();
+      WriteLn('<TABLE Border=0 Width=640 class=header>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD class=bold>');
+      Write(LocalText('65#Parameters for LV isolation test'));
+      WriteLn('</TD></TR>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD>');
+      Write(Line);
+      WriteLn('</TD></TR>');
+      WriteLn('</TABLE>');
+      WriteLn('<BR>');
+   end;
+end;
+
+//Writes measurement parameters for HV isolation test
+function write_isolationhv_parameters(): void;
+begin
+   CommandsExecuted = (MiscGetNumberOfExecutedCommands(CMDGRP_IsolationHV) > 0);
+   if (ParamIsCommandGroupActive(CMDGRP_IsolationHV) AND
+       ParamGetIsolationHV(PARAM_IsolationHVValid) AND
+       CommandsExecuted)
+   begin
+      Line = get_isolationhv_parameters();
+      WriteLn('<TABLE Border=0 Width=640 class=header>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD class=bold>');
+      Write(LocalText('67#Parameters for HV isolation test'));
+      WriteLn('</TD></TR>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD>');
+      Write(Line);
+      WriteLn('</TD></TR>');
+      WriteLn('</TABLE>');
+      WriteLn('<BR>');
+   end;
+end;
+
+//Writes measurement parameters for dielectric breakdown test
+function write_dielectricbreakdown_parameters(): void;
+begin
+   CommandsExecuted = (MiscGetNumberOfExecutedCommands(CMDGRP_DielectricBreakdown) > 0);
+   if (ParamIsCommandGroupActive(CMDGRP_DielectricBreakdown) AND
+       ParamGetDielectricBreakdown(PARAM_DielectricBreakdownValid) AND
+       CommandsExecuted)
+   begin
+      Line = get_dielectricbreakdown_parameters();
+      WriteLn('<TABLE Border=0 Width=640 class=header>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD class=bold>');
+      Write(LocalText('68#Parameters for dielectric breakdown test'));
+      WriteLn('</TD></TR>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD>');
+      Write(Line);
+      WriteLn('</TD></TR>');
+      WriteLn('</TABLE>');
+      WriteLn('<BR>');
+   end;
+end;
+
+//writes the measurement parameters
+function write_parameters(): void;
+begin
+   WriteLn('<BR>');
+   write_continuity_parameters();
+   write_isolationlv_parameters();
+   write_isolationhv_parameters();
+   write_dielectricbreakdown_parameters();
+end;
+
+function display_rangetest(): void;
+begin
+   if (MiscRangeTestRunning())
+   begin
+      RangeTestType = MiscRangeTestGetType();
+      WriteFunctions = FALSE;
+      WriteConnectors = FALSE;
+      WriteCables = FALSE;
+      if (RangeTestType == RANGETEST_Functions)
+      begin
+         WriteFunctions = TRUE;
+      end;
+      if (RangeTestType == RANGETEST_Connectors)
+      begin
+         UsedConnectorCount =
+            MiscRangeTestConnectors(RangeTestUsedConnectors, TRUE);
+         UnusedConnectorCount =
+            MiscRangeTestConnectors(RangeTestUnusedConnectors, FALSE);
+         WriteConnectors = TRUE;
+      end;
+      if ((RangeTestType == RANGETEST_AdtIsolationLV) OR
+          (RangeTestType == RANGETEST_AdtIsolationHV) OR
+          (RangeTestType == RANGETEST_AdtDielectricBreakdown))
+      begin
+         WriteCables = TRUE;
+      end;
+
+      Write('<TR><TD Width=300>');
+      Write(LocalText('74#Rangetest'));
+      Write('</TD><TD>');
+      
+      //normal rangetest
+      if (WriteFunctions)
+      begin
+         FunctionCount = MiscRangeTestFunctionCount();
+         if (FunctionCount > 0)
+         begin
+            Write(MiscRangeTestFunction(1));
+            WriteLn('</TD></TR>');
+            for Index = 2 to FunctionCount do
+            begin
+               Write('<TR><TD Width=300>&nbsp;</TD><TD>');
+               Write(MiscRangeTestFunction(Index));
+               WriteLn('</TD></TR>');
+            end;
+         end;
+      end;
+      
+      //Rangetest with connectors
+      if (WriteConnectors)
+      begin
+         if (UsedConnectorCount <= UnusedConnectorCount)
+         begin
+            Write(RangeTestUsedConnectors[1]);
+            WriteLn('</TD></TR>');
+            for Index = 2 to UsedConnectorCount do
+            begin
+               Write('<TR><TD Width=300>&nbsp;</TD><TD>');
+               Write(RangeTestUsedConnectors[Index]);
+               WriteLn('</TD></TR>');
+            end;
+         end
+         else
+         begin
+            Write(LocalText('132#Disabled connectors'));
+            WriteLn('</TD></TR>');
+            for Index = 1 to UnusedConnectorCount do
+            begin
+               Write('<TR><TD Width=300>&nbsp;</TD><TD>');
+               Write(RangeTestUnusedConnectors[Index]);
+               WriteLn('</TD></TR>');
+            end;
+         end;
+      end;
+      
+      //Rangetest Isolation with adaptercables
+      if (WriteCables)
+      begin
+         CableCount = AdapterCablesGetList(AdapterCables,
+                         ADAPTERCABLES_RangeTestIsolation);
+         if (CableCount > 0)
+         begin
+            Line = LocalText('83#From cable');
+            Line = StrAdd(Line, ' "');
+            Line = StrAdd(Line, AdapterCables[1]);
+            Line = StrAdd(Line, '" ');
+            Line = StrAdd(Line, LocalText('84#to cable'));
+            Line = StrAdd(Line, ' "');
+            Line = StrAdd(Line, AdapterCables[CableCount]);
+            Line = StrAdd(Line, '"');
+            Write(Line);
+            WriteLn('</TD></TR>');
+         end;
+      end;
+   end;
+end;
+
+function display_ordernumber(): void;
+begin
+   OrderNumber = GlobalDataGetOrderNumber();
+   //write order number if exists
+   if (StrCompare(OrderNumber, '') <> 0)
+   begin
+      Write('<TR><TD Width=300>');
+      Write(LocalText('93#Order number'));
+      Write('</TD><TD>');
+      Write(OrderNumber);
+      WriteLn('</TD></TR>');
+   end;
+end;
+
+function display_serialnumber(): void;
+begin
+   SerialNumber = GlobalDataGetSerialNumber();
+   //write serial number if exists
+   if (StrCompare(SerialNumber, '') <> 0)
+   begin
+      Write('<TR><TD Width=300>');
+      Write(LocalText('113#Serial number'));
+      Write('</TD><TD>');
+      Write(SerialNumber);
+      WriteLn('</TD></TR>');
+   end;
+end;
+
+function display_username(): void;
+begin
+   if (UserManagementGetEnabled())
+   begin
+      UserName = UserManagementGetUsername();
+      Write('<TR><TD Width=300>');
+      Write(LocalText('118#Username'));
+      Write('</TD><TD>');
+      Write(UserName);
+      WriteLn('</TD></TR>');
+   end;
+end;
+
+function display_fullusername(): void;
+begin
+   if (UserManagementGetEnabled())
+   begin
+      FullUserName = UserManagementGetFullUsername();
+      Write('<TR><TD Width=300>');
+      Write(LocalText('119#Full name'));
+      Write('</TD><TD>');
+      Write(FullUserName);
+      WriteLn('</TD></TR>');
+   end;
+end;
+
+function display_usergroupname(): void;
+begin
+   if (UserManagementGetEnabled())
+   begin
+      UserGroupName = UserManagementGetUserGroupName();
+      Write('<TR><TD Width=300>');
+      Write(LocalText('120#Group'));
+      Write('</TD><TD>');
+      Write(UserGroupName);
+      WriteLn('</TD></TR>');
+   end;
+end;
+
+function display_teststart_inputdata(): void;
+begin
+   //write additional input data form the test start program if exists
+   for Index = 1 to 6 do
+   begin
+      Text = GlobalDataRead(StrAdd('Text', Index), '', 'TestStart InputData');
+      Value = GlobalDataRead(StrAdd('Value', Index), '', 'TestStart InputData');
+      if (StrCompare(Text, '') <> 0)
+      begin
+         Write('<TR><TD Width=300>');
+         Write(Text);
+         Write('</TD><TD>');
+         Write(Value);
+         WriteLn('</TD></TR>');
+      end;
+   end;
+end;
+
+function display_teststepcomment(Comment: string; Style: string;
+            DeclaredAsPassed: boolean = FALSE;
+            DeclaredAsPassedBy: string = ''): void;
+begin
+   if (DeclaredAsPassed)
+   begin
+      Text = LocalText('146#Declared as "passed" by');
+      Text = StrAdd(Text, ': ');
+      Text = StrAdd(Text, DeclaredAsPassedBy);
+      if (StrCompare(Comment, '') <> 0)
+      begin
+         Text = StrAdd(Text, '<br>');
+         Comment = StrAdd(Text, Comment);
+      end
+      else
+      begin
+         Comment = Text;
+      end;
+   end;
+   if (StrCompare(Comment, '') <> 0)
+   begin
+      Write('<TR><TD COLSPAN=2>&nbsp;</TD><TD>');
+      Write(Comment);
+      WriteLn('</TD></TR>');
+   end;
+end;
+
+function hv_multi_step_line_output(File: string; ResultText: string; Name: string;
+            Pin1: string; Pin2: string; FailText: string; Value: string): void;
+begin
+   Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+   Write('<IMG SRC="');
+   Write(File);
+   WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+   Write('<TD Width=100 class=bold>');
+   Write(ResultText);
+   WriteLn('</TD>');
+   Write('<TD Width=130>');
+   Write(Name);
+   WriteLn('</TD>');
+   Write('<TD Width=130>');
+   Write(Pin1);
+   WriteLn('</TD>');
+   Write('<TD Width=130>');
+   Write(Pin2);
+   WriteLn('</TD>');
+   Write('<TD>');
+   Write(FailText);
+   WriteLn('</TD></TR>');
+   WriteLn('<TR><TD COLSPAN=2>&nbsp;</TD>');
+   Write('<TD COLSPAN=4>');
+   Write(Value);
+   WriteLn('</TD></TR>');
+end;
+
+function hvtwolevels_line_output(File: string; ResultText: string; Name: string;
+            Pin1: string; Pin2: string; FailText: string; Value: string): void;
+begin
+   Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+   Write('<IMG SRC="');
+   Write(File);
+   WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+   Write('<TD Width=100 class=bold>');
+   Write(ResultText);
+   WriteLn('</TD>');
+   Write('<TD Width=130>');
+   Write(Name);
+   WriteLn('</TD>');
+   Write('<TD Width=130>');
+   Write(Pin1);
+   WriteLn('</TD>');
+   Write('<TD Width=130>');
+   Write(Pin2);
+   WriteLn('</TD>');
+   Write('<TD>');
+   Write(FailText);
+   WriteLn('</TD></TR>');
+   WriteLn('<TR><TD COLSPAN=2>&nbsp;</TD>');
+   Write('<TD COLSPAN=4>');
+   Write(Value);
+   WriteLn('</TD></TR>');
+end;
+
+function display_short_to_lower_voltage_level(
+            ShortToLowerVoltageLevel: boolean): void;
+begin
+   if (ShortToLowerVoltageLevel)
+   begin
+      Line = '<TR><TD COLSPAN=3>&nbsp;</TD><TD COLSPAN=2>';
+      Line = StrAdd(Line, LocalText('85#Possible short to lower voltagelevel'));
+      Line = StrAdd(Line, '</TD></TR>');
+      WriteLn(Line);
+   end;
+end;
+
+//Funtion for ReportWriteNormal and ReportWriteError
+function report_write_teststep(Data: string; Passed: boolean): boolean;
+begin
+   Result = FALSE;
+   // Search for tag
+   Tag = '<TESTSTEP>';
+   if (StrPosition(Tag, Data) == 1)
+   begin
+      Result = TRUE;
+      // Tag found. Expected entry structure is as follows.
+      // ReportWriteNormal('<TESTSTEP>Passed;StepName;Pin1;Pin2;Value');
+      // Remaining text after tag will be separated by each semicolon and
+      // written into report like a test step.
+      Data = StrDelete(Data, 1, StrLength(Tag));
+      Columns = 5;
+      MiscCreateList(ColumnList, Columns);
+      PrelastColumn = Columns - 1;
+      for Column = 1 to PrelastColumn do
+      begin
+         SemicolonPos = StrPosition(';', Data);
+         Length = SemicolonPos - 1;
+         ColumnList[Column] = StrCopy(Data, 1, Length);
+         Data = StrDelete(Data, 1, SemicolonPos);
+      end;
+      ColumnList[Columns] = Data;
+      if (Passed)
+      begin
+         Style = 'teststeppass';
+         File = '..\..\images\TeststepPass.jpg';
+      end
+      else
+      begin
+         Style = 'teststepfail';
+         File = '..\..\images\TeststepFail.jpg';
+      end;
+      Write('<TABLE Border=0 Width=640 class=');
+      Write(Style);
+      WriteLn('>');
+      Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+      Write('<IMG SRC="');
+      Write(File);
+      WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+      Write('<TD Width=100 class=bold>');
+      Write(ColumnList[1]);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(ColumnList[2]);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(ColumnList[3]);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(ColumnList[4]);
+      WriteLn('</TD>');
+      Write('<TD Align=RIGHT>');
+      Write(ColumnList[5]);
+      WriteLn('</TD></TR>');
+      WriteLn('</TABLE>');
+   end;
+end;
+
+function report_write_tag_get_image_size(Tag: string; var Width: integer;
+            var Height: integer): boolean;
+begin
+   Result = FALSE;
+   Len = StrLength('Image');
+   Size = StrDelete(Tag, 1,  Len);
+   Size = StrLowerCase(Size);
+   SizeLength = StrLength(Size);
+   X_Pos = StrPosition('x', StrLowerCase(Size));
+   //size value contains an x?
+   if (X_Pos > 1)
+   begin
+      //separate value in front of and after x
+      WidthLength = X_Pos - 1;
+      HeightPos = X_Pos + 1;
+      HeightLength = SizeLength - X_Pos;
+      Width = StrCopy(Size, 1, WidthLength);
+      Height = StrCopy(Size, HeightPos, HeightLength);
+      //both must be integer
+      if ((FormatIsInteger(Width)) AND ((FormatIsInteger(Height)))
+      begin
+         Result = TRUE;
+         // DIN-A4 page sizes...
+         DinA4Width = 640;
+         DinA4Height = 905;
+         //reduce if width > DIN A4 width
+         if (Width > DinA4Width)
+         begin
+            Factor = Width / DinA4Width;
+            Width = DinA4Width;
+            Height = Height / Factor;
+            Height = ArithRound(Height, 0);
+         end;
+         //reduce if height > DIN A4 height
+         if (Height > DinA4Height)
+         begin
+            Factor = Height / DinA4Height;
+            Height = DinA4Height;
+            Width = Width / Factor;
+            Width = ArithRound(Width, 0);
+         end;
+      end;
+   end;
+end;
+
+//Inserts an image into the report
+function insert_image(Filename: string; Width: integer; Height: integer): void;
+begin
+   AbsoluteFilename = FileExpandName(Filename);
+   //Blank line before image
+   WriteLn('<TABLE Border=0 Width=640 class=teststeppass>');
+   WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+   WriteLn('<TD></TD></TR>');
+   WriteLn('</TABLE>');
+
+   //Image
+   WriteLn('<TABLE Width=640>');
+   Line = '<TR><TD ALIGN="CENTER"><IMG SRC="';
+   Line = StrAdd(Line, AbsoluteFilename);
+   Line = StrAdd(Line, '"');
+   if ((Width > 0) AND (Height > 0))
+   begin
+      Line = StrAdd(Line, ' width="');
+      Line = StrAdd(Line, Width);
+      Line = StrAdd(Line, '" height="');
+      Line = StrAdd(Line, Height);
+      Line = StrAdd(Line, '"');
+   end;
+   Line = StrAdd(Line, '></TD></TR>');
+   WriteLn(Line);
+   WriteLn('</TABLE><BR>');
+
+   //Blank line after image
+   WriteLn('<TABLE Border=0 Width=640 class=teststeppass>');
+   WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+   WriteLn('<TD></TD></TR>');
+   WriteLn('</TABLE>');
+end;
+
+function write_default_table_line(File, ResultText, Name: string;
+   Pin1: string = '&nbsp;'; Pin2: string = '&nbsp;';
+   Value: string = '&nbsp;'): void;
+begin
+   if (StrCompare(File, '&nbsp;') == 0)
+   begin
+      Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+      Write(File);
+      WriteLn('</TD>');
+   end
+   else
+   begin
+      Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+      Write('<IMG SRC="');
+      Write(File);
+      WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+   end;
+   Write('<TD Width=100 class=bold>');
+   Write(ResultText);
+   WriteLn('</TD>');
+   Write('<TD Width=130>');
+   Write(Name);
+   WriteLn('</TD>');
+   Write('<TD Width=130>');
+   Write(Pin1);
+   WriteLn('</TD>');
+   Write('<TD Width=130>');
+   Write(Pin2);
+   WriteLn('</TD>');
+   Write('<TD Align=RIGHT>');
+   Write(Value);
+   WriteLn('</TD>');
+   WriteLn('</TR>');
+end;
+
+//Writes the results of the command groups in the report
+function write_command_group_results(): void;
+begin
+   Style = '';
+   Text = get_command_group_result(CMDGRP_Continuity, FAILCOUNTER_Continuity, 
+      Style);
+   if (StrCompare('', Text) <> 0) 
+   begin
+      Write('<TR class=');
+      Write(Style);
+      Write('><TD Width=300>');
+      Write(LocalText('27#Continuity test'));
+      Write('</TD><TD>');
+      Write(Text);
+      WriteLn('</TD></TR>');
+   end;
+   Text = get_command_group_result(CMDGRP_IsolationLV, FAILCOUNTER_IsolationLV, 
+      Style);
+   if (StrCompare('', Text) <> 0) 
+   begin
+      Write('<TR class=');
+      Write(Style);
+      Write('><TD Width=300>');
+      Write(LocalText('28#LV isolation test'));
+      Write('</TD><TD>');
+      Write(Text);
+      WriteLn('</TD></TR>');
+   end;
+   Text = get_command_group_result(CMDGRP_IsolationHV, FAILCOUNTER_IsolationHV, 
+      Style);
+   if (StrCompare('', Text) <> 0) 
+   begin
+      Write('<TR class=');
+      Write(Style);
+      Write('><TD Width=300>');
+      Write(LocalText('29#HV isolation test'));
+      Write('</TD><TD>');
+      Write(Text);
+      WriteLn('</TD></TR>');
+   end;
+   Text = get_command_group_result(CMDGRP_DielectricBreakdown, 
+      FAILCOUNTER_DielectricBreakdown, Style);
+   if (StrCompare('', Text) <> 0) 
+   begin
+      Write('<TR class=');
+      Write(Style);
+      Write('><TD Width=300>');
+      Write(LocalText('30#Test for dielectric breakdown'));
+      Write('</TD><TD>');
+      Write(Text);
+      WriteLn('</TD></TR>');
+   end;
+   Text = get_command_group_result( CMDGRP_ElectricalComponents, 
+      FAILCOUNTER_ElectricalComponents, Style);
+   if (StrCompare('', Text) <> 0) 
+   begin
+      Write('<TR class=');
+      Write(Style);
+      Write('><TD Width=300>');
+      Write(LocalText('31#Test of electrical components'));
+      Write('</TD><TD>');
+      Write(Text);
+      WriteLn('</TD></TR>');
+   end;
+   Text = get_command_group_result(CMDGRP_VoltageAndCurrent, 
+      FAILCOUNTER_VoltageAndCurrent, Style);
+   if (StrCompare('', Text) <> 0) 
+   begin
+      Write('<TR class=');
+      Write(Style);
+      Write('><TD Width=300>');
+      Write(LocalText('179#Voltage and Current'));
+      Write('</TD><TD>');
+      Write(Text);
+      WriteLn('</TD></TR>');
+   end;
+   Text = get_command_group_result(CMDGRP_OpticalComponents, 
+      FAILCOUNTER_OpticalComponents, Style);
+   if (StrCompare('', Text) <> 0) 
+   begin
+      Write('<TR class=');
+      Write(Style);
+      Write('><TD Width=300>');
+      Write(LocalText('112#Test of optical components'));
+      Write('</TD><TD>');
+      Write(Text);
+      WriteLn('</TD></TR>');
+   end;
+   Text = get_command_group_result(CMDGRP_CANBus, FAILCOUNTER_CANBus, Style);
+   if (StrCompare('', Text) <> 0) 
+   begin
+      Write('<TR class=');
+      Write(Style);
+      Write('><TD Width=300>');
+      Write(LocalText('115#CAN bus'));
+      Write('</TD><TD>');
+      Write(Text);
+      WriteLn('</TD></TR>');
+   end;
+   Text = get_command_group_result(CMDGRP_IDD, FAILCOUNTER_IDD, Style);
+   if (StrCompare('', Text) <> 0) 
+   begin
+      Write('<TR class=');
+      Write(Style);
+      Write('><TD Width=300>');
+      Write(LocalText('180#IDD'));
+      Write('</TD><TD>');
+      Write(Text);
+      WriteLn('</TD></TR>');
+   end;
+   Text = get_command_group_result(CMDGRP_Detections, FAILCOUNTER_Detections, Style);
+   if (StrCompare('', Text) <> 0) 
+   begin
+      Write('<TR class=');
+      Write(Style);
+      Write('><TD Width=300>');
+      Write(LocalText('181#Detections'));
+      Write('</TD><TD>');
+      Write(Text);
+      WriteLn('</TD></TR>');
+   end;
+   Text = get_command_group_result(CMDGRP_TwistedPair, FAILCOUNTER_TwistedPair, Style);
+   if (StrCompare('', Text) <> 0)
+   begin
+      Write('<TR class=');
+      Write(Style);
+      Write('><TD Width=300>');
+      Write(LocalText('280#Twisted Pair'));
+      Write('</TD><TD>');
+      Write(Text);
+      WriteLn('</TD></TR>');
+   end;
+   Text = get_command_group_result(CMDGRP_Others, FAILCOUNTER_Others, Style);
+   if (StrCompare('', Text) <> 0) 
+   begin
+      Write('<TR class=');
+      Write(Style);
+      Write('><TD Width=300>');
+      Write(LocalText('32#Other tests'));
+      Write('</TD><TD>');
+      Write(Text);
+      WriteLn('</TD></TR>');
+   end;
+end;
+
+//Returns a value text for HV isolation test steps
+function get_hv_isolation_value_text(IsArc, IsdIdt, IsEnergyLimit: boolean;
+   Prefix: string; Value: real): string;
+begin
+   if (IsArc)
+   begin
+      Result = LocalText('202#Arc');
+   end
+   else
+   begin
+      if (IsdIdt)
+      begin
+         Result = LocalText('203#dIdt');
+      end
+      else
+      begin
+         if (IsEnergyLimit)
+         begin
+            Result = LocalText('164#Energy > 350 mJ');
+         end
+         else
+         begin
+            Result = get_resistance_value(Prefix, Value);
+         end;
+      end;
+   end;
+end;
+

@@ -1,0 +1,224 @@
+constants
+begin
+   CAGE_CODE = '923W5';
+   LOCATION = 'BEMIDJI, MN';
+   CAL_FILE = 'O:\Test Eng\Support_Files\W434\calibration_data.ini';
+end;
+
+
+function get_system_calibration_due_date(): string;
+begin
+   Result = GlobalDataRead('TestStation.CalDueDate', 'NULL');
+end;
+
+// EXAMPLE FOR TSX, NOT PRESENTLY USED
+function print_nortech_header(): void;
+begin
+   Customer = 'Customer       : ' + GlobalDataRead('Customer', 'DEFAULT');
+   Station =  'W434 Station   : ' + MiscGetTestStationIdentifier();
+   Serial =   'W434 Serial    : ' + GlobalDataRead('TestStation.Serial', 'NULL');
+   CalDue =   'Cal. Due Date  : ' + GlobalDataRead('TestStation.CalDueDate', 'NULL');
+   SWVer =    'SW Version     : ' + GlobalDataRead('TestStation.SoftwareVersion', 'NULL');
+   FWVer =    'FW Version     : ' + GlobalDataRead('TestStation.FirmwareVersion', 'NULL');
+
+   WriteLn('---- NORTECH TSX HEADER ----');
+   WriteLn(Customer);
+   WriteLn(Station);
+   WriteLn(Serial);
+   WriteLn(CalDue);
+   WriteLn(SWVer);
+   WriteLn(FWVer);
+   WriteLn('----------------------------');
+end;
+
+
+function get_collins_partnum(): string;
+begin
+   Result = GlobalDataRead('Collins.PartNum', 'NULL');
+end;
+
+
+function get_collins_testrev(): string;
+begin
+   Result = GlobalDataRead('Collins.TestRev', 'NULL');
+end;
+
+
+function print_html_scale_info(): void;
+begin
+   Temp = GlobalDataRead('Collins.Scale', 'NULL');
+
+   if (StrCompare(Temp, 'NULL') <> 0)
+   begin
+      WriteLn('<BR>');
+      WriteLn('<TABLE Width=640 class=header>');
+
+      Count = MiscListFromString(Temp, Scales, ',');
+      Handle = FileOpenIni(CAL_FILE);
+
+      if (Handle == 0)
+      begin
+         WriteLn('<TR><TD COLSPAN=2 ALIGN="left"><B>Scale:</B> ___________________, S/N: ________, Cal Due Date: ______________</TD></TR>');
+         WriteLn('<TR><TD>&nbsp;</TD></TR>');
+      end
+      else
+      begin
+         WriteLn('<TR><TD COLSPAN=2 ALIGN="left"><B>Scale:</B> (circle one)</TD></TR>');
+         WriteLn('<TR><TD>&nbsp;</TD></TR>');
+         for Index = 1 to Count do
+         begin
+            Description = FileGetIni(Handle, Scales[Index], 'Description', 'NULL');
+            SNumber = Scales[Index];
+            CalDue = FileGetIni(Handle, Scales[Index], 'CalDue', 'NULL');
+            Output = '<TR><TD COLSPAN=2 ALIGN="left"> &nbsp;&nbsp;&nbsp; ' + Description + ', S/N: ' + SNumber + ', Cal Due Date: ' + CalDue + '</TD></TR>';
+            WriteLn(Output);
+            WriteLn('<TR><TD>&nbsp;</TD></TR>');
+         end;
+      end;
+
+      FileCloseIni(Handle);
+
+      MaxWeight = GlobalDataRead('Collins.MaxWeight', '______');
+      Output = '<TR><TD Width=500 ALIGN="center">MAX Weight:<B><U>&nbsp;&nbsp;' + MaxWeight + '&nbsp;&nbsp;</U></B>lbs ACTUAL Weight:______lbs</TD>';
+      WriteLn(Output);
+      WriteLn('<TD ALIGN="right">PASS &nbsp;&nbsp; FAIL &nbsp;&nbsp; NA</TD></TR>');
+      WriteLn('</TABLE>');
+   end;
+end;
+
+
+function print_html_bondcheck_info(): void;
+begin
+   Temp = GlobalDataRead('Collins.Bondcheck', 'NULL');
+
+   if (StrCompare(Temp, 'NULL') <> 0)
+   begin
+      WriteLn('<BR>');
+      WriteLn('<TABLE Width=640 class=header>');
+
+      Count = MiscListFromString(Temp, DMMs, ',');
+      Handle = FileOpenIni(CAL_FILE);
+
+      if (Handle == 0)
+      begin
+         WriteLn('<TR><TD COLSPAN=2 ALIGN="left"><B>DMM (Bond Check):</B> ___________________, S/N: ________, Cal Due Date: ______________</TD></TR>');
+         WriteLn('<TR><TD>&nbsp;</TD></TR>');
+      end
+      else
+      begin
+         WriteLn('<TR><TD COLSPAN=2 ALIGN="left"><B>DMM (Bond Check):</B> (circle one)</TD></TR>');
+         WriteLn('<TR><TD>&nbsp;</TD></TR>');
+         for Index = 1 to Count do
+         begin
+            Description = FileGetIni(Handle, DMMs[Index], 'Description', 'NULL');
+            SNumber = DMMs[Index];
+            CalDue = FileGetIni(Handle, DMMs[Index], 'CalDue', 'NULL');
+            Output = '<TR><TD COLSPAN=2 ALIGN="left"> &nbsp;&nbsp;&nbsp; ' + Description + ', S/N: ' + SNumber + ', Cal Due Date: ' + CalDue + '</TD></TR>';
+            WriteLn(Output);
+            WriteLn('<TR><TD>&nbsp;</TD></TR>');
+         end;
+      end;
+
+      FileCloseIni(Handle);
+
+      WriteLn('<TD ALIGN="right">PASS &nbsp;&nbsp; FAIL &nbsp;&nbsp; NA</TD></TR>');
+      WriteLn('</TABLE>');
+   end;
+end;
+
+
+function print_html_lcr_info(): void;
+begin
+   Temp = GlobalDataRead('Collins.LCR', 'NULL');
+
+   if (StrCompare(Temp, 'NULL') <> 0)
+   begin
+      WriteLn('<BR>');
+      WriteLn('<TABLE Width=640 class=header>');
+
+      Count = MiscListFromString(Temp, LCRs, ',');
+      Handle = FileOpenIni(CAL_FILE);
+
+      if (Handle == 0)
+      begin
+         WriteLn('<TR><TD COLSPAN=2 ALIGN="left"><B>LCR Meter:</B> ___________________, S/N: ________, Cal Due Date: ______________</TD></TR>');
+         WriteLn('<TR><TD>&nbsp;</TD></TR>');
+      end
+      else
+      begin
+         WriteLn('<TR><TD COLSPAN=2 ALIGN="left"><B>LCR Meter:</B> (circle one)</TD></TR>');
+         WriteLn('<TR><TD>&nbsp;</TD></TR>');
+         for Index = 1 to Count do
+         begin
+            Description = FileGetIni(Handle, LCRs[Index], 'Description', 'NULL');
+            SNumber = LCRs[Index];
+            CalDue = FileGetIni(Handle, LCRs[Index], 'CalDue', 'NULL');
+            Output = '<TR><TD COLSPAN=2 ALIGN="left"> &nbsp;&nbsp;&nbsp; ' + Description + ', S/N: ' + SNumber + ', Cal Due Date: ' + CalDue + '</TD></TR>';
+            WriteLn(Output);
+            WriteLn('<TR><TD>&nbsp;</TD></TR>');
+         end;
+      end;
+
+      FileCloseIni(Handle);
+
+      // TODO: MAKE ONLY RELEVANT ASSEMBLY INFORMATION DISPLAY
+      WriteLn('<TR><TD Width=320 ALIGN="left"> &nbsp;&nbsp; P/N 473188-01</TD>');
+      WriteLn('<TD Width=320 ALIGN="left">______ &nbsp; 0.2pF max</TD></TR>');
+      WriteLn('<TR><TD Width=320 ALIGN="left"> &nbsp;&nbsp; P/N 473454-01</TD>');
+      WriteLn('<TD Width=320 ALIGN="left">______ &nbsp; 0.4pF max</TD></TR>');
+      WriteLn('<TD ALIGN="right">PASS &nbsp;&nbsp; FAIL &nbsp;&nbsp; NA</TD></TR>');
+      WriteLn('</TABLE>');
+   end;
+end;
+
+
+function print_html_massspec_info(): void;
+begin
+   Temp = GlobalDataRead('Collins.MassSpec', 'NULL');
+
+   if (StrCompare(Temp, 'NULL') <> 0)
+   begin
+      WriteLn('<BR>');
+      WriteLn('<TABLE Width=640 class=header>');
+
+      Count = MiscListFromString(Temp, MassSpecs, ',');
+      Handle = FileOpenIni(CAL_FILE);
+
+      if (Handle == 0)
+      begin
+         WriteLn('<TR><TD COLSPAN=2 ALIGN="left"><B>Helium Leak Tester:</B> ___________________, S/N: ________, Cal Due Date: ______________</TD></TR>');
+         WriteLn('<TR><TD>&nbsp;</TD></TR>');
+      end
+      else
+      begin
+         WriteLn('<TR><TD COLSPAN=2 ALIGN="left"><B>Helium Leak Tester:</B> (circle one)</TD></TR>');
+         WriteLn('<TR><TD>&nbsp;</TD></TR>');
+         for Index = 1 to Count do
+         begin
+            Description = FileGetIni(Handle, MassSpecs[Index], 'Description', 'NULL');
+            SNumber = MassSpecs[Index];
+            CalDue = FileGetIni(Handle, MassSpecs[Index], 'CalDue', 'NULL');
+            Output = '<TR><TD COLSPAN=2 ALIGN="left"> &nbsp;&nbsp;&nbsp; ' + Description + ', S/N: ' + SNumber + ', Cal Due Date: ' + CalDue + '</TD></TR>';
+            WriteLn(Output);
+            WriteLn('<TR><TD>&nbsp;</TD></TR>');
+         end;
+      end;
+
+      FileCloseIni(Handle);
+
+      WriteLn('<TD ALIGN="right">PASS &nbsp;&nbsp; FAIL &nbsp;&nbsp; NA</TD></TR>');
+      WriteLn('</TABLE>');
+   end;
+end;
+
+
+function print_html_examination_info(): void;
+begin
+   WriteLn('<BR>');
+   WriteLn('<TABLE Width=640 class=header>');
+   WriteLn('<TR><TD COLSPAN=2 ALIGN="left"><B>Examination of Product:</B> &nbsp;&nbsp; PASS &nbsp;&nbsp; FAIL</TD></TR>');
+   WriteLn('<TR><TD>&nbsp;</TD></TR>');
+   WriteLn('<TR><TD Width=320 ALIGN="left"> &nbsp;&nbsp; Inspected by: &nbsp; ________________________ </TD>');
+   WriteLn('<TD Width=320 ALIGN="left">Tested by: &nbsp; ________________________ </TD></TR>');
+   WriteLn('</TABLE>');
+end;

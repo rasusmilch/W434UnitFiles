@@ -1,0 +1,181 @@
+//Output for the command VoltageTest
+template VoltageTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('48#Voltage'));
+   switch (RES_Result)
+   begin
+      case TESTSTEP_Passed:
+      begin
+         ResultText = LocalText('5#Passed');
+         Style = 'teststeppass';
+      end;
+      case TESTSTEP_Failed:
+      begin
+         if (RES_Value > RES_MaxVoltage)
+         begin
+            ResultText = LocalText('12#Too high');
+         end
+         else
+         begin
+            ResultText = LocalText('13#Too low');
+         end;
+         Style = 'teststepfail';
+      end;
+      default:
+      begin
+         ResultText = LocalText('7#Invalid');
+         Style = 'teststepfail';
+      end;
+   end;
+   File = get_teststepimage(RES_Result, RES_ManualTest);
+   Write('<TABLE Border=0 Width=640 class=');
+   Write(Style);
+   WriteLn('>');
+   Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+   Write('<IMG SRC="');
+   Write(File);
+   WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+   Write('<TD Width=100 class=bold>');
+   Write(ResultText);
+   WriteLn('</TD>');
+   Write('<TD Width=130>');
+   Write(Name);
+   WriteLn('</TD>');
+   Pin1 = get_pinname(RES_Pin1);
+   Pin2 = get_pinname(RES_Pin2);
+   Write('<TD Width=130>');
+   Write(Pin1);
+   WriteLn('</TD>');
+   Write('<TD Width=130>');
+   Write(Pin2);
+   WriteLn('</TD>');
+   Value = get_voltage_value(RES_Prefix, RES_Value);
+   Write('<TD Align=RIGHT>');
+   Write(Value);
+   WriteLn('</TD></TR>');
+   display_teststepcomment(RES_Comment, Style, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   WriteLn('</TABLE>');
+end;
+
+//Output for the command VoltageTestCustom
+template VoltageTestCustom
+begin
+   Name = get_teststep_name(RES_Name, LocalText('48#Voltage'));
+   switch (RES_Result)
+   begin
+      case TESTSTEP_Passed:
+      begin
+         ResultText = LocalText('5#Passed');
+         Style = 'teststeppass';
+      end;
+      case TESTSTEP_Failed:
+      begin
+         if (RES_Value > RES_MaxVoltage)
+         begin
+            ResultText = LocalText('12#Too high');
+         end
+         else
+         begin
+            ResultText = LocalText('13#Too low');
+         end;
+         Style = 'teststepfail';
+      end;
+      default:
+      begin
+         ResultText = LocalText('7#Invalid');
+         Style = 'teststepfail';
+      end;
+   end;
+   File = get_teststepimage(RES_Result, RES_ManualTest);
+   Write('<TABLE Border=0 Width=640 class=');
+   Write(Style);
+   WriteLn('>');
+   Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+   Write('<IMG SRC="');
+   Write(File);
+   WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+   Write('<TD Width=100 class=bold>');
+   Write(ResultText);
+   WriteLn('</TD>');
+   Write('<TD Width=130>');
+   Write(Name);
+   WriteLn('</TD>');
+   Pin1 = get_pinname(RES_Pin1);
+   Pin2 = get_pinname(RES_Pin2);
+   Write('<TD Width=130>');
+   Write(Pin1);
+   WriteLn('</TD>');
+   Write('<TD Width=130>');
+   Write(Pin2);
+   WriteLn('</TD>');
+   Value = get_voltage_value(RES_Prefix, RES_Value);
+   Write('<TD Align=RIGHT>');
+   Write(Value);
+   WriteLn('</TD></TR>');
+   display_teststepcomment(RES_Comment, Style, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   WriteLn('</TABLE>');
+end;
+
+//Output for the command VoltageFrequencyTest
+template VoltageFrequencyTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('165#Voltage+Frequency'));
+   switch (RES_Result)
+   begin
+      case TESTSTEP_Passed:
+      begin
+         ResultText = LocalText('5#Passed');
+         Style = 'teststeppass';
+      end;
+      case TESTSTEP_Failed:
+      begin
+         ResultTextU = LocalText('270#U') + ': ' + LocalText('122#Fail');
+         ResultTextf = LocalText('271#f') + ': ' + LocalText('122#Fail');
+         if (RES_VoltagePassed)
+         begin
+            ResultTextU = LocalText('270#U') + ': ' + LocalText('121#Pass');
+         end;
+         if (RES_FrequencyPassed)
+         begin
+            ResultTextf = LocalText('271#f') + ': ' + LocalText('121#Pass');
+         end;
+         ResultText = ResultTextU + '; ' + ResultTextf;
+         Style = 'teststepfail';
+      end;
+      default:
+      begin
+         ResultText = LocalText('7#Invalid');
+         Style = 'teststepfail';
+      end;
+   end;
+   File = get_teststepimage(RES_Result, RES_ManualTest);
+   Write('<TABLE Border=0 Width=640 class=');
+   Write(Style);
+   WriteLn('>');
+   Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+   Write('<IMG SRC="');
+   Write(File);
+   WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+   Write('<TD Width=100 class=bold>');
+   Write(ResultText);
+   WriteLn('</TD>');
+   Write('<TD Width=130>');
+   Write(Name);
+   WriteLn('</TD>');
+   Pin1 = get_pinname(RES_Pin1);
+   Pin2 = get_pinname(RES_Pin2);
+   Write('<TD Width=130>');
+   Write(Pin1);
+   WriteLn('</TD>');
+   Write('<TD Width=130>');
+   Write(Pin2);
+   WriteLn('</TD>');
+   ValueU = get_voltage_value(RES_Prefix, RES_Value);
+   Valuef = get_frequency_value(RES_fPrefix, RES_fValue);
+   Value = ValueU + '; ' + Valuef;
+   Write('<TD Align=RIGHT>');
+   Write(Value);
+   WriteLn('</TD></TR>');
+   display_teststepcomment(RES_Comment, Style, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   WriteLn('</TABLE>');
+end;

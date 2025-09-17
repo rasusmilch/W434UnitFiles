@@ -1,0 +1,124 @@
+//Output for the command OFAttenuationTest
+template OFAttenuationTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('111#Optical fiber'));
+   switch (RES_Result)
+   begin
+      case TESTSTEP_Passed:
+      begin
+         ResultText = LocalText('5#Passed');
+         Style = 'teststeppass';
+      end;
+      case TESTSTEP_Failed:
+      begin
+         if (StrCompare(RES_Prefix, '%') == 0)
+         begin
+            ResultText = LocalText('45#Defective');
+         end
+         else
+         begin
+            if (RES_Value > RES_MaxAttenuation)
+            begin
+               ResultText = LocalText('12#Too high');
+            end
+            else
+            begin
+               ResultText = LocalText('13#Too low');
+            end;
+         end;
+         Style = 'teststepfail';
+      end;
+      default:
+      begin
+         ResultText = LocalText('7#Invalid');
+         Style = 'teststepfail';
+      end;
+   end;
+   File = get_teststepimage(RES_Result, RES_ManualTest);
+   Write('<TABLE Border=0 Width=640 class=');
+   Write(Style);
+   WriteLn('>');
+   Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+   Write('<IMG SRC="');
+   Write(File);
+   WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+   Write('<TD Width=100 class=bold>');
+   Write(ResultText);
+   WriteLn('</TD>');
+   Write('<TD Width=130>');
+   Write(Name);
+   WriteLn('</TD>');
+   Pin1 = get_optical_pinname(RES_Pin1);
+   Pin2 = get_optical_pinname(RES_Pin2);
+   Write('<TD Width=130>');
+   Write(Pin1);
+   WriteLn('</TD>');
+   Write('<TD Width=130>');
+   Write(Pin2);
+   WriteLn('</TD>');
+   Value = get_attenuation_value(RES_Prefix, RES_Value);
+   Write('<TD Align=RIGHT>');
+   Write(Value);
+   WriteLn('</TD></TR>');
+   display_teststepcomment(RES_Comment, Style, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   WriteLn('</TABLE>');
+end;
+
+//Output for the command OFPinScan
+template OFPinScan
+begin
+   Name = LocalText('257#OFPinScan');
+   Pin1 = get_optical_pinname(RES_Pin);
+   WriteLn('<TABLE Border=0 Width=640 class=teststeppass>');
+   File = get_teststepimage(2, TRUE);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      Value = '&nbsp;';
+      Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+      Write('<IMG SRC="');
+      Write(File);
+      WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+      Write('<TD Width=100 class=bold>');
+      Write('&nbsp;');
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Name);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Pin1);
+      WriteLn('</TD>');
+      Write('<TD Width=130>&nbsp;</TD>');
+      Write('<TD Align=RIGHT>');
+      Write(Value);
+      WriteLn('</TD></TR>');
+   end
+   else
+   begin
+      for Index = 1 to RES_ErrorPinCount do
+      begin
+         Pin2 = get_optical_pinname(RES_ErrorPins[Index]);
+         Value = '&nbsp;';
+         Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+         Write('<IMG SRC="');
+         Write(File);
+         WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+         Write('<TD Width=100 class=bold>');
+         Write(LocalText('17#Found'));
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Name);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Pin1);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Pin2);
+         WriteLn('</TD>');
+         Write('<TD Align=RIGHT>');
+         Write(Value);
+         WriteLn('</TD></TR>');
+      end;
+   end;
+   WriteLn('</TABLE>');
+end;
+

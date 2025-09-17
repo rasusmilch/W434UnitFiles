@@ -1,0 +1,25 @@
+[WindowPos]
+Count=2
+
+[WindowPos 0]
+Id=1888
+L=0
+T=93
+W=1920
+H=939
+S=0
+
+[WindowPos 1]
+Id=1889
+L=0
+T=0
+W=1920
+H=93
+S=0
+
+[GridSet]
+Count=0
+
+[EditorLastOpenFiles]
+Count=0
+0=.\TestUnitFiles\rs232_functions.unit

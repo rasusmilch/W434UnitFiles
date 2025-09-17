@@ -1,0 +1,90 @@
+template Header
+begin
+   init_indent();
+   //XML-Header
+   write_line('<?xml version="1.0" encoding="utf-8"?>');
+   write_line('<CEETISReport xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">');
+   DateTime = DTDateTimeString(DTNow());
+   inc_indent();
+   Line = '<CreationDateTime>' + DateTime + '</CreationDateTime>';
+   write_line(Line);
+
+   write_line('<Header>');
+   inc_indent();
+
+   CompanyName = '';
+   CompanyLogo = '';
+   CompanyLogoWidth = 0;
+   CompanyLogoHeight = 0;
+   MiscGetCompanyInfo(CompanyName, CompanyLogo, CompanyLogoWidth, CompanyLogoHeight);
+   Line = '<CompanyName>' + CompanyName + '</CompanyName>';
+   write_line(Line);
+   Line = '<SoftwareVersion>' + RES_SoftwareVersion + '</SoftwareVersion>';
+   write_line(Line);
+   Line = '<ProjectName>' + ProjectGetName() + '</ProjectName>';
+   write_line(Line);
+   Line = '<ProjectFileName>' + ProjectGetFilename() + '</ProjectFileName>';
+   write_line(Line);
+   Line = '<ProjectVersion>' + ProjectGetVersion(VERSION_Full_Version, '#.##-##') + '</ProjectVersion>';
+   write_line(Line);
+   write_line('<CheckSums>');
+   inc_indent();
+   Line = '<ATS>' + ProjectGetChecksum(CHECKSUM_Ats) + '</ATS>';
+   write_line(Line);
+   Line = '<Parameters>' + ProjectGetChecksum(CHECKSUM_Parameter) + '</Parameters>';
+   write_line(Line);
+   Line = '<NetList>' + ProjectGetChecksum(CHECKSUM_Netlist) + '</NetList>';
+   write_line(Line);
+   dec_indent();
+   write_line('</CheckSums>');
+
+   DateTime = DTGetTestDateTime();
+   DateTime = DTDateTimeString(DateTime);
+   Line = '<TestDateTime>' + DateTime + '</TestDateTime>';
+
+   write_line(Line);
+   write_user();
+   write_ordernumber();
+   write_serialnumber();
+   write_teststart_inputdata();
+   write_rangetest();
+   write_sections();
+
+   //Test result
+   Line = '<Result>';
+   switch (RES_Result)
+   begin
+      case TEST_Passed:
+      begin
+         Line = Line + 'Passed';
+      end;
+      case TEST_Failed:
+      begin
+         Line = Line + 'Failed';
+      end;
+      case TEST_Aborted:
+      begin
+         Line = Line + 'Aborted';
+      end;
+      default:
+      begin
+         Line = Line + 'Invalid';
+      end;
+   end;
+   Line = Line + '</Result>';
+   write_line(Line);
+   write_command_group_results();
+   dec_indent();
+   write_line('</Header>');
+
+   write_line('<TestSteps>');
+   inc_indent();
+end;
+
+template Footer
+begin
+   dec_indent();
+   write_line('</TestSteps>');
+   dec_indent();
+   write_line('</CEETISReport>');
+end;

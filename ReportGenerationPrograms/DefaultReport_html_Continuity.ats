@@ -1,0 +1,741 @@
+//Verbindungstest-Funktionen sind die Funktionen, bei denen die
+//Durchgangsparameter für die Messung verwendet werden.
+
+//Continuity functions are those, for which the continuity parameters are used
+
+function get_continuity_result_text(ResultValue: integer; IsArc: boolean; var Style: string): string;
+begin
+   switch (ResultValue)
+   begin
+      case TESTSTEP_Passed:
+      begin
+         Result = LocalText('5#Passed');
+         Style = 'teststeppass';
+      end;
+      case TESTSTEP_Failed:
+      begin
+         if (IsArc)
+         begin
+            Result = LocalText('202#Arc');
+         end
+         else
+         begin
+            Result = LocalText('6#Open');
+         end;
+         Style = 'teststepfail';
+      end;
+      default:
+      begin
+         Result = LocalText('7#Invalid');
+         Style = 'teststepfail';
+      end;
+   end;
+end;
+
+//Output for the command ParamContinuity
+template ParamContinuity
+begin
+   Line = '';
+   if (RES_CurrentChanged)
+   begin
+      Value = FormatCurrent(RES_CCurrent);
+      Line = StrAdd(Line, LocalText('51#Current'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_ThresholdChanged)
+   begin
+      Value = FormatResistance(RES_CThreshold);
+      Line = StrAdd(Line, LocalText('52#Threshold'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TriseChanged)
+   begin
+      Value = FormatTime(RES_CTrise);
+      Line = StrAdd(Line, LocalText('53#Trise'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TwaitChanged)
+   begin
+      Value = FormatTime(RES_CTwait);
+      Line = StrAdd(Line, LocalText('54#Twait'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TmeasChanged)
+   begin
+      Value = FormatTime(RES_CTmeas);
+      Line = StrAdd(Line, LocalText('55#Tmeas'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_AutoRangeChanged)
+   begin
+      if (RES_CAutoRange)
+      begin
+         Value = LocalText('56#On');
+      end
+      else
+      begin
+         Value = LocalText('57#Off');
+      end;
+      Line = StrAdd(Line, LocalText('58#Auto ranging'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_VoltageLimitChanged)
+   begin
+      Value = FormatVoltage(RES_CVoltageLimit);
+      Line = StrAdd(Line, LocalText('59#Voltage limit'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (StrCompare(Line, '') <> 0)
+   begin
+      Pos = StrLength(Line) - 1;
+      Line = StrDelete(Line, Pos, 2);
+      WriteLn('<TABLE Border=0 Width=640 class=teststeppass>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD class=bold>');
+      Write(LocalText('60#Parameters for continuity test'));
+      WriteLn('</TD></TR>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD>');
+      Write(Line);
+      WriteLn('</TD></TR>');
+      WriteLn('</TABLE>');
+   end;
+end;
+
+//Output for the command ParamResetContinuity
+template ParamResetContinuity
+begin
+   Line = '';
+   if (RES_CurrentChanged)
+   begin
+      Value = FormatCurrent(RES_CCurrent);
+      Line = StrAdd(Line, LocalText('51#Current'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_ThresholdChanged)
+   begin
+      Value = FormatResistance(RES_CThreshold);
+      Line = StrAdd(Line, LocalText('52#Threshold'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TriseChanged)
+   begin
+      Value = FormatTime(RES_CTrise);
+      Line = StrAdd(Line, LocalText('53#Trise'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TwaitChanged)
+   begin
+      Value = FormatTime(RES_CTwait);
+      Line = StrAdd(Line, LocalText('54#Twait'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TmeasChanged)
+   begin
+      Value = FormatTime(RES_CTmeas);
+      Line = StrAdd(Line, LocalText('55#Tmeas'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_AutoRangeChanged)
+   begin
+      if (RES_CAutoRange)
+      begin
+         Value = LocalText('56#On');
+      end
+      else
+      begin
+         Value = LocalText('57#Off');
+      end;
+      Line = StrAdd(Line, LocalText('58#Auto ranging'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_VoltageLimitChanged)
+   begin
+      Value = FormatVoltage(RES_CVoltageLimit);
+      Line = StrAdd(Line, LocalText('59#Voltage limit'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (StrCompare(Line, '') <> 0)
+   begin
+      Pos = StrLength(Line) - 1;
+      Line = StrDelete(Line, Pos, 2);
+      WriteLn('<TABLE Border=0 Width=640 class=teststeppass>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD class=bold>');
+      Write(LocalText('60#Parameters for continuity test'));
+      WriteLn('</TD></TR>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD>');
+      Write(Line);
+      WriteLn('</TD></TR>');
+      WriteLn('</TABLE>');
+   end;
+end;
+
+//Output for the command WireTest
+template WireTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('8#Wire'));
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      Style = '';
+      ResultText = get_continuity_result_text(RES_Result, RES_Arc, Style);
+      File = get_teststepimage(RES_Result, RES_ManualTest);
+      Write('<TABLE Border=0 Width=640 class=');
+      Write(Style);
+      WriteLn('>');
+      Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+      Write('<IMG SRC="');
+      Write(File);
+      WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+      Write('<TD Width=100 class=bold>');
+      Write(ResultText);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Name);
+      WriteLn('</TD>');
+      Pin1 = get_pinname(RES_Pin1);
+      Pin2 = get_pinname(RES_Pin2);
+      Write('<TD Width=130>');
+      Write(Pin1);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Pin2);
+      WriteLn('</TD>');
+      if (RES_AutoRangePassedAfterFail)
+      begin
+         Value = get_resistance_value('>', RES_CThreshold);
+         Value = StrAdd(Value, '!');
+      end
+      else
+      begin
+         Value = get_resistance_value(RES_Prefix, RES_Value);
+      end;
+      Write('<TD Align=RIGHT>');
+      Write(Value);
+      WriteLn('</TD></TR>');
+      if (RES_Result == TESTSTEP_Failed)
+      begin
+         if (RES_InterchangedWiresPin1 <> PINADDRESS_None)
+         begin
+            Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+            Write('<TD Width=100 class=bold>&nbsp;</TD>');
+            Write('<TD Width=130>');
+            Write(LocalText('69#Connected'));
+            WriteLn('</TD>');
+            Pin1 = get_pinname(RES_Pin1);
+            Pin2 = get_pinname(RES_InterchangedWiresPin1);
+            Write('<TD Width=130>');
+            Write(Pin1);
+            WriteLn('</TD>');
+            Write('<TD Width=130>');
+            Write(Pin2);
+            WriteLn('</TD>');
+            WriteLn('<TD Align=RIGHT>&nbsp;</TD></TR>');
+         end;
+         if (RES_InterchangedWiresPin2 <> PINADDRESS_None)
+         begin
+            Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+            Write('<TD Width=100 class=bold>&nbsp;</TD>');
+            Write('<TD Width=130>');
+            Write(LocalText('69#Connected'));
+            WriteLn('</TD>');
+            Pin1 = get_pinname(RES_Pin2);
+            Pin2 = get_pinname(RES_InterchangedWiresPin2);
+            Write('<TD Width=130>');
+            Write(Pin1);
+            WriteLn('</TD>');
+            Write('<TD Width=130>');
+            Write(Pin2);
+            WriteLn('</TD>');
+            WriteLn('<TD Align=RIGHT>&nbsp;</TD></TR>');
+         end;
+      end;
+      display_teststepcomment(RES_Comment, Style,
+         RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+      WriteLn('</TABLE>');
+   end;
+end;
+
+//Output for the command SwitchTest
+template SwitchTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('11#Switch'));
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      Style = 'teststepfail';
+      if ((RES_Result == TESTSTEP_Failed) AND (NOT RES_Arc))
+      begin
+         if (RES_SwitchClosed)
+         begin
+            ResultText = LocalText('9#Open');
+         end
+         else
+         begin
+            ResultText = LocalText('10#Closed');
+         end;
+      end
+      else
+      begin
+         ResultText = get_continuity_result_text(RES_Result, RES_Arc, Style);
+      end;
+      File = get_teststepimage(RES_Result, RES_ManualTest);
+      Write('<TABLE Border=0 Width=640 class=');
+      Write(Style);
+      WriteLn('>');
+      Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+      Write('<IMG SRC="');
+      Write(File);
+      WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+      Write('<TD Width=100 class=bold>');
+      Write(ResultText);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Name);
+      WriteLn('</TD>');
+      Pin1 = get_pinname(RES_Pin1);
+      Pin2 = get_pinname(RES_Pin2);
+      Write('<TD Width=130>');
+      Write(Pin1);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Pin2);
+      WriteLn('</TD>');
+      if (RES_AutoRangePassedAfterFail)
+      begin
+         Value = get_resistance_value('>', RES_CThreshold);
+         Value = StrAdd(Value, '!');
+      end
+      else
+      begin
+         Value = get_resistance_value(RES_Prefix, RES_Value);
+      end;
+      Write('<TD Align=RIGHT>');
+      Write(Value);
+      WriteLn('</TD></TR>');
+      display_teststepcomment(RES_Comment, Style,
+         RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+      WriteLn('</TABLE>');
+   end;
+end;
+
+//Output for the command ConnectionTest
+template ConnectionTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('40#Connection'));
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      Style = '';
+      ResultText = get_continuity_result_text(RES_Result, RES_Arc, Style);
+      File = get_teststepimage(RES_Result, RES_ManualTest);
+      Write('<TABLE Border=0 Width=640 class=');
+      Write(Style);
+      WriteLn('>');
+      Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+      Write('<IMG SRC="');
+      Write(File);
+      WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+      Write('<TD Width=100 class=bold>');
+      Write(ResultText);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Name);
+      WriteLn('</TD>');
+      Pin1 = get_pinname(RES_Pin1);
+      Pin2 = get_pinname(RES_Pin2);
+      Write('<TD Width=130>');
+      Write(Pin1);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Pin2);
+      WriteLn('</TD>');
+      if (RES_AutoRangePassedAfterFail)
+      begin
+         Value = get_resistance_value('>', RES_CThreshold);
+         Value = StrAdd(Value, '!');
+      end
+      else
+      begin
+         Value = get_resistance_value(RES_Prefix, RES_Value);
+      end;
+      Write('<TD Align=RIGHT>');
+      Write(Value);
+      WriteLn('</TD></TR>');
+      if (RES_InterchangedWiresPin1 <> PINADDRESS_None)
+      begin
+         Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+         Write('<TD Width=100 class=bold>&nbsp;</TD>');
+         Write('<TD Width=130>');
+         Write(LocalText('69#Connected'));
+         WriteLn('</TD>');
+         Pin1 = get_pinname(RES_Pin1);
+         Pin2 = get_pinname(RES_InterchangedWiresPin1);
+         Write('<TD Width=130>');
+         Write(Pin1);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Pin2);
+         WriteLn('</TD>');
+         WriteLn('<TD Align=RIGHT>&nbsp;</TD></TR>');
+      end;
+      if (RES_InterchangedWiresPin2 <> PINADDRESS_None)
+      begin
+         Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+         Write('<TD Width=100 class=bold>&nbsp;</TD>');
+         Write('<TD Width=130>');
+         Write(LocalText('69#Connected'));
+         WriteLn('</TD>');
+         Pin1 = get_pinname(RES_Pin2);
+         Pin2 = get_pinname(RES_InterchangedWiresPin2);
+         Write('<TD Width=130>');
+         Write(Pin1);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Pin2);
+         WriteLn('</TD>');
+         WriteLn('<TD Align=RIGHT>&nbsp;</TD></TR>');
+      end;
+      display_teststepcomment(RES_Comment, Style,
+         RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+      WriteLn('</TABLE>');
+   end;
+end;
+
+//Output for the command ProbeTest
+template ProbeTest
+begin
+   Name = get_teststep_name(RES_Name, '&nbsp;');
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      Style = '';
+      ResultText = get_continuity_result_text(RES_Result, RES_Arc, Style);
+      File = get_teststepimage(RES_Result, RES_ManualTest);
+      Write('<TABLE Border=0 Width=640 class=');
+      Write(Style);
+      WriteLn('>');
+      Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+      Write('<IMG SRC="');
+      Write(File);
+      WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+      Write('<TD Width=100 class=bold>');
+      Write(ResultText);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Name);
+      WriteLn('</TD>');
+      Pin1 = get_pinname(RES_Pin);
+      Pin2 = LocalText('117#Probe');
+      Write('<TD Width=130>');
+      Write(Pin1);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Pin2);
+      WriteLn('</TD>');
+      Value = get_resistance_value(RES_Prefix, RES_Value);
+      Write('<TD Align=RIGHT>');
+      Write(Value);
+      WriteLn('</TD></TR>');
+      WriteLn('</TABLE>');
+   end;
+end;
+
+//Output for the command ProbeTestSearch
+template ProbeTestSearch
+begin
+   Name = get_teststep_name(RES_Name, '&nbsp;');
+   Style = '';
+   ResultText = get_continuity_result_text(RES_Result, RES_Arc, Style);
+   File = get_teststepimage(RES_Result, RES_ManualTest);
+   Write('<TABLE Border=0 Width=640 class=');
+   Write(Style);
+   WriteLn('>');
+   Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+   Write('<IMG SRC="');
+   Write(File);
+   WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+   Write('<TD Width=100 class=bold>');
+   Write(ResultText);
+   WriteLn('</TD>');
+   Write('<TD Width=130>');
+   Write(Name);
+   WriteLn('</TD>');
+   Pin1 = get_pinname(RES_Pin);
+   Pin2 = LocalText('117#Probe');
+   Write('<TD Width=130>');
+   Write(Pin1);
+   WriteLn('</TD>');
+   Write('<TD Width=130>');
+   Write(Pin2);
+   WriteLn('</TD>');
+   Write('<TD Align=RIGHT>');
+   WriteLn('</TD></TR>');
+   WriteLn('</TABLE>');
+end;
+
+//Output for the command NoConnection
+template NoConnection
+begin
+   Name = get_teststep_name(RES_Name, LocalText('232#NC'));
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      Style = 'teststepfail';
+      if ((RES_Result == TESTSTEP_Failed) AND (NOT RES_Arc))
+      begin
+         ResultText = LocalText('15#Short');
+      end
+      else
+      begin
+         ResultText = get_continuity_result_text(RES_Result, RES_Arc, Style);
+      end;
+      File = get_teststepimage(RES_Result, RES_ManualTest);
+      Write('<TABLE Border=0 Width=640 class=');
+      Write(Style);
+      WriteLn('>');
+      Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+      Write('<IMG SRC="');
+      Write(File);
+      WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+      Write('<TD Width=100 class=bold>');
+      Write(ResultText);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Name);
+      WriteLn('</TD>');
+      Pin1 = get_pinname(RES_Pin1);
+      Pin2 = get_pinname(RES_Pin2);
+      Write('<TD Width=130>');
+      Write(Pin1);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Pin2);
+      WriteLn('</TD>');
+      if (RES_Arc)
+      begin
+         Value = '&nbsp;';
+      end
+      else
+      begin
+         Value = get_resistance_value(RES_Prefix, RES_Value);
+      end;
+      Write('<TD Align=RIGHT>');
+      Write(Value);
+      WriteLn('</TD></TR>');
+      display_teststepcomment(RES_Comment, Style,
+         RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+      WriteLn('</TABLE>');
+   end;
+end;
+
+//Output for the command WireTestAnalysis
+template WireTestAnalysis
+begin
+   Name = get_teststep_name(RES_Name, LocalText('8#Wire'));
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      Style = '';
+      ResultText = get_continuity_result_text(RES_Result, RES_Arc, Style);
+      File = get_teststepimage(RES_Result, RES_ManualTest);
+      Write('<TABLE Border=0 Width=640 class=');
+      Write(Style);
+      WriteLn('>');
+      Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+      Write('<IMG SRC="');
+      Write(File);
+      WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+      Write('<TD Width=100 class=bold>');
+      Write(ResultText);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Name);
+      WriteLn('</TD>');
+      Pin1 = get_pinname(RES_Pin1);
+      Pin2 = get_pinname(RES_Pin2);
+      Write('<TD Width=130>');
+      Write(Pin1);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Pin2);
+      WriteLn('</TD>');
+      Value = get_resistance_value(RES_Prefix, RES_Value);
+      Write('<TD Align=RIGHT>');
+      Write(Value);
+      WriteLn('</TD></TR>');
+      if (RES_Result == TESTSTEP_Failed)
+      begin
+         //Write results of continuity analysis
+         for Network = 1 to RES_NetworkCount do
+         begin
+            for Index = 1 to RES_NetworkPinCount[Network] do
+            begin
+               Write('<TR><TD Width=20>&nbsp;</TD><TD>&nbsp;</TD><TD>&nbsp;</TD><TD>');
+               Write(get_pinname(RES_NetworkPins[Network, Index]));
+               WriteLn('</TD><TD>&nbsp;</TD><TD>&nbsp;</TD></TD></TR>');
+            end;
+            Write('<TR><TD Width=20>&nbsp;</TD><TD>&nbsp;</TD><TD>');
+            if (Network < RES_NetworkCount)
+            begin
+               if (RES_ValuesToNextNWArc[Network])
+               begin
+                  Write('Arc');
+               end
+               else
+               begin
+                  Write(get_resistance_value(RES_ValuesToNextNWPrefix[Network],
+                     RES_ValuesToNextNW[Network]));
+               end;
+               Write('</TD><TD>&nbsp;</TD><TD>&nbsp;</TD><TD>&nbsp;</TD>');
+            end;
+            WriteLn('</TR>');
+         end;
+         //Write results of LV isolation analysis
+         for Network = 1 to RES_NetworkCount do
+         begin
+            if (RES_NCAExecuted[Network])
+            begin
+               if (RES_ShortCount[Network] == 0)
+               begin
+                  Write('<TR><TD Width=20 class=teststeppass>&nbsp;</TD><TD class=teststeppass>');
+                  Write(LocalText('233#NCA'));
+                  Write('</TD><TD class=teststeppass>&nbsp;</TD><TD class=teststeppass>');
+                  Pin = get_pinname(RES_NetworkPins[Network, 1]);
+                  Write(Pin);
+                  Write('</TD><TD class=teststeppass>&nbsp;</TD><TD class=teststeppass>');
+                  Value = get_resistance_value(RES_NCAValuesPrefix[Network], RES_NCAValues[Network]);
+                  Write(Value);
+                  WriteLn('</TD></TR>');
+               end
+               else
+               begin
+                  Pin1 = get_pinname(RES_NetworkPins[Network, 1]);
+                  for Index = 1 to RES_ShortCount[Network] do
+                  begin
+                     Write('<TR><TD Width=20>&nbsp;</TD><TD>');
+                     Write(LocalText('43#Short'));
+                     Write('</TD><TD>&nbsp;</TD><TD>');
+                     Write(Pin1);
+                     Write('</TD><TD>');
+                     Pin2 = get_pinname(RES_Shorts[Network, Index]);
+                     Write(Pin2);
+                     Write('</TD><TD>');
+                     if (RES_ShortArcs[Network, Index])
+                     begin
+                        Value = LocalText('202#Arc');
+                     end
+                     else
+                     begin
+                        Value = get_resistance_value(RES_ShortPrefixes[Network, Index],
+                           RES_ShortValues[Network, Index]);
+                     end;
+                     Write(Value);
+                     WriteLn('</TD></TR>');
+                  end;
+               end;
+            end;
+         end;
+      end;
+      WriteLn('</TABLE>');
+   end;
+end;
+
+//Output for the command NoConnAll
+template NoConnAll
+begin
+   Name = get_teststep_name(RES_Name, LocalText('233#NCA'));
+   Pin1 = get_pinname(RES_Pin);
+   Write('<TABLE Border=0 Width=640 class=');
+   File = get_teststepimage(RES_Result, RES_ManualTest);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      Style = 'teststeppass';
+      WriteLn(StrAdd(Style, '>'));
+      Value = get_resistance_value(RES_Prefix, RES_Value);
+      Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+      Write('<IMG SRC="');
+      Write(File);
+      WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+      Write('<TD Width=100 class=bold>');
+      Write(LocalText('5#Passed'));
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Name);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Pin1);
+      WriteLn('</TD>');
+      Write('<TD Width=130>&nbsp;</TD>');
+      Write('<TD Align=RIGHT>');
+      Write(Value);
+      WriteLn('</TD></TR>');
+   end
+   else
+   begin
+      Style = 'teststepfail';
+      WriteLn(StrAdd(Style, '>'));
+      for Index = 1 to RES_ErrorPinCount do
+      begin
+         Pin2 = get_pinname(RES_ErrorPins[Index]);
+         if (RES_Arcs[Index])
+         begin
+            ResultText = LocalText('202#Arc');
+            Value = '&nbsp;';
+         end
+         else
+         begin
+            ResultText = LocalText('15#Short');
+            Value = get_resistance_value(RES_Prefixes[Index], RES_Values[Index]);
+         end;
+         Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+         Write('<IMG SRC="');
+         Write(File);
+         WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+         Write('<TD Width=100 class=bold>');
+         Write(ResultText);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Name);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Pin1);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Pin2);
+         WriteLn('</TD>');
+         Write('<TD Align=RIGHT>');
+         Write(Value);
+         WriteLn('</TD></TR>');
+      end;
+   end;
+   display_teststepcomment(RES_Comment, Style,
+      RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   WriteLn('</TABLE>');
+end;

@@ -1,0 +1,155 @@
+//Output for the command CANRxTest
+template CANRxTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('261#CANRxTest'));
+   switch (RES_Result)
+   begin
+      case TESTSTEP_Passed:
+      begin
+         ResultText = LocalText('5#Passed');
+         Style = 'teststeppass';
+      end;
+      case TESTSTEP_Failed:
+      begin
+         ResultText = LocalText('114#Failed');
+         Style = 'teststepfail';
+      end;
+      default:
+      begin
+         ResultText = LocalText('7#Invalid');
+         Style = 'teststepfail';
+      end;
+   end;
+
+   File = get_teststepimage(RES_Result, RES_ManualTest);
+   Write('<TABLE Border=0 Width=640 class=');
+   Write(Style);
+   WriteLn('>');
+   Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+   Write('<IMG SRC="');
+   Write(File);
+   WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+   Write('<TD Width=100 class=bold>');
+   Write(ResultText);
+   WriteLn('</TD>');
+   Write('<TD Width>');
+   Write(Name);
+   WriteLn('</TABLE>');
+end;
+
+//Output for the command CANTxRxTest
+template CANTxRxTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('262#CANTxRxTest'));
+   switch (RES_Result)
+   begin
+      case TESTSTEP_Passed:
+      begin
+         ResultText = LocalText('5#Passed');
+         Style = 'teststeppass';
+      end;
+      case TESTSTEP_Failed:
+      begin
+         ResultText = LocalText('114#Failed');
+         Style = 'teststepfail';
+      end;
+      default:
+      begin
+         ResultText = LocalText('7#Invalid');
+         Style = 'teststepfail';
+      end;
+   end;
+
+   File = get_teststepimage(RES_Result, RES_ManualTest);
+   Write('<TABLE Border=0 Width=640 class=');
+   Write(Style);
+   WriteLn('>');
+   Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+   Write('<IMG SRC="');
+   Write(File);
+   WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+   Write('<TD Width=100 class=bold>');
+   Write(ResultText);
+   WriteLn('</TD>');
+   Write('<TD Width>');
+   Write(Name);
+   WriteLn('</TABLE>');
+end;
+
+//Output for the command CANRtrRxTest
+template CANTxRxTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('263#CANRtrRxTest'));
+   switch (RES_Result)
+   begin
+      case TESTSTEP_Passed:
+      begin
+         ResultText = LocalText('5#Passed');
+         Style = 'teststeppass';
+      end;
+      case TESTSTEP_Failed:
+      begin
+         ResultText = LocalText('114#Failed');
+         Style = 'teststepfail';
+      end;
+      default:
+      begin
+         ResultText = LocalText('7#Invalid');
+         Style = 'teststepfail';
+      end;
+   end;
+
+   File = get_teststepimage(RES_Result, RES_ManualTest);
+   Write('<TABLE Border=0 Width=640 class=');
+   Write(Style);
+   WriteLn('>');
+   Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+   Write('<IMG SRC="');
+   Write(File);
+   WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+   Write('<TD Width=100 class=bold>');
+   Write(ResultText);
+   WriteLn('</TD>');
+   Write('<TD Width>');
+   Write(Name);
+   WriteLn('</TABLE>');
+end;
+
+//Output for the command CANISO15765TxRxTest
+template CANISO15765TxRxTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('264#CANISO15765TxRxTest'));
+   switch (RES_Result)
+   begin
+      case TESTSTEP_Passed:
+      begin
+         ResultText = LocalText('5#Passed');
+         Style = 'teststeppass';
+      end;
+      case TESTSTEP_Failed:
+      begin
+         ResultText = LocalText('114#Failed');
+         Style = 'teststepfail';
+      end;
+      default:
+      begin
+         ResultText = LocalText('7#Invalid');
+         Style = 'teststepfail';
+      end;
+   end;
+
+   File = get_teststepimage(RES_Result, RES_ManualTest);
+   Write('<TABLE Border=0 Width=640 class=');
+   Write(Style);
+   WriteLn('>');
+   Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+   Write('<IMG SRC="');
+   Write(File);
+   WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+   Write('<TD Width=100 class=bold>');
+   Write(ResultText);
+   WriteLn('</TD>');
+   Write('<TD Width>');
+   Write(Name);
+   WriteLn('</TABLE>');
+end;

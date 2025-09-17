@@ -1,0 +1,621 @@
+//HV-Isolationstest-Funktionen sind die Funktionen, bei denen die
+//HV-DC-Parameter für die Messung verwendet werden.
+
+//HV isolation test functions are those, for which the HV DC parameters are used
+
+
+//Output for the command ParamIsolationHV
+template ParamIsolationHV
+begin
+   Line = get_isolationhv_parameters_text(RES_VoltageChanged, RES_HVVoltage,
+      RES_ThresholdChanged, RES_HVThreshold, RES_HVUseIThreshold,
+      RES_HVIThreshold, RES_TriseChanged, RES_HVTrise,
+      RES_TwaitChanged, RES_HVTwait, RES_TmeasChanged, RES_HVTmeas,
+      RES_AutoRangeChanged, RES_HVAutoRange,
+      RES_CurrentLimitChanged, RES_HVCurrentLimit,
+      RES_TmeasReductionChanged, RES_HVTmeasReduction,
+      RES_TmeasFactorChanged, RES_HVTmeasFactor,
+      RES_VoltageRampChanged, RES_HVVoltageRamp,
+      RES_dIdtEnabledChanged, RES_HVdIdtEnabled,
+      RES_dIdtCurrentThresholdChanged, RES_HVdIdtCurrentThreshold,
+      RES_dIdtTimeThresholdChanged, RES_HVdIdtTimeThreshold);
+   if (StrCompare(Line, '') <> 0)
+   begin
+      WriteLn('<TABLE Border=0 Width=640 class=teststeppass>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD class=bold>');
+      Write(LocalText('67#Parameters for HV isolation test'));
+      WriteLn('</TD></TR>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD>');
+      Write(Line);
+      WriteLn('</TD></TR>');
+      WriteLn('</TABLE>');
+   end;
+end;
+
+//Output for the command ParamIsolationHV
+template ParamIsolationHV
+begin
+   Line = get_isolationhv_parameters_text(RES_VoltageChanged, RES_HVVoltage,
+      RES_ThresholdChanged, RES_HVThreshold, RES_HVUseIThreshold,
+      RES_HVIThreshold, RES_TriseChanged, RES_HVTrise,
+      RES_TwaitChanged, RES_HVTwait, RES_TmeasChanged, RES_HVTmeas,
+      RES_AutoRangeChanged, RES_HVAutoRange,
+      RES_CurrentLimitChanged, RES_HVCurrentLimit,
+      RES_TmeasReductionChanged, RES_HVTmeasReduction,
+      RES_TmeasFactorChanged, RES_HVTmeasFactor,
+      RES_VoltageRampChanged, RES_HVVoltageRamp,
+      RES_dIdtEnabledChanged, RES_HVdIdtEnabled,
+      RES_dIdtCurrentThresholdChanged, RES_HVdIdtCurrentThreshold,
+      RES_dIdtTimeThresholdChanged, RES_HVdIdtTimeThreshold);
+   if (StrCompare(Line, '') <> 0)
+   begin
+      WriteLn('<TABLE Border=0 Width=640 class=teststeppass>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD class=bold>');
+      Write(LocalText('67#Parameters for HV isolation test'));
+      WriteLn('</TD></TR>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD>');
+      Write(Line);
+      WriteLn('</TD></TR>');
+      WriteLn('</TABLE>');
+   end;
+end;
+
+//Output for the command ParamResetIsolationHV
+template ParamResetIsolationHV
+begin
+   Line = get_isolationhv_parameters_text(RES_VoltageChanged, RES_HVVoltage,
+      RES_ThresholdChanged, RES_HVThreshold, RES_HVUseIThreshold,
+      RES_HVIThreshold, RES_TriseChanged, RES_HVTrise,
+      RES_TwaitChanged, RES_HVTwait, RES_TmeasChanged, RES_HVTmeas,
+      RES_AutoRangeChanged, RES_HVAutoRange,
+      RES_CurrentLimitChanged, RES_HVCurrentLimit,
+      RES_TmeasReductionChanged, RES_HVTmeasReduction,
+      RES_TmeasFactorChanged, RES_HVTmeasFactor,
+      RES_VoltageRampChanged, RES_HVVoltageRamp,
+      RES_dIdtEnabledChanged, RES_HVdIdtEnabled,
+      RES_dIdtCurrentThresholdChanged, RES_HVdIdtCurrentThreshold,
+      RES_dIdtTimeThresholdChanged, RES_HVdIdtTimeThreshold);
+   if (StrCompare(Line, '') <> 0)
+   begin
+      WriteLn('<TABLE Border=0 Width=640 class=teststeppass>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD class=bold>');
+      Write(LocalText('67#Parameters for HV isolation test'));
+      WriteLn('</TD></TR>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD>');
+      Write(Line);
+      WriteLn('</TD></TR>');
+      WriteLn('</TABLE>');
+   end;
+end;
+
+//Output for the command NoConnectionHV
+template NoConnectionHV
+begin
+   Name = get_teststep_name(RES_Name, LocalText('226#NC HV'));
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+            Style = 'teststeppass';
+         end;
+         case TESTSTEP_Failed:
+         begin
+            ResultText = get_hv_isolation_error_text(RES_Arc, RES_dIdt, RES_ELim);
+            Style = 'teststepfail';
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+            Style = 'teststepfail';
+         end;
+      end;
+      File = get_teststepimage(RES_Result, RES_ManualTest);
+      Write('<TABLE Border=0 Width=640 class=');
+      Write(Style);
+      WriteLn('>');
+      Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+      Write('<IMG SRC="');
+      Write(File);
+      WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+      Write('<TD Width=100 class=bold>');
+      Write(ResultText);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Name);
+      WriteLn('</TD>');
+      Pin1 = get_pinname(RES_Pin1);
+      Pin2 = get_pinname(RES_Pin2);
+      Write('<TD Width=130>');
+      Write(Pin1);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Pin2);
+      WriteLn('</TD>');
+      Value = '&nbsp;';
+      IsShort = (NOT RES_Arc) AND (NOT RES_dIdt) AND (NOT RES_ELim);
+      if (IsShort)
+      begin
+         if (RES_HVUseIThreshold)
+         begin
+            Value = get_current_value(RES_IPrefix, RES_IValue);
+         end
+         else
+         begin
+            Value = get_resistance_value(RES_Prefix, RES_Value);
+         end;
+      end;
+      Write('<TD Align=RIGHT>');
+      Write(Value);
+      WriteLn('</TD></TR>');
+      display_teststepcomment(RES_Comment, Style,
+         RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+      WriteLn('</TABLE>');
+   end;
+end;
+
+//Output for the command NoConnAllHV
+template NoConnAllHV
+begin
+   Name = get_teststep_name(RES_Name, LocalText('227#NCA HV'));
+   Pin1 = get_pinname(RES_Pin);
+   Write('<TABLE Border=0 Width=640 class=');
+   File = get_teststepimage(RES_Result, RES_ManualTest);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      Style = 'teststeppass';
+      WriteLn(StrAdd(Style, '>'));
+      if (RES_HVUseIThreshold)
+      begin
+         Value = get_current_value(RES_IPrefix, RES_IValue);
+      end
+      else
+      begin
+         Value = get_resistance_value(RES_Prefix, RES_Value);
+      end;
+      Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+      Write('<IMG SRC="');
+      Write(File);
+      WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+      Write('<TD Width=100 class=bold>');
+      Write(LocalText('5#Passed'));
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Name);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Pin1);
+      WriteLn('</TD>');
+      Write('<TD Width=130>&nbsp;</TD>');
+      Write('<TD Align=RIGHT>');
+      Write(Value);
+      WriteLn('</TD></TR>');
+   end
+   else
+   begin
+      Style = 'teststepfail';
+      WriteLn(StrAdd(Style, '>'));
+      for Index = 1 to RES_ErrorPinCount do
+      begin
+         Pin2 = get_pinname(RES_ErrorPins[Index]);
+         ResultText = get_hv_isolation_error_text(RES_Arcs[Index],
+            RES_dIdts[Index], RES_ELims[Index]);
+         IsShort = (NOT RES_Arcs[Index]) AND (NOT RES_dIdts[Index]) AND
+            (NOT RES_ELims[Index]);
+         Value = '&nbsp;';
+         if (IsShort)
+         begin
+            if (RES_HVUseIThreshold)
+            begin
+               Value = get_current_value(RES_IPrefixes[Index], RES_IValues[Index]);
+            end
+            else
+            begin
+               Value = get_resistance_value(RES_Prefixes[Index], RES_Values[Index]);
+            end;
+         end;
+         Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+         Write('<IMG SRC="');
+         Write(File);
+         WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+         Write('<TD Width=100 class=bold>');
+         Write(ResultText);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Name);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Pin1);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Pin2);
+         WriteLn('</TD>');
+         Write('<TD Align=RIGHT>');
+         Write(Value);
+         WriteLn('</TD></TR>');
+      end;
+   end;
+   display_teststepcomment(RES_Comment, Style, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   WriteLn('</TABLE>');
+end;
+
+//Output for the command NoConnLowerHV
+template NoConnLowerHV
+begin
+   Name = get_teststep_name(RES_Name, LocalText('228#NCL HV'));
+   Pin1 = get_pinname(RES_Pin);
+   Write('<TABLE Border=0 Width=640 class=');
+   File = get_teststepimage(RES_Result, FALSE);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      Style = 'teststeppass';
+      WriteLn(StrAdd(Style, '>'));
+      if (RES_HVUseIThreshold)
+      begin
+         Value = get_current_value(RES_IPrefix, RES_IValue);
+      end
+      else
+      begin
+         Value = get_resistance_value(RES_Prefix, RES_Value);
+      end;
+      Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+      Write('<IMG SRC="');
+      Write(File);
+      WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+      Write('<TD Width=100 class=bold>');
+      Write(LocalText('5#Passed'));
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Name);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Pin1);
+      WriteLn('</TD>');
+      Write('<TD Width=130>&nbsp;</TD>');
+      Write('<TD Align=RIGHT>');
+      Write(Value);
+      WriteLn('</TD></TR>');
+   end
+   else
+   begin
+      Style = 'teststepfail';
+      WriteLn(StrAdd(Style, '>'));
+      for Index = 1 to RES_ErrorPinCount do
+      begin
+         Pin2 = get_pinname(RES_ErrorPins[Index]);
+         ResultText = get_hv_isolation_error_text(RES_Arcs[Index],
+            RES_dIdts[Index], RES_ELims[Index]);
+         IsShort = (NOT RES_Arcs[Index]) AND (NOT RES_dIdts[Index]) AND
+            (NOT RES_ELims[Index]);
+         Value = '&nbsp;';
+         if (IsShort)
+         begin
+            if (RES_HVUseIThreshold)
+            begin
+               Value = get_current_value(RES_IPrefixes[Index], RES_IValues[Index]);
+            end
+            else
+            begin
+               Value = get_resistance_value(RES_Prefixes[Index], RES_Values[Index]);
+            end;
+         end;
+         Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+         Write('<IMG SRC="');
+         Write(File);
+         WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+         Write('<TD Width=100 class=bold>');
+         Write(ResultText);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Name);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Pin1);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Pin2);
+         WriteLn('</TD>');
+         Write('<TD Align=RIGHT>');
+         Write(Value);
+         WriteLn('</TD></TR>');
+      end;
+   end;
+   display_teststepcomment(RES_Comment, Style, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   WriteLn('</TABLE>');
+end;
+
+//Output for the command NoConnGroupHV
+template NoConnGroupHV
+begin
+   Name = get_teststep_name(RES_Name, LocalText('229#NCG HV'));
+   Write('<TABLE Border=0 Width=640 class=');
+   File = get_teststepimage(RES_Result, RES_ManualTest);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      Style = 'teststeppass';
+      WriteLn(StrAdd(Style, '>'));
+      if (RES_HVUseIThreshold)
+      begin
+         Value = get_current_value(RES_IPrefix, RES_IValue);
+      end
+      else
+      begin
+         Value = get_resistance_value(RES_Prefix, RES_Value);
+      end;
+      Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+      Write('<IMG SRC="');
+      Write(File);
+      WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+      Write('<TD Width=100 class=bold>');
+      Write(LocalText('5#Passed'));
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Name);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(RES_HighGroup);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(RES_LowGroup);
+      WriteLn('</TD>');
+      Write('<TD Align=RIGHT>');
+      Write(Value);
+      WriteLn('</TD></TR>');
+   end
+   else
+   begin
+      Style = 'teststepfail';
+      WriteLn(StrAdd(Style, '>'));
+      for Index = 1 to RES_ErrorCount do
+      begin
+         ResultText = get_hv_isolation_error_text(RES_Arcs[Index],
+            RES_dIdts[Index], RES_ELims[Index]);
+         IsShort = (NOT RES_Arcs[Index]) AND (NOT RES_dIdts[Index]) AND
+            (NOT RES_ELims[Index]);
+         Value = '&nbsp;';
+         if (IsShort)
+         begin
+            if (RES_HVUseIThreshold)
+            begin
+               Value = get_current_value(RES_IPrefixes[Index], RES_IValues[Index]);
+            end
+            else
+            begin
+               Value = get_resistance_value(RES_Prefixes[Index], RES_Values[Index]);
+            end;
+         end;
+         if ((RES_ErrorHighPins[Index] == PINADDRESS_NotSearched) OR
+             (RES_ErrorHighPins[Index] == PINADDRESS_NotFound))
+         begin
+            Pin1 = RES_HighGroup;
+         end
+         else
+         begin
+            Pin1 = get_pinname(RES_ErrorHighPins[Index]);
+         end;
+         if ((RES_ErrorLowPins[Index] == PINADDRESS_NotSearched) OR
+             (RES_ErrorLowPins[Index] == PINADDRESS_NotFound))
+         begin
+            Pin2 = RES_LowGroup;
+         end
+         else
+         begin
+            Pin2 = get_pinname(RES_ErrorLowPins[Index]);
+         end;
+         Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+         Write('<IMG SRC="');
+         Write(File);
+         WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+         Write('<TD Width=100 class=bold>');
+         Write(ResultText);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Name);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Pin1);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Pin2);
+         WriteLn('</TD>');
+         Write('<TD Align=RIGHT>');
+         Write(Value);
+         WriteLn('</TD></TR>');
+      end;
+      display_short_to_lower_voltage_level(RES_ShortToLowerVoltageLevel);
+   end;
+   display_teststepcomment(RES_Comment, Style,
+      RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   WriteLn('</TABLE>');
+end;
+
+//Output for the command ConnectionTestHV
+template ConnectionTestHV
+begin
+   Name = get_teststep_name(RES_Name, LocalText('230#ConnectionTestHV'));
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+            Style = 'teststeppass';
+         end;
+         case TESTSTEP_Failed:
+         begin
+            if (RES_Arc)
+            begin
+               ResultText = LocalText('202#Arc');
+            end
+            else
+            begin
+               ResultText = LocalText('6#Open');
+            end;
+            Style = 'teststepfail';
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+            Style = 'teststepfail';
+         end;
+      end;
+      File = get_teststepimage(RES_Result, RES_ManualTest);
+      Write('<TABLE Border=0 Width=640 class=');
+      Write(Style);
+      WriteLn('>');
+      Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+      Write('<IMG SRC="');
+      Write(File);
+      WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+      Write('<TD Width=100 class=bold>');
+      Write(ResultText);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Name);
+      WriteLn('</TD>');
+      Pin1 = get_pinname(RES_Pin1);
+      Pin2 = get_pinname(RES_Pin2);
+      Write('<TD Width=130>');
+      Write(Pin1);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Pin2);
+      WriteLn('</TD>');
+      if (RES_Arc)
+      begin
+         Value = '&nbsp;';
+      end
+      else
+      begin
+         if (RES_HVUseIThreshold)
+         begin
+            Value = get_current_value(RES_IPrefix, RES_IValue);
+         end
+         else
+         begin
+            Value = get_resistance_value(RES_Prefix, RES_Value);
+         end;
+      end;
+      Write('<TD Align=RIGHT>');
+      Write(Value);
+      WriteLn('</TD></TR>');
+      display_teststepcomment(RES_Comment, Style, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+      WriteLn('</TABLE>');
+   end;
+end;
+
+//Output for the command SimpleNoConnPinVsGroupHV
+template SimpleNoConnPinVsGroupHV
+begin
+   Name = get_teststep_name(RES_Name, LocalText('231#SPvG HV'));
+   HighPin = get_pinname(RES_Pin);
+   Write('<TABLE Border=0 Width=640 class=');
+   File = get_teststepimage(RES_Result, RES_ManualTest);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      Style = 'teststeppass';
+      WriteLn(StrAdd(Style, '>'));
+      if (RES_HVUseIThreshold)
+      begin
+         Value = get_current_value(RES_IPrefix, RES_IValue);
+      end
+      else
+      begin
+         Value = get_resistance_value(RES_Prefix, RES_Value);
+      end;
+      Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+      Write('<IMG SRC="');
+      Write(File);
+      WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+      Write('<TD Width=100 class=bold>');
+      Write(LocalText('5#Passed'));
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Name);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(HighPin);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(RES_LowGroup);
+      WriteLn('</TD>');
+      Write('<TD Align=RIGHT>');
+      Write(Value);
+      WriteLn('</TD></TR>');
+   end
+   else
+   begin
+      Style = 'teststepfail';
+      WriteLn(StrAdd(Style, '>'));
+      for Index = 1 to RES_ErrorPinCount do
+      begin
+         ResultText = get_hv_isolation_error_text(RES_Arcs[Index],
+            RES_dIdts[Index], RES_ELims[Index]);
+         IsShort = (NOT RES_Arcs[Index]) AND (NOT RES_dIdts[Index]) AND
+            (NOT RES_ELims[Index]);
+         Value = '&nbsp;';
+         if (IsShort)
+         begin
+            if (RES_HVUseIThreshold)
+            begin
+               Value = get_current_value(RES_IPrefixes[Index], RES_IValues[Index]);
+            end
+            else
+            begin
+               Value = get_resistance_value(RES_Prefixes[Index], RES_Values[Index]);
+            end;
+         end;
+         if ((RES_ErrorPins[Index] == PINADDRESS_NotSearched) OR
+             (RES_ErrorPins[Index] == PINADDRESS_NotFound))
+         begin
+            LowPin = RES_LowGroup;
+         end
+         else
+         begin
+            LowPin = get_pinname(RES_ErrorPins[Index]);
+         end;
+         Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+         Write('<IMG SRC="');
+         Write(File);
+         WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+         Write('<TD Width=100 class=bold>');
+         Write(ResultText);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Name);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(HighPin);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(LowPin);
+         WriteLn('</TD>');
+         Write('<TD Align=RIGHT>');
+         Write(Value);
+         WriteLn('</TD></TR>');
+      end;
+      display_short_to_lower_voltage_level(RES_ShortToLowerVoltageLevel);
+   end;
+   display_teststepcomment(RES_Comment, Style, RES_DeclaredAsPassed,
+      RES_DeclaredAsPassedByUser);
+   WriteLn('</TABLE>');
+end;

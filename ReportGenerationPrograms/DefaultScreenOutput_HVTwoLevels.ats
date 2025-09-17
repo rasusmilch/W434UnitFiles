@@ -1,0 +1,265 @@
+//Output for the command ParamIsolationHVFirstLevel
+template ParamIsolationHVFirstLevel
+begin
+   Line = get_isolationhv_parameters_text(RES_VoltageChanged, RES_HVFLVoltage,
+      RES_ThresholdChanged, RES_HVFLThreshold, RES_HVFLUseIThreshold,
+      RES_HVFLIThreshold, RES_TriseChanged, RES_HVFLTrise,
+      RES_TwaitChanged, RES_HVFLTwait, RES_TmeasChanged, RES_HVFLTmeas,
+      RES_AutoRangeChanged, RES_HVFLAutoRange,
+      RES_CurrentLimitChanged, RES_HVFLCurrentLimit,
+      RES_TmeasReductionChanged, RES_HVFLTmeasReduction,
+      RES_TmeasFactorChanged, RES_HVFLTmeasFactor,
+      RES_VoltageRampChanged, RES_HVFLVoltageRamp,
+      RES_dIdtEnabledChanged, RES_HVFLdIdtEnabled,
+      RES_dIdtCurrentThresholdChanged, RES_HVFLdIdtCurrentThreshold,
+      RES_dIdtTimeThresholdChanged, RES_HVFLdIdtTimeThreshold);
+   if (StrCompare(Line, '') <> 0)
+   begin
+      UIWriteNormal(LocalText('161#Parameters for first level of the two level HV isolation test'));
+      UIWriteNormal(Line);
+   end;
+end;
+
+//Output for the command NoConnectionHVTwoLevels
+template NoConnectionHVTwoLevels
+begin
+   Name = get_teststep_name(RES_Name, LocalText('222#NC HV2L'));
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+            FailText = ' ';
+            Level2Value = TRUE;
+         end;
+         case TESTSTEP_Failed:
+         begin
+            IsArc = RES_Level1Arc OR RES_Level2Arc;
+            IsdIdt = RES_Level1dIdt OR RES_Level2dIdt;
+            IsEnergyLimit = RES_Level1ELim OR RES_Level2ELim;
+            IsShort = (NOT IsArc) AND (NOT IsdIdt) AND (NOT IsEnergyLimit);
+            ResultText = get_hv_isolation_error_text(IsArc, IsdIdt, IsEnergyLimit);
+            FailText = get_hv_two_levels_fail_text(RES_Level1Error);
+            Level2Value = NOT RES_Level1Error;
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+            FailText = ' ';
+            Level2Value = FALSE;
+         end;
+      end;
+      ResultText = format_teststep_result(ResultText);
+      Value = LocalText('220#Lvl1') + ': ';
+      ValueText = get_hv_isolation_value_text(RES_Level1Arc, RES_Level1dIdt,
+         RES_Level1ELim, RES_Level1Prefix, RES_Level1Value);
+      Value = StrAdd(Value, ValueText);
+      if (Level2Value)
+      begin
+         Value = StrAdd(Value, get_double_dash_text(LocalText('221#Lvl2')));
+         ValueText = get_hv_isolation_value_text(RES_Level2Arc, RES_Level2dIdt,
+            RES_Level2ELim, RES_Level2Prefix, RES_Level2Value);
+         Value = StrAdd(Value, ValueText);
+      end;
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      Line1 = StrAdd(ResultText, Name);
+      Line1 = StrAdd(Line1, Pin1);
+      Line1 = StrAdd(Line1, Pin2);
+      Line1 = StrAdd(Line1, FailText);
+      Space = format_teststep_result(' ');
+      Line2 = StrAdd(Space, Value);
+      if (RES_Result == TESTSTEP_Passed)
+      begin
+         UIWriteNormal(Line1);
+         UIWriteNormal(Line2);
+      end
+      else
+      begin
+         UIWriteError(Line1);
+         short_to_lower_voltage_level(RES_ShortToLowerVoltageLevel);
+         UIWriteError(Line2);
+      end;
+   end;
+end;
+
+//Output for the command NoConnAllHVTwoLevels
+template NoConnAllHVTwoLevels
+begin
+   Name = get_teststep_name(RES_Name, LocalText('223#NCA HV2L'));
+   Name = format_teststep_name(Name);
+   Pin1 = format_teststep_pin(get_pinname(RES_Pin));
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      Value = LocalText('220#Lvl1') + ': ';
+      Value = StrAdd(Value, get_resistance_value(RES_Level1Prefix, RES_Level1Value));
+      Value = StrAdd(Value, get_double_dash_text(LocalText('221#Lvl2')));
+      Value = StrAdd(Value, get_resistance_value(RES_Level2Prefix, RES_Level2Value));
+      Line1 = StrAdd(format_teststep_result(LocalText('5#Passed')), Name);
+      Line1 = StrAdd(Line1, Pin1);
+      Line1 = StrAdd(Line1, format_teststep_pin(' '));
+      Line2 = StrAdd(format_teststep_result(' '), Value);
+      UIWriteNormal(Line1);
+      UIWriteNormal(Line2);
+   end
+   else
+   begin
+      if (RES_ErrorPinCount > 0)
+      begin
+         Index = RES_ErrorPinCount;
+         ResultText = get_hv_isolation_error_text(RES_Arcs[Index], RES_dIdts[Index], RES_ELims[Index]);
+         IsShort = (NOT RES_Arcs[Index]) AND (NOT RES_dIdts[Index]) AND (NOT RES_ELims[Index]);
+         Value = ' ';
+         if (IsShort)
+         begin
+            Value = get_resistance_value(RES_Prefixes[Index], RES_Values[Index]);
+         end;
+         Pin2 = format_teststep_pin(get_pinname(RES_ErrorPins[Index]));
+         FailText = get_hv_two_levels_fail_text(RES_Level1Errors[Index]);
+         Line1 = StrAdd(format_teststep_result(ResultText), Name);
+         Line1 = StrAdd(Line1, Pin1);
+         Line1 = StrAdd(Line1, Pin2);
+         Line1 = StrAdd(Line1, FailText);
+         UIWriteError(Line1);
+         if (StrCompare(StrTrim(Value), '') <> 0)
+         begin
+            Line2 = StrAdd(format_teststep_result(' '), Value);
+            UIWriteError(Line2);
+         end;
+      end;
+   end;
+end;
+
+//Output for the command NoConnLowerHVTwoLevels
+template NoConnLowerHVTwoLevels
+begin
+   Name = get_teststep_name(RES_Name, LocalText('224#NCL HV2L'));
+   Name = format_teststep_name(Name);
+   Pin1 = format_teststep_pin(get_pinname(RES_Pin));
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      Value = LocalText('220#Lvl1') + ': ';
+      Value = StrAdd(Value, get_resistance_value(RES_Level1Prefix, RES_Level1Value));
+      Value = StrAdd(Value, get_double_dash_text(LocalText('221#Lvl2')));
+      Value = StrAdd(Value, get_resistance_value(RES_Level2Prefix, RES_Level2Value));
+      Line1 = StrAdd(format_teststep_result(LocalText('5#Passed')), Name);
+      Line1 = StrAdd(Line1, Pin1);
+      Line1 = StrAdd(Line1, format_teststep_pin(' '));
+      Line2 = StrAdd(format_teststep_result(' '), Value);
+      UIWriteNormal(Line1);
+      UIWriteNormal(Line2);
+   end
+   else
+   begin
+      if (RES_ErrorPinCount > 0)
+      begin
+         Index = RES_ErrorPinCount;
+         ResultText = get_hv_isolation_error_text(RES_Arcs[Index], RES_dIdts[Index], RES_ELims[Index]);
+         IsShort = (NOT RES_Arcs[Index]) AND (NOT RES_dIdts[Index]) AND (NOT RES_ELims[Index]);
+         Value = ' ';
+         if (IsShort)
+         begin
+            Value = get_resistance_value(RES_Prefixes[Index], RES_Values[Index]);
+         end;
+         Pin2 = format_teststep_pin(get_pinname(RES_ErrorPins[Index]));
+         FailText = get_hv_two_levels_fail_text(RES_Level1Errors[Index]);
+         Line1 = StrAdd(format_teststep_result(ResultText), Name);
+         Line1 = StrAdd(Line1, Pin1);
+         Line1 = StrAdd(Line1, Pin2);
+         Line1 = StrAdd(Line1, FailText);
+         UIWriteError(Line1);
+         if (StrCompare(StrTrim(Value), '') <> 0)
+         begin
+            Line2 = StrAdd(format_teststep_result(' '), Value);
+            UIWriteError(Line2);
+         end;
+      end;
+   end;
+end;
+
+//Output for the command NoConnGroupHVTwoLevels
+template NoConnGroupHVTwoLevels
+begin
+   Name = get_teststep_name(RES_Name, LocalText('225#NCG HV2L'));
+   Name = format_teststep_name(Name);
+   HighGroup = format_teststep_pin(RES_HighGroup);
+   LowGroup = format_teststep_pin(RES_LowGroup);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      Value = LocalText('220#Lvl1') + ': ';
+      Value = StrAdd(Value, get_resistance_value(RES_Level1Prefix, RES_Level1Value));
+      Value = StrAdd(Value, get_double_dash_text(LocalText('221#Lvl2')));
+      Value = StrAdd(Value, get_resistance_value(RES_Level2Prefix, RES_Level2Value));
+      Line1 = StrAdd(format_teststep_result(LocalText('5#Passed')), Name);
+      Line1 = StrAdd(Line1, HighGroup);
+      Line1 = StrAdd(Line1, LowGroup);
+      Line2 = StrAdd(format_teststep_result(' '), Value);
+      UIWriteNormal(Line1);
+      Space = format_teststep_result(' ');
+      Line2 = StrAdd(Space, Value);
+      UIWriteNormal(Line2);
+   end
+   else
+   begin
+      if (RES_ErrorCount > 0)
+      begin
+         Index = RES_ErrorCount;
+         ResultText = get_hv_isolation_error_text(RES_Arcs[Index], RES_dIdts[Index], RES_ELims[Index]);
+         IsShort = (NOT RES_Arcs[Index]) AND (NOT RES_dIdts[Index]) AND (NOT RES_ELims[Index]);
+         Value = ' ';
+         if (IsShort)
+         begin
+            Value = get_resistance_value(RES_Prefixes[Index], RES_Values[Index]);
+         end;
+         if ((RES_ErrorHighPins[Index] == PINADDRESS_NotSearched) OR
+             (RES_ErrorHighPins[Index] == PINADDRESS_NotFound))
+         begin
+            Pin1 = RES_HighGroup;
+         end
+         else
+         begin
+            Pin1 = get_pinname(RES_ErrorHighPins[Index]);
+         end;
+         if ((RES_ErrorLowPins[Index] == PINADDRESS_NotSearched) OR
+             (RES_ErrorLowPins[Index] == PINADDRESS_NotFound))
+         begin
+            Pin2 = RES_LowGroup;
+         end
+         else
+         begin
+            Pin2 = get_pinname(RES_ErrorLowPins[Index]);
+         end;
+         Pin1 = format_teststep_pin(Pin1);
+         Pin2 = format_teststep_pin(Pin2);
+         FailText = '';
+         if (RES_Level1Errors[Index])
+         begin
+            FailText = 'Lvl1';
+         end
+         else
+         begin
+            FailText = 'Lvl2';
+         end;
+         Line1 = StrAdd(format_teststep_result(ResultText), Name);
+         Line1 = StrAdd(Line1, Pin1);
+         Line1 = StrAdd(Line1, Pin2);
+         Line1 = StrAdd(Line1, FailText);
+         UIWriteError(Line1);
+         if (StrCompare(StrTrim(Value), '') <> 0)
+         begin
+            Line2 = StrAdd(format_teststep_result(' '), Value);
+            UIWriteError(Line2);
+         end;
+         short_to_lower_voltage_level(RES_ShortToLowerVoltageLevel);
+      end;
+   end;
+end;
+

@@ -1,0 +1,99 @@
+//Output for the command CANRxTest
+template CANRxTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('261#CANRxTest'));
+   switch (RES_Result)
+   begin
+      case TESTSTEP_Passed:
+      begin
+         ResultText = LocalText('5#Passed');
+      end;
+      case TESTSTEP_Failed:
+      begin
+         ResultText = LocalText('114#Failed');
+      end;
+      default:
+      begin
+         ResultText = LocalText('7#Invalid');
+      end;
+   end;
+   ResultText = FormatAlignLeft(ResultText, 20, ' ');
+   ResultText = format_teststep_result(ResultText);
+   Line = StrAdd(ResultText, Name);
+   Write(Line);
+end;
+
+//Output for the command CANTxRxTest
+template CANTxRxTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('262#CANTxRxTest'));
+   switch (RES_Result)
+   begin
+      case TESTSTEP_Passed:
+      begin
+         ResultText = LocalText('5#Passed');
+      end;
+      case TESTSTEP_Failed:
+      begin
+         ResultText = LocalText('114#Failed');
+      end;
+      default:
+      begin
+         ResultText = LocalText('7#Invalid');
+      end;
+   end;
+   ResultText = FormatAlignLeft(ResultText, 20, ' ');
+   ResultText = format_teststep_result(ResultText);
+   Line = StrAdd(ResultText, Name);
+   Write(Line);
+end;
+
+//Output for the command CANRtrRxTest
+template CANRtrRxTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('263#CANRtrRxTest'));
+   switch (RES_Result)
+   begin
+      case TESTSTEP_Passed:
+      begin
+         ResultText = LocalText('5#Passed');
+      end;
+      case TESTSTEP_Failed:
+      begin
+         ResultText = LocalText('114#Failed');
+      end;
+      default:
+      begin
+         ResultText = LocalText('7#Invalid');
+      end;
+   end;
+   ResultText = FormatAlignLeft(ResultText, 20, ' ');
+   ResultText = format_teststep_result(ResultText);
+   Line = StrAdd(ResultText, Name);
+   Write(Line);
+end;
+
+//Output for the command CANISO15765TxRxTest
+template CANISO15765TxRxTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('264#CANISO15765TxRxTest'));
+   switch (RES_Result)
+   begin
+      case TESTSTEP_Passed:
+      begin
+         ResultText = LocalText('5#Passed');
+      end;
+      case TESTSTEP_Failed:
+      begin
+         ResultText = LocalText('114#Failed');
+      end;
+      default:
+      begin
+         ResultText = LocalText('7#Invalid');
+      end;
+   end;
+   ResultText = FormatAlignLeft(ResultText, 20, ' ');
+   ResultText = format_teststep_result(ResultText);
+   Line = StrAdd(ResultText, Name);
+   Write(Line);
+end;

@@ -1,0 +1,123 @@
+//Output commands for the command VoltageTest
+template VoltageTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('48#Voltage'));
+   switch (RES_Result)
+   begin
+      case TESTSTEP_Passed:
+      begin
+         ResultText = LocalText('5#Passed');
+      end;
+      case TESTSTEP_Failed:
+      begin
+         if (RES_Value > RES_MaxVoltage)
+         begin
+            ResultText = LocalText('12#Too high');
+         end
+         else
+         begin
+            ResultText = LocalText('13#Too low');
+         end;
+      end;
+      default:
+      begin
+         ResultText = LocalText('7#Invalid');
+      end;
+   end;
+   ResultText = format_teststep_result(ResultText);
+   Name = format_teststep_name(Name);
+   Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+   Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+   Value = get_voltage_value(RES_Prefix, RES_Value);
+   Line = StrAdd(ResultText, Name);
+   Line = StrAdd(Line, Pin1);
+   Line = StrAdd(Line, Pin2);
+   Line = StrAdd(Line, Value);
+   Write(Line);
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+
+//Output commands for the command VoltageTestCustom
+template VoltageTestCustom
+begin
+   Name = get_teststep_name(RES_Name, LocalText('48#Voltage'));
+   switch (RES_Result)
+   begin
+      case TESTSTEP_Passed:
+      begin
+         ResultText = LocalText('5#Passed');
+      end;
+      case TESTSTEP_Failed:
+      begin
+         if (RES_Value > RES_MaxVoltage)
+         begin
+            ResultText = LocalText('12#Too high');
+         end
+         else
+         begin
+            ResultText = LocalText('13#Too low');
+         end;
+      end;
+      default:
+      begin
+         ResultText = LocalText('7#Invalid');
+      end;
+   end;
+   ResultText = format_teststep_result(ResultText);
+   Name = format_teststep_name(Name);
+   Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+   Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+   Value = get_voltage_value(RES_Prefix, RES_Value);
+
+   Line = StrAdd(ResultText, Name);
+   Line = StrAdd(Line, Pin1);
+   Line = StrAdd(Line, Pin2);
+   Line = StrAdd(Line, Value);
+   Write(Line);
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+
+//Output commands for the command VoltageFrequencyTest
+template VoltageFrequencyTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('262#U+f'));
+   switch (RES_Result)
+   begin
+      case TESTSTEP_Passed:
+      begin
+         ResultText = LocalText('5#Passed');
+      end;
+      case TESTSTEP_Failed:
+      begin
+         ResultTextU = LocalText('263#U-');
+         ResultTextf = LocalText('264#f-');
+         if (RES_VoltagePassed)
+         begin
+            ResultTextU = LocalText('265#U+');
+         end;
+         if (RES_FrequencyPassed)
+         begin
+            ResultTextf = LocalText('266#f+');
+         end;
+         ResultText = ResultTextU + '; ' + ResultTextf;
+      end;
+      default:
+      begin
+         ResultText = LocalText('7#Invalid');
+      end;
+   end;
+   ResultText = format_teststep_result(ResultText);
+   Name = format_teststep_name(Name);
+   Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+   Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+   ValueU = get_voltage_value(RES_Prefix, RES_Value);
+   Valuef = get_frequency_value(RES_fPrefix, RES_fValue);
+   Value = ValueU + '; ' + Valuef;
+
+   Line = StrAdd(ResultText, Name);
+   Line = StrAdd(Line, Pin1);
+   Line = StrAdd(Line, Pin2);
+   Line = StrAdd(Line, Value);
+   Write(Line);
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;

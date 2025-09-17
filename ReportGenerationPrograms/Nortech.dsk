@@ -1,0 +1,26 @@
+[WindowPos]
+Count=2
+
+[GridSet]
+Count=0
+
+[EditorLastOpenFiles]
+Count=2
+0=ReportGenerationFunctions.unit
+1=ReportGenerationFunctions_txt.unit
+
+[WindowPos 0]
+Id=1888
+L=0
+T=80
+W=1366
+H=644
+S=0
+
+[WindowPos 1]
+Id=1889
+L=0
+T=0
+W=1366
+H=80
+S=0

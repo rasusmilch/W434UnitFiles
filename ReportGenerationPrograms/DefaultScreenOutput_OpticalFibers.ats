@@ -1,0 +1,83 @@
+//Output for the command OFAttenuationTest
+template OFAttenuationTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('111#Optical fiber'));
+   switch (RES_Result)
+   begin
+      case TESTSTEP_Passed:
+      begin
+         ResultText = LocalText('5#Passed');
+      end;
+      case TESTSTEP_Failed:
+      begin
+         if (StrCompare(RES_Prefix, '%') == 0)
+         begin
+            ResultText = LocalText('45#Defective');
+         end
+         else
+         begin
+            if (RES_Value > RES_MaxAttenuation)
+            begin
+               ResultText = LocalText('12#Too high');
+            end
+            else
+            begin
+               ResultText = LocalText('13#Too low');
+            end;
+         end;
+      end;
+      default:
+      begin
+         ResultText = LocalText('7#Invalid');
+      end;
+   end;
+   ResultText = format_teststep_result(ResultText);
+   Name = format_teststep_name(Name);
+   Pin1 = format_teststep_pin(get_optical_pinname(RES_Pin1));
+   Pin2 = format_teststep_pin(get_optical_pinname(RES_Pin2));
+   Value = get_attenuation_value(RES_Prefix, RES_Value);
+
+   Line = StrAdd(ResultText, Name);
+   Line = StrAdd(Line, Pin1);
+   Line = StrAdd(Line, Pin2);
+   Line = StrAdd(Line, Value);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      UIWriteNormal(Line);
+   end
+   else
+   begin
+      UIWriteError(Line);
+   end;
+end;
+
+//Output for the command OFPinScan
+template OFPinScan
+begin
+   Name = format_teststep_name(LocalText('257#OFPinScan'));
+   Pin1 = format_teststep_pin(get_optical_pinname(RES_Pin));
+
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      ResultText = format_teststep_result(' ');
+      Pin2 = format_teststep_pin(' ');
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      UIWriteNormal(Line);
+   end
+   else
+   begin
+      if (RES_ErrorPinCount > 0)
+      begin
+         Index = RES_ErrorPinCount;
+         ResultText = format_teststep_result(LocalText('17#Found'));
+         Pin2 = format_teststep_pin(get_optical_pinname(RES_ErrorPins[Index]));
+         Line = StrAdd(ResultText, Name);
+         Line = StrAdd(Line, Pin1);
+         Line = StrAdd(Line, Pin2);
+         UIWriteNormal(Line);
+      end;
+   end;
+end;
+

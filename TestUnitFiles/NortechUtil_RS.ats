@@ -3,7 +3,7 @@
   //   Retrieve the test duration for the current project from FILE_TIMER_DURATIONS, or return "NULL" if not found.
 
   check_job_whitelist(Debug: boolean = FALSE): string
-  //   Load the project’s job whitelist from FILE_JOB_WHITELIST, prompt and verify the operator’s job number, returning the raw whitelist or "NULL".
+  //   Load the projectï¿½s job whitelist from FILE_JOB_WHITELIST, prompt and verify the operatorï¿½s job number, returning the raw whitelist or "NULL".
 
   test_cont_option(): void
   // Ensure the continuity test option is supported and enabled.
@@ -21,7 +21,7 @@
   //   Validate that all required test options are supported and enabled.
 
   fail_count_other_increase(): void
-  //   Increment the “Others” failure counter.
+  //   Increment the ï¿½Othersï¿½ failure counter.
 
   ui_report_error(Line: string): void
   //   Write an error message to both the UI and the test report.
@@ -90,7 +90,12 @@
   //   Verify the electrical components group is active, optionally report tolerances, and execute an RLC capacitance test.
 
   operator_name_from_id(): string
-  //   Lookup and return the operator’s name based on the current operator ID from FILE_OPERATOR_ID_MAP, aborting on error.
+  //   Lookup and return the operatorï¿½s name based on the current operator ID from FILE_OPERATOR_ID_MAP, aborting on error.
+
+  ui_print_helper(Str: string; Report: boolean = FALSE; Warning: boolean = FALSE; Error: boolean = FALSE; Debug: boolean = FALSE): void;
+  // Route a message to UI or report with severity flags and guard against invalid combinations.
+
+
 }
 
 constants
@@ -754,7 +759,7 @@ end;
  * @brief   Display a TRUE/FALSE prompt to the operator, log the choice, and report pass/fail.
  *
  * Presents a dialog titled @p Title with the question @p Message and three buttons:
- * "Cancel", "True", and "False".  Compares the operator’s choice against @p SuccessFlag:
+ * "Cancel", "True", and "False".  Compares the operatorï¿½s choice against @p SuccessFlag:
  * if they match, the test passes; otherwise it fails.  Any cancellation or mismatch
  * increments the failure counter and records an error message.  Finally, draws a
  * bordered report line and returns prompt pass (TRUE) or failure (FALSE).
@@ -770,7 +775,7 @@ begin
 
    // Initialize report line and status flags
    ReportLine = '';            // text to display in the report box
-   OperatorResult = FALSE;     // operator’s True/False choice
+   OperatorResult = FALSE;     // operatorï¿½s True/False choice
    Error = FALSE;              // tracks whether an error/failure occurred
 
    // Show a custom dialog with Cancel, True, False buttons
@@ -926,8 +931,8 @@ end;
   @details
     1. Displays an input dialog for the lower measurement described by @p LowerLine in units @p Units.
     2. Validates the lower value against [@p LowerMinValue, @p LowerMaxValue]; aborts on cancel or out-of-range.
-    3. Repeats steps 1–2 for the upper measurement described by @p UpperLine and bounds [@p UpperMinValue, @p UpperMaxValue].
-    4. Computes the delta = upper – lower, validates it against [@p DeltaMin, @p DeltaMax]; aborts on failure.
+    3. Repeats steps 1ï¿½2 for the upper measurement described by @p UpperLine and bounds [@p UpperMinValue, @p UpperMaxValue].
+    4. Computes the delta = upper ï¿½ lower, validates it against [@p DeltaMin, @p DeltaMax]; aborts on failure.
     5. Constructs and displays a bordered summary of the lower, upper, and delta values.
   @param   LowerLine      Text describing the lower measurement prompt.
   @param   UpperLine      Text describing the upper measurement prompt.
@@ -1178,7 +1183,7 @@ begin
       // Trim whitespace from the entered value
       InputResult = StrTrim(InputResult);
 
-      // Compare the expected part number to the operator’s entry
+      // Compare the expected part number to the operatorï¿½s entry
       Result = StrCompare(PartNum, InputResult);
 
       // If they do not match, display a boxed error and abort
@@ -1658,7 +1663,7 @@ end;
            (@p CapAvg) and a percentage tolerance (@p TolPercent), then reports the
            formatted range.
   @param   CapAvg      Average capacitance in Farads (e.g., 1.0E-9 for 1 nF).
-  @param   TolPercent  Integer percentage tolerance (e.g., 10 for ±10%).
+  @param   TolPercent  Integer percentage tolerance (e.g., 10 for ï¿½10%).
   @return  void
 **}
 function rcl_test_cap_report(CapAvg: real; TolPercent: integer): void;
@@ -1701,7 +1706,7 @@ end;
   @param   FromPin     Starting terminal pin for the capacitance measurement.
   @param   ToPin       Ending terminal pin for the capacitance measurement.
   @param   CapAvg      Average capacitance in Farads (e.g., 1.0E-9 for 1 nF).
-  @param   TolPercent  Integer percentage tolerance (e.g., 10 for ±10%).
+  @param   TolPercent  Integer percentage tolerance (e.g., 10 for ï¿½10%).
   @param   ReportTol   Optional flag to display tolerance info before testing (default FALSE).
   @return  TRUE if the capacitance falls within tolerance, FALSE otherwise.
 **}
@@ -1737,7 +1742,7 @@ end;
 
 
 {**
-  @brief   Retrieve the operator’s name from the operator ID mapping file.
+  @brief   Retrieve the operatorï¿½s name from the operator ID mapping file.
   @details
     1. Attempts to open the INI file defined by `FILE_OPERATOR_ID_MAP`.
     2. Reads the current operator ID from global data key `"Value1"` in `"TestStart InputData"`.
@@ -1785,7 +1790,7 @@ end;
   @brief   Report the main failure counter total to the timer.
   @details
     Retrieves the count from the main failure counter (FAILCOUNTER_Main) and calls
-    timer_set_errors to update the timer’s error register.
+    timer_set_errors to update the timerï¿½s error register.
   @param   Debug  Optional flag to enable debug logging when TRUE (default FALSE).
   @return  void
 **}
@@ -1794,8 +1799,352 @@ begin
    // Main failure count
    Fails = FailCounterGet(FAILCOUNTER_Main);
 
-   // Update the timer’s error register with the aggregated failure count
+   // Update the timerï¿½s error register with the aggregated failure count
    timer_set_errors(Fails, Debug);
 end;
 
+{**
+  @brief Route a message to either the report channel or the live UI with warning/error/normal handling.
 
+  @details
+  Dispatches the supplied text to one of two output paths:
+  - **Report path** (when Report is TRUE): uses `ui_report_*` routines.
+  - **UI path** (when Report is FALSE): uses `UIWrite*` routines.
+  In each path, the routine:
+  1) Emits a warning message if `Warning` is TRUE.
+  2) Emits an error message if `Error` is TRUE.
+  3) Validates that `Warning` and `Error` are not simultaneously TRUE; if they are,
+     it opens an error dialog and aborts the active test sequence.
+  4) Otherwise, emits a normal (non-severity) message.
+
+  Note: The message may be emitted more than once in a given path (e.g., warning and then normal),
+  depending on the combination of flags. The `Debug` parameter is accepted but not used here.
+
+  @param Str The text to emit.
+  @param Report When TRUE, route output through the report subsystem (`ui_report_*`).
+  @param Warning When TRUE, also emit the message as a warning.
+  @param Error When TRUE, also emit the message as an error.
+  @param Debug Reserved for future diagnostic behavior; not used in this implementation.
+
+  @return None.
+
+  @pre The following routines must be available and an active test/UI context present:
+       - ui_report_warning(str), ui_report_error(str), ui_report_normal(str)
+       - UIWriteWarning(str), UIWriteError(str), UIWriteNormal(str)
+       - UIErrorDialog(str), MiscAbortTest()
+
+  @post If both `Error` and `Warning` are TRUE, an error dialog is displayed and the current test is aborted.
+
+  @sideeffects Produces user-visible/report-visible output; may terminate the current test on invalid flag combinations.
+
+  @header
+  ui_print_helper(Str: string; Report: boolean = FALSE; Warning: boolean = FALSE; Error: boolean = FALSE; Debug: boolean = FALSE): void;
+  Route a message to UI or report with severity flags and guard against invalid combinations.
+*}
+function ui_print_helper(Str: string; Report: boolean = FALSE; Warning: boolean = FALSE; Error: boolean = FALSE; Debug: boolean = FALSE): void;
+begin
+
+   if (Debug)
+   begin
+      DebugStr = StrAdd('Report: ', Report);
+      DebugStr = StrAdd(DebugStr, ', Warning: ');
+      DebugStr = StrAdd(DebugStr, Warning);
+      DebugStr = StrAdd(DebugStr, ', Error: ');
+      DebugStr = StrAdd(DebugStr, Error);
+      UIWriteWarning(DebugStr);
+   end;
+
+   // Select the reporting path: report subsystem when TRUE, otherwise live UI.
+   if (Report)
+   begin
+      // Guard against invalid simultaneous severity flags.
+      if (Error AND Warning)
+      begin
+         UIErrorDialog('Invalid: ERROR AND WARNING SET FOR OUTPUT');
+         MiscAbortTest();
+      end;
+
+      if (Error)
+      begin
+         // Emit the normal (non-severity) UI message.
+         ui_report_error(Str);
+      end
+      else
+      begin
+         if (Warning)
+         begin
+            ui_report_warning(Str);
+         end
+         else
+         begin
+            ui_report_normal(Str);
+         end;
+      end;
+   end
+   else
+   begin
+      // Guard against invalid simultaneous severity flags.
+      if (Error AND Warning)
+      begin
+         UIErrorDialog('Invalid: ERROR AND WARNING SET FOR OUTPUT');
+         MiscAbortTest();
+      end;
+
+      if (Error)
+      begin
+         // Emit the normal (non-severity) UI message.
+         UIWriteError(Str);
+      end
+      else
+      begin
+         if (Warning)
+         begin
+            UIWriteWarning(Str);
+         end
+         else
+         begin
+            UIWriteNormal(Str);
+         end;
+      end;
+   end;
+end;
+
+{**
+  @brief Forward a single text segment to the UI/report printing helper.
+
+  @details
+  Thin wrapper that forwards one string argument and all severity/route flags to
+  the underlying printing helper. No concatenation or transformation is performed.
+
+  @param Str1 The text to emit.
+  @param Report When TRUE, route output to the report subsystem; otherwise to live UI.
+  @param Warning When TRUE, mark the message as a warning in the chosen channel.
+  @param Error When TRUE, mark the message as an error in the chosen channel.
+  @param Debug Passed through to the helper for potential diagnostic behavior.
+
+  @return None.
+
+  @post Message may be emitted to UI and/or report depending on flags.
+
+  @sideeffects Produces user-visible/report-visible output via ui_print_helper.
+
+  @header
+  ui_print_str_1(Str1: string; Report: boolean = FALSE; Warning: boolean = FALSE; Error: boolean = FALSE; Debug: boolean = FALSE): void;
+  Forward single string to print helper.
+*}
+function ui_print_str_1(Str1: string; Report: boolean = FALSE; Warning: boolean = FALSE; Error: boolean = FALSE; Debug: boolean = FALSE): void;
+begin
+   // Forward the single segment string and all flags to the printing helper.
+   ui_print_helper(Str1, Report, Warning, Error, Debug);
+
+end;
+
+{**
+  @brief Concatenate two text segments (Str1 + Str2) and emit via the printing helper.
+
+  @details
+  Builds a message by sequentially appending Str2 to Str1 (no separator inserted),
+  then forwards the combined string and all severity/route flags to the helper.
+
+  @param Str1 First text segment.
+  @param Str2 Second text segment appended to Str1.
+  @param Report When TRUE, route output to the report subsystem; otherwise to live UI.
+  @param Warning When TRUE, mark the message as a warning in the chosen channel.
+  @param Error When TRUE, mark the message as an error in the chosen channel.
+  @param Debug Passed through to the helper for potential diagnostic behavior.
+
+  @return None.
+
+  @note Concatenation is direct with no delimiter; caller must include spaces if needed.
+
+  @post Combined message may be emitted to UI and/or report depending on flags.
+
+  @sideeffects Produces user-visible/report-visible output via ui_print_helper.
+
+  @header
+  ui_print_str_2(Str1: string; Str2: string; Report: boolean = FALSE; Warning: boolean = FALSE; Error: boolean = FALSE; Debug: boolean = FALSE): void;
+  Concatenate two strings then print via helper.
+*}
+function ui_print_str_2(Str1: string; Str2: string; Report: boolean = FALSE; Warning: boolean = FALSE; Error: boolean = FALSE; Debug: boolean = FALSE): void;
+begin
+   // Initialize with Str1 and append Str2.
+   Str = StrAdd(Str1, Str2);
+
+   // Forward the combined string and flags to the printing helper.
+   ui_print_helper(Str, Report, Warning, Error, Debug);
+   
+end;
+
+{**
+  @brief Concatenate three text segments (Str1 + Str2 + Str3) and emit via the printing helper.
+
+  @details
+  Sequentially appends Str2 and Str3 to Str1 (no separators inserted) to form the
+  message payload, then forwards it with all severity/route flags to the helper.
+
+  @param Str1 First text segment.
+  @param Str2 Second text segment.
+  @param Str3 Third text segment.
+  @param Report When TRUE, route output to the report subsystem; otherwise to live UI.
+  @param Warning When TRUE, mark the message as a warning in the chosen channel.
+  @param Error When TRUE, mark the message as an error in the chosen channel.
+  @param Debug Passed through to the helper for potential diagnostic behavior.
+
+  @return None.
+
+  @note Concatenation is direct with no delimiter; caller must include spaces if needed.
+
+  @post Combined message may be emitted to UI and/or report depending on flags.
+
+  @sideeffects Produces user-visible/report-visible output via ui_print_helper.
+
+  @header
+  ui_print_str_3(Str1: string; Str2: string; Str3: string; Report: boolean = FALSE; Warning: boolean = FALSE; Error: boolean = FALSE; Debug: boolean = FALSE): void;
+  Concatenate three strings then print via helper.
+*}
+function ui_print_str_3(Str1: string; Str2: string; Str3: string; Report: boolean = FALSE; Warning: boolean = FALSE; Error: boolean = FALSE; Debug: boolean = FALSE): void;
+begin
+   // Initialize with Str1 and append Str2.
+   Str = StrAdd(Str1, Str2);
+   // Append Str3 to the intermediate string.
+   Str = StrAdd(Str, Str3);
+
+   // Forward the combined string and flags to the printing helper.
+   ui_print_helper(Str, Report, Warning, Error, Debug);
+   
+end;
+
+{**
+  @brief Concatenate four text segments (Str1 + Str2 + Str3 + Str4) and emit via the printing helper.
+
+  @details
+  Sequentially appends Str2, Str3, and Str4 to Str1 (no separators inserted) to
+  build the message payload, then forwards it with all severity/route flags.
+
+  @param Str1 First text segment.
+  @param Str2 Second text segment.
+  @param Str3 Third text segment.
+  @param Str4 Fourth text segment.
+  @param Report When TRUE, route output to the report subsystem; otherwise to live UI.
+  @param Warning When TRUE, mark the message as a warning in the chosen channel.
+  @param Error When TRUE, mark the message as an error in the chosen channel.
+  @param Debug Passed through to the helper for potential diagnostic behavior.
+
+  @return None.
+
+  @note Concatenation is direct with no delimiter; caller must include spaces if needed.
+
+  @post Combined message may be emitted to UI and/or report depending on flags.
+
+  @sideeffects Produces user-visible/report-visible output via ui_print_helper.
+
+  @header
+  ui_print_str_4(Str1: string; Str2: string; Str3: string; Str4: string; Report: boolean = FALSE; Warning: boolean = FALSE; Error: boolean = FALSE; Debug: boolean = FALSE): void;
+  Concatenate four strings then print via helper.
+*}
+function ui_print_str_4(Str1: string; Str2: string; Str3: string; Str4: string; Report: boolean = FALSE; Warning: boolean = FALSE; Error: boolean = FALSE; Debug: boolean = FALSE): void;
+begin
+   // Initialize with Str1 and append Str2.
+   Str = StrAdd(Str1, Str2);
+   // Append Str3 to the intermediate string.
+   Str = StrAdd(Str, Str3);
+   // Append Str4 to the intermediate string.
+   Str = StrAdd(Str, Str4);
+
+   // Forward the combined string and flags to the printing helper.
+   ui_print_helper(Str, Report, Warning, Error, Debug);
+   
+end;
+
+{**
+  @brief Concatenate five text segments (Str1..Str5) and emit via the printing helper.
+
+  @details
+  Sequentially appends Str2 through Str5 to Str1 (no separators inserted) to form
+  the message payload, then forwards it with all severity/route flags.
+
+  @param Str1 First text segment.
+  @param Str2 Second text segment.
+  @param Str3 Third text segment.
+  @param Str4 Fourth text segment.
+  @param Str5 Fifth text segment.
+  @param Report When TRUE, route output to the report subsystem; otherwise to live UI.
+  @param Warning When TRUE, mark the message as a warning in the chosen channel.
+  @param Error When TRUE, mark the message as an error in the chosen channel.
+  @param Debug Passed through to the helper for potential diagnostic behavior.
+
+  @return None.
+
+  @note Concatenation is direct with no delimiter; caller must include spaces if needed.
+
+  @post Combined message may be emitted to UI and/or report depending on flags.
+
+  @sideeffects Produces user-visible/report-visible output via ui_print_helper.
+
+  @header
+  ui_print_str_5(Str1: string; Str2: string; Str3: string; Str4: string; Str5: string; Report: boolean = FALSE; Warning: boolean = FALSE; Error: boolean = FALSE; Debug: boolean = FALSE): void;
+  Concatenate five strings then print via helper.
+*}
+function ui_print_str_5(Str1: string; Str2: string; Str3: string; Str4: string; Str5: string; Report: boolean = FALSE; Warning: boolean = FALSE; Error: boolean = FALSE; Debug: boolean = FALSE): void;
+begin
+   // Initialize with Str1 and append Str2.
+   Str = StrAdd(Str1, Str2);
+   // Append Str3 to the intermediate string.
+   Str = StrAdd(Str, Str3);
+   // Append Str4 to the intermediate string.
+   Str = StrAdd(Str, Str4);
+   // Append Str5 to the intermediate string.
+   Str = StrAdd(Str, Str5);
+
+   // Forward the combined string and flags to the printing helper.
+   ui_print_helper(Str, Report, Warning, Error, Debug);
+   
+end;
+
+{**
+  @brief Concatenate six text segments (Str1..Str6) and emit via the printing helper.
+
+  @details
+  Sequentially appends Str2 through Str6 to Str1 (no separators inserted) to form
+  the message payload, then forwards it with all severity/route flags.
+
+  @param Str1 First text segment.
+  @param Str2 Second text segment.
+  @param Str3 Third text segment.
+  @param Str4 Fourth text segment.
+  @param Str5 Fifth text segment.
+  @param Str6 Sixth text segment.
+  @param Report When TRUE, route output to the report subsystem; otherwise to live UI.
+  @param Warning When TRUE, mark the message as a warning in the chosen channel.
+  @param Error When TRUE, mark the message as an error in the chosen channel.
+  @param Debug Passed through to the helper for potential diagnostic behavior.
+
+  @return None.
+
+  @note Concatenation is direct with no delimiter; caller must include spaces if needed.
+
+  @post Combined message may be emitted to UI and/or report depending on flags.
+
+  @sideeffects Produces user-visible/report-visible output via ui_print_helper.
+
+  @header
+  ui_print_str_6(Str1: string; Str2: string; Str3: string; Str4: string; Str5: string; Str6: string; Report: boolean = FALSE; Warning: boolean = FALSE; Error: boolean = FALSE; Debug: boolean = FALSE): void;
+  Concatenate six strings then print via helper.
+*}
+function ui_print_str_6(Str1: string; Str2: string; Str3: string; Str4: string; Str5: string; Str6: string; Report: boolean = FALSE; Warning: boolean = FALSE; Error: boolean = FALSE; Debug: boolean = FALSE): void;
+begin
+   // Initialize with Str1 and append Str2.
+   Str = StrAdd(Str1, Str2);
+   // Append Str3 to the intermediate string.
+   Str = StrAdd(Str, Str3);
+   // Append Str4 to the intermediate string.
+   Str = StrAdd(Str, Str4);
+   // Append Str5 to the intermediate string.
+   Str = StrAdd(Str, Str5);
+   // Append Str6 to the intermediate string.
+   Str = StrAdd(Str, Str6);
+
+   // Forward the combined string and flags to the printing helper.
+   ui_print_helper(Str, Report, Warning, Error, Debug);
+   
+end;

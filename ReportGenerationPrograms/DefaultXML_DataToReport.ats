@@ -1,0 +1,94 @@
+template ReportWriteNormal
+begin
+   write_line('<TestStep Cmd="ReportWriteNormal">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   Line = '<Text>' + RES_Text + '</Text>';
+   write_line(Line);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template ReportWriteError
+begin
+   write_line('<TestStep Cmd="ReportWriteError">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   Line = '<Text>' + RES_Text + '</Text>';
+   write_line(Line);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template ReportWriteTag
+begin
+   write_line('<TestStep Cmd="ReportWriteTag">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   Line = '<Tag>' + RES_Tag + '</Tag>';
+   write_line(Line);
+   Line = '<Text>' + RES_Text + '</Text>';
+   write_line(Line);
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template ReportWriteStrings
+begin
+   write_line('<TestStep Cmd="ReportWriteStrings">');
+   inc_indent();
+   write_teststep_basics(RES_FileIndex, RES_StartLine, RES_ModuleFileIndex, RES_ModuleLine);
+   Line = '<Text>' + RES_Text + '</Text>';
+   write_line(Line);
+   write_line('<Strings>');
+   inc_indent();
+   for Index = 1 to RES_StringCount do
+   begin
+      Line = '<String>' + RES_Strings[Index] + '</String>';
+      write_line(Line);
+   end;
+   dec_indent();
+   write_line('</Strings>');
+   dec_indent();
+   write_line('</TestStep>');
+end;
+
+template ReportWriteMeasurementParameters
+begin
+   write_line('<TestStep Cmd="ReportWriteMeasurementParameters">');
+   inc_indent();
+   switch (RES_CommandGroup)
+   begin
+      case CMDGRP_Continuity: begin
+         write_line('<CommandGroup>Continuity</CommandGroup>');
+         write_continuity_parameters(RES_CCurrent, RES_CThreshold, RES_CTrise, RES_CTwait,
+            RES_CTmeas, RES_CAutoRange, RES_CVoltageLimit);
+      end;
+      case CMDGRP_IsolationLV: begin
+         write_line('<CommandGroup>IsolationLV</CommandGroup>');
+         write_isolationlv_parameters(RES_LVVoltage, RES_LVThreshold, RES_LVTrise, RES_LVTwait,
+            RES_LVTmeas, RES_LVAutoRange, RES_LVCurrentLimit, RES_LVTmeasReduction);
+      end;
+      case CMDGRP_IsolationHV: begin
+         if (ParamGetIsolationHV(PARAM_IsolationHVValid))
+         begin
+            write_line('<CommandGroup>IsolationHV</CommandGroup>');
+            write_isolationhv_parameters(RES_HVVoltage, RES_HVThreshold, RES_HVUseIThreshold,
+               RES_HVIThreshold, RES_HVTrise, RES_HVTwait, RES_HVTmeas, RES_HVAutoRange,
+               RES_HVCurrentLimit, RES_HVTmeasReduction, RES_HVTmeasFactor, RES_HVVoltageRamp,
+               RES_HVdIdtEnabled, RES_HVdIdtCurrentThreshold, RES_HVdIdtTimeThreshold);
+         end;
+      end;
+      case CMDGRP_DielectricBreakdown: begin
+         if (ParamGetDielectricBreakdown(PARAM_DielectricBreakdownValid))
+         begin
+            write_line('<CommandGroup>PARAM_DielectricBreakdown</CommandGroup>');
+            write_dielectricbreakdown_parameters(RES_DBVoltage, RES_DBTrise, RES_DBTwait, RES_DBTmeas,
+               RES_DBTmeasFactor, RES_DBVoltageRamp, RES_DBThresholdIr, RES_DBThresholdIi);
+         end;
+      end;
+   end;
+   dec_indent();
+   write_line('</TestStep>');
+end;
+

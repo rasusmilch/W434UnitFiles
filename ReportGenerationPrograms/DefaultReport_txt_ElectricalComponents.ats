@@ -1,0 +1,1385 @@
+//Output commands for the command ResistorTest
+template ResistorTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('14#Resistor'));
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+         end;
+         case TESTSTEP_Failed:
+         begin
+            if (RES_Arc)
+            begin
+               ResultText = LocalText('202#Arc');
+            end
+            else
+            begin
+               if (StrCompare(RES_Prefix, '%') == 0)
+               begin
+                  ResultText = LocalText('45#Defective');
+               end
+               else
+               begin
+                  if (RES_Value > RES_MaxResistance)
+                  begin
+                     ResultText = LocalText('12#Too high');
+                  end
+                  else
+                  begin
+                     ResultText = LocalText('13#Too low');
+                  end;
+               end;
+            end;
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+         end;
+      end;
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      if (RES_Arc)
+      begin
+         Value = ' ';
+      end
+      else
+      begin
+         Value = get_resistance_value(RES_Prefix, RES_Value);
+      end;
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      Write(Line);
+   end;
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+
+//Output commands for the command ResistorTestCustom
+template ResistorTestCustom
+begin
+   Name = get_teststep_name(RES_Name, LocalText('14#Resistor'));
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+         end;
+         case TESTSTEP_Failed:
+         begin
+            if (RES_Arc)
+            begin
+               ResultText = LocalText('202#Arc');
+            end
+            else
+            begin
+               if (StrCompare(RES_Prefix, '%') == 0)
+               begin
+                  ResultText = LocalText('45#Defective');
+               end
+               else
+               begin
+                  if (RES_Value > RES_MaxResistance)
+                  begin
+                     ResultText = LocalText('12#Too high');
+                  end
+                  else
+                  begin
+                     ResultText = LocalText('13#Too low');
+                  end;
+               end;
+            end;
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+         end;
+      end;
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      Value = get_resistance_value(RES_Prefix, RES_Value);
+
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      Write(Line);
+   end;
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+
+//Output commands for the command CapacitorTest
+template CapacitorTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('39#Capacitor'));
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+         end;
+         case TESTSTEP_Failed:
+         begin
+            if (StrCompare(RES_Prefix, '%') == 0)
+            begin
+               ResultText = LocalText('45#Defective');
+            end
+            else
+            begin
+               if (RES_Value > RES_MaxCapacitance)
+               begin
+                  ResultText = LocalText('12#Too high');
+               end
+               else
+               begin
+                  if (RES_Value < RES_MinCapacitance)
+                  begin
+                     ResultText = LocalText('13#Too low');
+                  end
+                  else
+                  begin
+                     ResultText = LocalText('7#Invalid');
+                  end;
+               end;
+            end;
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+         end;
+      end;
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      Value = get_capacitance_value(RES_Prefix, RES_Value);
+
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      Write(Line);
+   end;
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+
+//Output commands for the command DiodeTest
+template DiodeTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('41#Diode'));
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+         end;
+         case TESTSTEP_Failed:
+         begin
+            if (RES_U1Ok AND (NOT RES_U2Ok) AND RES_U3Ok)
+            begin
+               ResultText = LocalText('42#Open');
+            end
+            else
+            begin
+               if ((NOT RES_U1Ok) AND RES_U2Ok AND (NOT RES_U3Ok))
+               begin
+                  ResultText = LocalText('43#Short');
+               end
+               else
+               begin
+                  if (RES_U1Ok AND (NOT RES_U2Ok) AND (NOT RES_U3Ok))
+                  begin
+                     ResultText = LocalText('44#Reversed');
+                  end
+                  else
+                  begin
+                     ResultText = LocalText('45#Defective');
+                  end;
+               end;
+            end;
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+         end;
+      end;
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      Value = ' ';
+
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      Write(Line);
+   end;
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+
+//Output commands for the command DiodeTestCustom
+template DiodeTestCustom
+begin
+   Name = get_teststep_name(RES_Name, LocalText('41#Diode'));
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+         end;
+         case TESTSTEP_Failed:
+         begin
+            if (RES_U1Ok AND (NOT RES_U2Ok) AND RES_U3Ok)
+            begin
+               ResultText = LocalText('42#Open');
+            end
+            else
+            begin
+               if ((NOT RES_U1Ok) AND RES_U2Ok AND (NOT RES_U3Ok))
+               begin
+                  ResultText = LocalText('43#Short');
+               end
+               else
+               begin
+                  if (RES_U1Ok AND (NOT RES_U2Ok) AND (NOT RES_U3Ok))
+                  begin
+                     ResultText = LocalText('44#Reversed');
+                  end
+                  else
+                  begin
+                     ResultText = LocalText('45#Defective');
+                  end;
+               end;
+            end;
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+         end;
+      end;
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      Value = ' ';
+
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      Write(Line);
+   end;
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+
+//Output commands for the command ZDiodeTest
+template ZDiodeTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('46#Z-Diode'));
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+         end;
+         case TESTSTEP_Failed:
+         begin
+            if (RES_U1Ok AND (NOT RES_U2Ok) AND RES_U3Ok)
+            begin
+               ResultText = LocalText('42#Open');
+            end
+            else
+            begin
+               if ((NOT RES_U1Ok) AND RES_U2Ok AND (NOT RES_U3Ok))
+               begin
+                  ResultText = LocalText('43#Short');
+               end
+               else
+               begin
+                  if (RES_U1Ok AND (NOT RES_U2Ok) AND (NOT RES_U3Ok))
+                  begin
+                     ResultText = LocalText('44#Reversed');
+                  end
+                  else
+                  begin
+                     ResultText = LocalText('45#Defective');
+                  end;
+               end;
+            end;
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+         end;
+      end;
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      Value = ' ';
+
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      Write(Line);
+   end;
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+
+//Output commands for the command ZDiodeTestCustom
+template ZDiodeTestCustom
+begin
+   Name = get_teststep_name(RES_Name, LocalText('46#Z-Diode'));
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+         end;
+         case TESTSTEP_Failed:
+         begin
+            if (RES_U1Ok AND (NOT RES_U2Ok) AND RES_U3Ok)
+            begin
+               ResultText = LocalText('42#Open');
+            end
+            else
+            begin
+               if ((NOT RES_U1Ok) AND RES_U2Ok AND (NOT RES_U3Ok))
+               begin
+                  ResultText = LocalText('43#Short');
+               end
+               else
+               begin
+                  if (RES_U1Ok AND (NOT RES_U2Ok) AND (NOT RES_U3Ok))
+                  begin
+                     ResultText = LocalText('44#Reversed');
+                  end
+                  else
+                  begin
+                     ResultText = LocalText('45#Defective');
+                  end;
+               end;
+            end;
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+         end;
+      end;
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      Value = ' ';
+
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      Write(Line);
+   end;
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+
+//Output commands for the command CTwistTestAC
+template CTwistTestAC
+begin
+   Name = get_teststep_name(RES_Name, LocalText('240#C-Twist'));
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+         end;
+         case TESTSTEP_Failed:
+         begin
+            if (StrCompare(RES_Prefix, '%') == 0)
+            begin
+               ResultText = LocalText('45#Defective');
+            end
+            else
+            begin
+               if (RES_Value > RES_MaxCapacitance)
+               begin
+                  ResultText = LocalText('12#Too high');
+               end
+               else
+               begin
+                  ResultText = LocalText('13#Too low');
+               end;
+            end;
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+         end;
+      end;
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      Value = get_capacitance_value(RES_Prefix, RES_Value);
+
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      Write(Line);
+   end;
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+
+//Output commands for the command RLCSerialInductanceTest
+template RLCSerialInductanceTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('241#RLC'));
+   Name = Name + ' ' + LocalText('242#L');
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+         end;
+         case TESTSTEP_Failed:
+         begin
+            if (StrCompare(RES_Prefix, '%') == 0)
+            begin
+               ResultText = LocalText('45#Defective');
+            end
+            else
+            begin
+               if (RES_Value > RES_Lmax)
+               begin
+                  ResultText = LocalText('12#Too high');
+               end
+               else
+               begin
+                  if (RES_Value < RES_Lmin)
+                  begin
+                     ResultText = LocalText('13#Too low');
+                  end
+                  else
+                  begin
+                     ResultText = LocalText('137#Inaccurate');
+                  end;
+               end;
+            end;
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+         end;
+      end;
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      Value = get_inductance_value(RES_Prefix, RES_Value);
+
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      Write(Line);
+   end;
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+
+//Output commands for the command RLCSerialCapacitanceTest
+template RLCSerialCapacitanceTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('241#RLC'));
+   Name = Name + ' ' + LocalText('243#C');
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+         end;
+         case TESTSTEP_Failed:
+         begin
+            if (StrCompare(RES_Prefix, '%') == 0)
+            begin
+               ResultText = LocalText('45#Defective');
+            end
+            else
+            begin
+               if (RES_Value > RES_Cmax)
+               begin
+                  ResultText = LocalText('12#Too high');
+               end
+               else
+               begin
+                  if (RES_Value < RES_Cmin)
+                  begin
+                     ResultText = LocalText('13#Too low');
+                  end
+                  else
+                  begin
+                     ResultText = LocalText('137#Inaccurate');
+                  end;
+               end;
+            end;
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+         end;
+      end;
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      Value = get_capacitance_value(RES_Prefix, RES_Value);
+
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      Write(Line);
+   end;
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+
+//Output commands for the command RLCSerialResistanceTest
+template RLCSerialResistanceTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('241#RLC'));
+   Name = Name + ' ' + LocalText('244#R');
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+         end;
+         case TESTSTEP_Failed:
+         begin
+            if (StrCompare(RES_Prefix, '%') == 0)
+            begin
+               ResultText = LocalText('45#Defective');
+            end
+            else
+            begin
+               if (RES_Value > RES_Rmax)
+               begin
+                  ResultText = LocalText('12#Too high');
+               end
+               else
+               begin
+                  if (RES_Value < RES_Rmin)
+                  begin
+                     ResultText = LocalText('13#Too low');
+                  end
+                  else
+                  begin
+                     ResultText = LocalText('137#Inaccurate');
+                  end;
+               end;
+            end;
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+         end;
+      end;
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      Value = get_resistance_value(RES_Prefix, RES_Value);
+
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      Write(Line);
+   end;
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+
+//Output commands for the command RLCParallelInductanceTest
+template RLCParallelInductanceTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('241#RLC'));
+   Name = Name + ' ' + LocalText('242#L');
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+         end;
+         case TESTSTEP_Failed:
+         begin
+            if (StrCompare(RES_Prefix, '%') == 0)
+            begin
+               ResultText = LocalText('45#Defective');
+            end
+            else
+            begin
+               if (RES_Value > RES_Lmax)
+               begin
+                  ResultText = LocalText('12#Too high');
+               end
+               else
+               begin
+                  if (RES_Value < RES_Lmin)
+                  begin
+                     ResultText = LocalText('13#Too low');
+                  end
+                  else
+                  begin
+                     ResultText = LocalText('137#Inaccurate');
+                  end;
+               end;
+            end;
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+         end;
+      end;
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      Value = get_inductance_value(RES_Prefix, RES_Value);
+
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      Write(Line);
+   end;
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+
+//Output commands for the command RLCParallelCapacitanceTest
+template RLCParallelCapacitanceTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('241#RLC'));
+   Name = Name + ' ' + LocalText('243#C');
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+         end;
+         case TESTSTEP_Failed:
+         begin
+            if (StrCompare(RES_Prefix, '%') == 0)
+            begin
+               ResultText = LocalText('45#Defective');
+            end
+            else
+            begin
+               if (RES_Value > RES_Cmax)
+               begin
+                  ResultText = LocalText('12#Too high');
+               end
+               else
+               begin
+                  if (RES_Value < RES_Cmin)
+                  begin
+                     ResultText = LocalText('13#Too low');
+                  end
+                  else
+                  begin
+                     ResultText = LocalText('137#Inaccurate');
+                  end;
+               end;
+            end;
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+         end;
+      end;
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      Value = get_capacitance_value(RES_Prefix, RES_Value);
+
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      Write(Line);
+   end;
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+
+//Output commands for the command RLCParallelResistanceTest
+template RLCParallelResistanceTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('241#RLC'));
+   Name = Name + ' ' + LocalText('244#R');
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+         end;
+         case TESTSTEP_Failed:
+         begin
+            if (StrCompare(RES_Prefix, '%') == 0)
+            begin
+               ResultText = LocalText('45#Defective');
+            end
+            else
+            begin
+               if (RES_Value > RES_Rmax)
+               begin
+                  ResultText = LocalText('12#Too high');
+               end
+               else
+               begin
+                  if (RES_Value < RES_Rmin)
+                  begin
+                     ResultText = LocalText('13#Too low');
+                  end
+                  else
+                  begin
+                     ResultText = LocalText('137#Inaccurate');
+                  end;
+               end;
+            end;
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+         end;
+      end;
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      Value = get_resistance_value(RES_Prefix, RES_Value);
+
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      Write(Line);
+   end;
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+
+//Output commands for the command RLCDissipationTest
+template RLCDissipationTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('241#RLC'));
+   Name = Name + ' ' + LocalText('245#d');
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+         end;
+         case TESTSTEP_Failed:
+         begin
+            if (StrCompare(RES_Prefix, '%') == 0)
+            begin
+               ResultText = LocalText('45#Defective');
+            end
+            else
+            begin
+               if (RES_Value > RES_Dismax)
+               begin
+                  ResultText = LocalText('12#Too high');
+               end
+               else
+               begin
+                  if (RES_Value < RES_Dismin)
+                  begin
+                     ResultText = LocalText('13#Too low');
+                  end
+                  else
+                  begin
+                     ResultText = LocalText('137#Inaccurate');
+                  end;
+               end;
+            end;
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+         end;
+      end;
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      Value = ArithRound(RES_Value, 3);
+
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      Write(Line);
+   end;
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+
+//Output commands for the command RLCQualityTest
+template RLCQualityTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('241#RLC'));
+   Name = Name + ' ' + LocalText('246#Q');
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+         end;
+         case TESTSTEP_Failed:
+         begin
+            if (StrCompare(RES_Prefix, '%') == 0)
+            begin
+               ResultText = LocalText('45#Defective');
+            end
+            else
+            begin
+               if (RES_Value > RES_Qmax)
+               begin
+                  ResultText = LocalText('12#Too high');
+               end
+               else
+               begin
+                  if (RES_Value < RES_Qmin)
+                  begin
+                     ResultText = LocalText('13#Too low');
+                  end
+                  else
+                  begin
+                     ResultText = LocalText('137#Inaccurate');
+                  end;
+               end;
+            end;
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+         end;
+      end;
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      Value = ArithRound(RES_Value, 3);
+
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      Write(Line);
+   end;
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+
+//Output commands for the command RLCPhaseAngleTest
+template RLCPhaseAngleTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('241#RLC'));
+   Name = Name + ' ' + LocalText('247#PA');
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+         end;
+         case TESTSTEP_Failed:
+         begin
+            if (StrCompare(RES_Prefix, '%') == 0)
+            begin
+               ResultText = LocalText('45#Defective');
+            end
+            else
+            begin
+               if (RES_Value > RES_PAmax)
+               begin
+                  ResultText = LocalText('12#Too high');
+               end
+               else
+               begin
+                  if (RES_Value < RES_PAmin)
+                  begin
+                     ResultText = LocalText('13#Too low');
+                  end
+                  else
+                  begin
+                     ResultText = LocalText('137#Inaccurate');
+                  end;
+               end;
+            end;
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+         end;
+      end;
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      Value = ArithRound(RES_Value, 3);
+
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      Write(Line);
+   end;
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+
+//Output commands for the command RLCImpedanceImaginaryTest
+template RLCImpedanceImaginaryTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('241#RLC'));
+   Name = Name + ' ' + LocalText('248#Zi');
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+         end;
+         case TESTSTEP_Failed:
+         begin
+            if (StrCompare(RES_Prefix, '%') == 0)
+            begin
+               ResultText = LocalText('45#Defective');
+            end
+            else
+            begin
+               if (RES_Value > RES_Zmax)
+               begin
+                  ResultText = LocalText('12#Too high');
+               end
+               else
+               begin
+                  if (RES_Value < RES_Zmin)
+                  begin
+                     ResultText = LocalText('13#Too low');
+                  end
+                  else
+                  begin
+                     ResultText = LocalText('137#Inaccurate');
+                  end;
+               end;
+            end;
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+         end;
+      end;
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      Value = get_resistance_value(RES_Prefix, RES_Value);
+
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      Write(Line);
+   end;
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+
+//Output commands for the command RLCImpedanceRealTest
+template RLCImpedanceRealTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('241#RLC'));
+   Name = Name + ' ' + LocalText('249#Zr');
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+         end;
+         case TESTSTEP_Failed:
+         begin
+            if (StrCompare(RES_Prefix, '%') == 0)
+            begin
+               ResultText = LocalText('45#Defective');
+            end
+            else
+            begin
+               if (RES_Value > RES_Zmax)
+               begin
+                  ResultText = LocalText('12#Too high');
+               end
+               else
+               begin
+                  if (RES_Value < RES_Zmin)
+                  begin
+                     ResultText = LocalText('13#Too low');
+                  end
+                  else
+                  begin
+                     ResultText = LocalText('137#Inaccurate');
+                  end;
+               end;
+            end;
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+         end;
+      end;
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      Value = get_resistance_value(RES_Prefix, RES_Value);
+
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      Write(Line);
+   end;
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+
+//Output commands for the command RLCImpedanceAbsoluteTest
+template RLCImpedanceAbsoluteTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('241#RLC'));
+   Name = Name + ' ' + LocalText('250#Z');
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+         end;
+         case TESTSTEP_Failed:
+         begin
+            if (StrCompare(RES_Prefix, '%') == 0)
+            begin
+               ResultText = LocalText('45#Defective');
+            end
+            else
+            begin
+               if (RES_Value > RES_Zmax)
+               begin
+                  ResultText = LocalText('12#Too high');
+               end
+               else
+               begin
+                  if (RES_Value < RES_Zmin)
+                  begin
+                     ResultText = LocalText('13#Too low');
+                  end
+                  else
+                  begin
+                     ResultText = LocalText('137#Inaccurate');
+                  end;
+               end;
+            end;
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+         end;
+      end;
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      Value = get_resistance_value(RES_Prefix, RES_Value);
+
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      Write(Line);
+   end;
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+
+//Output commands for the command AttenuatorTest
+template AttenuatorTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('116#Attenuator'));
+   switch (RES_Result)
+   begin
+      case TESTSTEP_Passed:
+      begin
+         ResultText = LocalText('5#Passed');
+      end;
+      case TESTSTEP_Failed:
+      begin
+         ResultText = '';
+         if (StrCompare(RES_Prefix, '%') == 0)
+         begin
+            ResultText = LocalText('45#Defective');
+         end
+         else
+         begin
+            if (RES_Value > RES_MaxAttenuation)
+            begin
+               ResultText = LocalText('12#Too high');
+            end
+            else
+            begin
+               if (RES_Value < RES_MinAttenuation)
+               begin
+                  ResultText = LocalText('13#Too low');
+               end;
+            end;
+            if (RES_PolarityTest)
+            begin
+               if (NOT RES_PolarityOk)
+               begin
+                  if (StrCompare('', ResultText) == 0)
+                  begin
+                     ResultText = LocalText('44#Reversed');
+                  end
+                  else
+                  begin
+                     ResultText = StrAdd(ResultText, ' (');
+                     ResultText = StrAdd(ResultText, LocalText('44#Reversed'));
+                     ResultText = StrAdd(ResultText, ')');
+                  end;
+               end;
+            end;
+         end;
+      end;
+      default:
+      begin
+         ResultText = LocalText('7#Invalid');
+      end;
+   end;
+   ResultText = format_teststep_result(ResultText);
+   Name = format_teststep_name(Name);
+   Pin1 = format_teststep_pin(get_pinname(RES_PinA1));
+   Pin2 = format_teststep_pin(get_pinname(RES_PinB1));
+   Value = get_attenuation_value(RES_Prefix, RES_Value);
+   Line = StrAdd(ResultText, Name);
+   Line = StrAdd(Line, Pin1);
+   Line = StrAdd(Line, Pin2);
+   Line = StrAdd(Line, Value);
+   Write(Line);
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+
+//Output commands for the command VariableResistorTest
+template VariableResistorTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('148#Variable resistor'));
+   Name = Name + ' [' + RES_StateName + ']';
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+         end;
+         case TESTSTEP_Failed:
+         begin
+            if (RES_Arc)
+            begin
+               ResultText = LocalText('202#Arc');
+            end
+            else
+            begin
+               if (StrCompare(RES_Prefix, '%') == 0)
+               begin
+                  ResultText = LocalText('45#Defective');
+               end
+               else
+               begin
+                  if (RES_Value > RES_MaxResistance)
+                  begin
+                     ResultText = LocalText('12#Too high');
+                  end
+                  else
+                  begin
+                     ResultText = LocalText('13#Too low');
+                  end;
+               end;
+            end;
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+         end;
+      end;
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      if (RES_Arc)
+      begin
+         Value = ' ';
+      end
+      else
+      begin
+         Value = get_resistance_value(RES_Prefix, RES_Value);
+      end;
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      Write(Line);
+   end;
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;

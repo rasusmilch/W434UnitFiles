@@ -1,0 +1,55 @@
+//Output commands for the command LV_ConnectorDetectionTest
+template LV_ConnectorDetectionTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('268#CON DET'));
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      ResultText = format_teststep_result(LocalText('5#Passed'));
+   end
+   else
+   begin
+      if (RES_On)
+      begin
+         ResultText = format_teststep_result(LocalText('57#Off'));
+      end
+      else
+      begin
+         ResultText = format_teststep_result(LocalText('56#On'));
+      end;
+   end;
+   Name = format_teststep_name(Name);
+   Pin = format_teststep_pin(get_lv_pinname(RES_Pin));
+   Line = StrAdd(ResultText, Name);
+   Line = StrAdd(Line, Pin);
+   Write(Line);
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+
+//Output commands for the command LV_DetectionTest
+template LV_DetectionTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('269#DET'));
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      ResultText = format_teststep_result(LocalText('5#Passed'));
+   end
+   else
+   begin
+      if (RES_On)
+      begin
+         ResultText = format_teststep_result(LocalText('57#Off'));
+      end
+      else
+      begin
+         ResultText = format_teststep_result(LocalText('56#On'));
+      end;
+   end;
+   Name = format_teststep_name(Name);
+   Pin1 = format_teststep_pin(get_lv_pinname(RES_Pin1));
+   Pin2 = format_teststep_pin(get_lv_pinname(RES_Pin2));
+   Line = StrAdd(ResultText, Name);
+   Line = StrAdd(Line, Pin1);
+   Line = StrAdd(Line, Pin2);
+   Write(Line);
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;

@@ -1,0 +1,627 @@
+function init_indent(): void;
+begin
+   GlobalDataWrite('Indent', '', 'XML');
+end;
+
+function inc_indent(): void;
+begin
+   Indent = GlobalDataRead('Indent', '', 'XML');
+   Indent = Indent + '  ';
+   GlobalDataWrite('Indent', Indent, 'XML');
+end;
+
+function dec_indent(): void;
+begin
+   Indent = GlobalDataRead('Indent', '', 'XML');
+   Length = StrLength(Indent);
+   if (Length > 0)
+   begin
+      Length = Length - 2;
+      Indent = StrCopy(Indent, 1, Length);
+   end;
+   GlobalDataWrite('Indent', Indent, 'XML');
+end;
+
+function write_line(Line: string): void;
+begin
+   Indent = GlobalDataRead('Indent', '', 'XML');
+   Line = Indent + Line;
+   WriteLn(Line);
+end;
+
+function get_value_with_unit(Tag, MeasUnit: string; Value: real): string;
+begin
+   Result = '<' + Tag + ' Unit="' + MeasUnit + '">'+ Value +'</' + Tag + '>';
+end;
+
+function get_value_with_prefix(Tag, MeasUnit, Prefix: string; Value: real): string;
+begin
+   if (StrCompare(MeasUnit, '') <> 0)
+   begin
+      Result = '<' + Tag + ' Unit="' + MeasUnit + '"><Prefix>' + Prefix + '</Prefix><Value>' + Value + '</Value>' + '</' + Tag + '>';
+   end
+   else
+   begin
+      Result = '<' + Tag + '><Prefix>' + Prefix + '</Prefix><Value>' + Value + '</Value>' + '</' + Tag + '>';
+   end;
+end;
+
+function get_pin_name(Address: integer): string;
+begin
+   switch (Address)
+   begin
+      case PINADDRESS_SystemGround: begin
+         Result = 'SystemGround';
+      end;
+      case PINADDRESS_Invalid: begin
+         Result = '!Invalid!';
+      end;
+      case PINADDRESS_NotSearched: begin
+         Result = '?NotSearched?';
+      end;
+      case PINADDRESS_NotFound: begin
+         Result = '?NotFound?';
+      end;
+      case PINADDRESS_None: begin
+         Result = '!None!';
+      end;
+      case PINADDRESS_None: begin
+         Result = '!None!';
+      end;
+      default: begin
+         Result = PinGetData(Address, PIN_AnyName);
+      end;
+   end;
+end;
+
+function get_optical_pin_name(Address: integer): string;
+begin
+   Result = OpticalPinGetData(Address, OPTICALPIN_AnyName);
+end;
+
+function get_lv_pin_name(Address: integer): string;
+begin
+   Result = LV_PinGetData(Address, PIN_AnyName);
+end;
+
+function write_continuity_parameters(Current: tcurrent; Threshold: tresistance;
+   Trise, Twait, Tmeas: ttime; AutoRange: boolean; VoltageLimit: tvoltage): string;
+begin
+   write_line('<MeasurementParameters Type="Continuity">');
+   inc_indent();
+   write_line(get_value_with_unit('Current', 'A', Current));
+   write_line(get_value_with_unit('Threshold', 'Ohm', Threshold));
+   write_line(get_value_with_unit('Trise', 's', Trise));
+   write_line(get_value_with_unit('Twait', 's', Twait));
+   write_line(get_value_with_unit('Tmeas', 's', Tmeas));
+   Line = '<AutoRange>' + AutoRange + '</AutoRange>';
+   write_line(Line);
+   write_line(get_value_with_unit('VoltageLimit', 'V', Tmeas));
+   dec_indent();
+   write_line('</MeasurementParameters>');
+end;
+
+function write_isolationlv_parameters(Voltage: tvoltage; Threshold: tresistance; Trise,
+   Twait, Tmeas: ttime; AutoRange: boolean; CurrentLimit: tcurrent; TmeasReduction: boolean): string;
+begin
+   write_line('<MeasurementParameters Type="IsolationLV">');
+   inc_indent();
+   write_line(get_value_with_unit('Voltage', 'V', Voltage));
+   write_line(get_value_with_unit('Threshold', 'Ohm', Threshold));
+   write_line(get_value_with_unit('Trise', 's', Trise));
+   write_line(get_value_with_unit('Twait', 's', Twait));
+   write_line(get_value_with_unit('Tmeas', 's', Tmeas));
+   Line = '<AutoRange>' + AutoRange + '</AutoRange>';
+   write_line(Line);
+   write_line(get_value_with_unit('CurrentLimit', 'A', CurrentLimit));
+   Line = '<TmeasReduction>' + TmeasReduction + '</TmeasReduction>';
+   write_line(Line);
+   dec_indent();
+   write_line('</MeasurementParameters>');
+end;
+
+function write_isolationhv_parameters(Voltage: tvoltage; RThreshold: tresistance;
+   UseIThreshold: boolean; IThreshold: tcurrent; Trise, Twait, Tmeas: ttime; AutoRange: boolean;
+   CurrentLimit: tcurrent; TmeasReduction: boolean; TmeasFactor: real; VoltageRamp: tvoltageramp;
+   DIdtEnabled: boolean; DIdtCurrentThreshold: tcurrent; DIdtTimeThreshold: ttime;
+   ParamType: string = 'IsolationHV'): string;
+begin
+   Line = '<MeasurementParameters Type="' + ParamType + '">';
+   write_line(Line);
+   inc_indent();
+   write_line(get_value_with_unit('Voltage', 'V', Voltage));
+   write_line(get_value_with_unit('Threshold', 'Ohm', RThreshold));
+   Line = '<UseIThreshold>' + UseIThreshold + '</UseIThreshold>';
+   write_line(Line);
+   write_line(get_value_with_unit('IThreshold', 'A', IThreshold));
+   write_line(get_value_with_unit('Trise', 's', Trise));
+   write_line(get_value_with_unit('Twait', 's', Twait));
+   write_line(get_value_with_unit('Tmeas', 's', Tmeas));
+   Line = '<AutoRange>' + AutoRange + '</AutoRange>';
+   write_line(Line);
+   write_line(get_value_with_unit('CurrentLimit', 'A', CurrentLimit));
+   Line = '<TmeasReduction>' + TmeasReduction + '</TmeasReduction>';
+   write_line(Line);
+   Line = '<TmeasFactor>' + TmeasFactor + '</TmeasFactor>';
+   write_line(Line);
+   write_line(get_value_with_unit('VoltageRamp', 'Vps', VoltageRamp));
+   Line = '<DIdtEnabled>' + DIdtEnabled + '</DIdtEnabled>';
+   write_line(Line);
+   write_line(get_value_with_unit('DIdtCurrentThreshold', 'A', DIdtCurrentThreshold));
+   write_line(get_value_with_unit('DIdtTimeThreshold', 's', DIdtTimeThreshold));
+   dec_indent();
+   write_line('</MeasurementParameters>');
+end;
+
+function write_dielectricbreakdown_parameters(Voltage: tvoltage; Trise, Twait,
+   Tmeas: ttime; TmeasFactor: real; VoltageRamp: tvoltageramp; ThresholdIr: tcurrent;
+   ThresholdIi: tcurrent): string;
+begin
+   write_line('<MeasurementParameters Type="DielectricBreakdown">');
+   inc_indent();
+
+   write_line(get_value_with_unit('Voltage', 'V', Voltage));
+   ThresholdsValid = ParamGetDielectricBreakdown(PARAM_DielectricBreakdownCurrentThresholdsValid);
+   Line = '<ThresholdsValid>' + ThresholdsValid + '</ThresholdsValid>';
+   write_line(Line);
+   if (ThresholdsValid)
+   begin
+      write_line(get_value_with_unit('ThresholdIr', 'A', ThresholdIr));
+      write_line(get_value_with_unit('ThresholdIi', 'A', ThresholdIi));
+   end;
+   write_line(get_value_with_unit('Trise', 's', Trise));
+   write_line(get_value_with_unit('Twait', 's', Twait));
+   write_line(get_value_with_unit('Tmeas', 's', Tmeas));
+   Line = '<TmeasFactor>' + TmeasFactor + '</TmeasFactor>';
+   write_line(Line);
+   write_line(get_value_with_unit('VoltageRamp', 'Vps', VoltageRamp));
+   dec_indent();
+   write_line('</MeasurementParameters>');
+end;
+
+//write section information into the report
+function write_sections(): void;
+begin
+   Count = ProjectGetSectionCount();
+   if (Count > 0)
+   begin
+      write_line('<Sections>');
+      inc_indent();
+      for Index = 1 to Count do
+      begin
+         Name = ProjectGetSectionName(Index);
+         Enabled = ProjectSectionEnabled(Name);
+         Line = '<Section><Name>' + Name + '</Name><Enabled>' + Enabled + '</Enabled></Section>';
+         write_line(Line);
+      end;
+      dec_indent();
+      write_line('</Sections>');
+   end;
+end;
+
+function write_rangetest(): void;
+begin
+   if (MiscRangeTestRunning())
+   begin
+      RangeTestType = MiscRangeTestGetType();
+      Line = '<RangeTest><Type>';
+      switch (RangeTestType)
+      begin
+         case RANGETEST_Connectors: begin
+            Line = Line + 'Connectors';
+         end;
+         case RANGETEST_AdtIsolationLV: begin
+            Line = Line + 'AdtIsolationLV';
+         end;
+         case RANGETEST_AdtIsolationLV: begin
+            Line = Line + 'AdtIsolationHV';
+         end;
+         case RANGETEST_AdtDielectricBreakdown: begin
+            Line = Line + 'AdtIsolationDB';
+         end;
+         default: begin
+            Line = Line + 'Functions';
+         end;
+      end;
+      Line = Line + '</Type></RangeTest>';
+      write_line(Line);
+   end;
+end;
+
+function write_ordernumber(): void;
+begin
+   OrderNumber = GlobalDataGetOrderNumber();
+   if (StrCompare(OrderNumber, '') <> 0)
+   begin
+      Line = '<OrderNumber>' + OrderNumber + '</OrderNumber>';
+      write_line(Line);
+   end;
+end;
+
+function write_serialnumber(): void;
+begin
+   SerialNumber = GlobalDataGetSerialNumber();
+   if (StrCompare(SerialNumber, '') <> 0)
+   begin
+      Line = '<SerialNumber>' + SerialNumber + '</SerialNumber>';
+      write_line(Line);
+   end;
+end;
+
+function write_teststart_inputdata(): void;
+begin
+   MiscCreateList(Data, 6);
+   Found = FALSE;
+   for Index = 1 to 6 do
+   begin
+      Text = GlobalDataRead(StrAdd('Text', Index), '', 'TestStart InputData');
+      Value = GlobalDataRead(StrAdd('Value', Index), '', 'TestStart InputData');
+      if ((StrCompare(Text, '') <> 0) AND (StrCompare(Value, '') <> 0))
+      begin
+         Found = TRUE;
+      end;
+      Data[Index] = '<Value Text="' + Text + '">' + Value + '</Value>';
+   end;
+   if (Found)
+   begin
+      write_line('<TestStartInputData>');
+      inc_indent();
+      for Index = 1 to 6 do
+      begin
+         write_line(Data[Index]);
+      end;
+      dec_indent();
+      write_line('</TestStartInputData>');
+   end;
+end;
+
+function write_user(): void;
+begin
+   if (UserManagementGetEnabled())
+   begin
+      write_line('<User>');
+      inc_indent();
+      UserName = UserManagementGetUsername();
+      Line = '<Name>' + UserName + '</Name>';
+      write_line(Line);
+      FullUserName = UserManagementGetUsername();
+      if (StrCompare(FullUserName, '') <> 0)
+      begin
+         Line = '<FullName>' + FullUserName + '</FullName>';
+         write_line(Line);
+      end;
+      UserGroupName = UserManagementGetUsername();
+      Line = '<Group>' + UserGroupName + '</Group>';
+      write_line(Line);
+      dec_indent();
+      write_line('</User>');
+   end;
+end;
+
+function write_fullusername(): void;
+begin
+end;
+
+function write_usergroupname(): void;
+begin
+end;
+
+function write_teststep_comment(Comment: string; DeclaredAsPassed: boolean = FALSE;
+   DeclaredAsPassedByUser: string = ''): void;
+begin
+   if (DeclaredAsPassed)
+   begin
+      write_line('<DeclaredAsPassed>1</DeclaredAsPassed>');
+      Line = '<DeclaredAsPassedByUser>' + DeclaredAsPassedByUser + '</DeclaredAsPassedByUser>';
+      write_line(Line);
+   end;
+   if (StrCompare(Comment, '') <> 0)
+   begin
+      Line = '<Comment>' + Comment + '<Comment>';
+      write_line(Line);
+   end;
+end;
+
+//Writes the results of the command groups
+function write_command_group_result(CmdGroup, FailcounterID: integer; CmdGrpName: string): void;
+begin
+   Available = ParamIsCommandGroupAvailable(CmdGroup);
+   if (Available)
+   begin
+      Active = ParamIsCommandGroupActive(CmdGroup);
+      Errors = FailCounterGet(FailcounterID);
+      ExecutedCommands = MiscGetNumberOfExecutedCommands(CmdGroup);
+      Line = '<CommandGroupResult Group="' + CmdGrpName + '">';
+      write_line(Line);
+      inc_indent();
+      if (Active)
+      begin
+         switch (Errors)
+         begin
+            case 0:
+            begin
+               if (ExecutedCommands == 0)
+               begin
+                  Value = 'NoCommands';
+               end
+               else
+               begin
+                  Value = 'Pass';
+               end;
+            end;
+            default:
+            begin
+               Value = 'Fail';
+            end;
+         end;
+      end
+      else
+      begin
+         Value = 'NotActive';
+      end;
+      Line = '<Result>' + Value + '</Result>';
+      write_line(Line);
+      Line = '<ErrorCount>' + Errors + '</ErrorCount>';
+      write_line(Line);
+      dec_indent();
+      write_line('</CommandGroupResult>');
+   end;
+end;
+
+function write_command_group_results(): void;
+begin
+   write_line('<CommandGroupResults>');
+   inc_indent();
+   write_command_group_result(CMDGRP_Continuity, FAILCOUNTER_Continuity, 'Continuity');
+   write_command_group_result(CMDGRP_IsolationLV, FAILCOUNTER_IsolationLV, 'IsolationLV');
+   write_command_group_result(CMDGRP_IsolationHV, FAILCOUNTER_IsolationHV, 'IsolationHV');
+   write_command_group_result(CMDGRP_DielectricBreakdown, FAILCOUNTER_DielectricBreakdown, 'DielectricBreakdown');
+   write_command_group_result(CMDGRP_ElectricalComponents, FAILCOUNTER_ElectricalComponents, 'ElectricalComponents');
+   write_command_group_result(CMDGRP_VoltageAndCurrent, FAILCOUNTER_VoltageAndCurrent, 'VoltageAndCurrent');
+   write_command_group_result(CMDGRP_OpticalComponents, FAILCOUNTER_OpticalComponents, 'OpticalComponents');
+   write_command_group_result(CMDGRP_CANBus, FAILCOUNTER_CANBus, 'CANBus');
+   write_command_group_result(CMDGRP_IDD, FAILCOUNTER_IDD, 'IDD');
+   write_command_group_result(CMDGRP_Detections, FAILCOUNTER_Detections, 'Detections');
+   write_command_group_result(CMDGRP_Others, FAILCOUNTER_Others, 'Others');
+   dec_indent();
+   write_line('</CommandGroupResults>');
+end;
+
+function write_teststep_basics(FileIndex, StartLine, ModuleFileIndex, ModuleLine: integer): void;
+begin
+   Line = '<FileIndex>' + FileIndex + '</FileIndex>';
+   write_line(Line);
+   Line = '<StartLine>' + StartLine + '</StartLine>';
+   write_line(Line);
+   Line = '<ModuleFileIndex>' + ModuleFileIndex + '</ModuleFileIndex>';
+   write_line(Line);
+   Line = '<ModuleLine>' + ModuleLine + '</ModuleLine>';
+   write_line(Line);
+end;
+
+function write_one_pin_basics(Name: string; Pin, OrigPin: integer): void;
+begin
+   write_line('<OnePinBasics>');
+   inc_indent();
+   Line = '<Name>' + Name + '</Name>';
+   write_line(Line);
+   Line = '<PinAddr>' + Pin + '</PinAddr>';
+   write_line(Line);
+   Line = '<OriginalPinAddr>' + OrigPin + '</OriginalPinAddr>';
+   write_line(Line);
+
+   PinName = get_pin_name(Pin);
+   Line = '<PinName>' + PinName + '</PinName>';
+   write_line(Line);
+   PinName = get_pin_name(OrigPin);
+   Line = '<OriginalPinName>' + PinName + '</OriginalPinName>';
+   write_line(Line);
+
+   dec_indent();
+   write_line('</OnePinBasics>');
+end;
+
+function write_two_pin_basics(Name: string; Pin1, Pin2, OrigPin1, OrigPin2: integer): void;
+begin
+   write_line('<TwoPinBasics>');
+   inc_indent();
+   Line = '<Name>' + Name + '</Name>';
+   write_line(Line);
+   Line = '<Pin1Addr>' + Pin1 + '</Pin1Addr>';
+   write_line(Line);
+   Line = '<Pin2Addr>' + Pin2 + '</Pin2Addr>';
+   write_line(Line);
+   Line = '<OriginalPin1Addr>' + OrigPin1 + '</OriginalPin1Addr>';
+   write_line(Line);
+   Line = '<OriginalPin2Addr>' + OrigPin2 + '</OriginalPin2Addr>';
+   write_line(Line);
+
+   PinName = get_pin_name(Pin1);
+   Line = '<Pin1Name>' + PinName + '</Pin1Name>';
+   write_line(Line);
+   PinName = get_pin_name(Pin2);
+   Line = '<Pin2Name>' + PinName + '</Pin2Name>';
+   write_line(Line);
+   PinName = get_pin_name(OrigPin1);
+   Line = '<OriginalPin1Name>' + PinName + '</OriginalPin1Name>';
+   write_line(Line);
+   PinName = get_pin_name(OrigPin2);
+   Line = '<OriginalPin2Name>' + PinName + '</OriginalPin2Name>';
+   write_line(Line);
+   dec_indent();
+   write_line('</TwoPinBasics>');
+end;
+
+function write_group_pin_basics(Name: string; HighGroupName, LowGroupName: string; HighGroupCount,
+   LowGroupCount: integer; HighGroupPins, LowGroupPins: tintegerarray): void;
+begin
+   write_line('<GroupPinBasics>');
+   inc_indent();
+   Line = '<Name>' + Name + '</Name>';
+   write_line(Line);
+   if ((HighGroupCount > 0) OR (StrCompare(HighGroupName, '') <> 0))
+   begin
+      write_line('<HighGroup>');
+      inc_indent();
+      Line = '<Name>' + HighGroupName + '</Name>';
+      write_line(Line);
+      if (HighGroupCount > 0)
+      begin
+         write_line('<Pins>');
+         inc_indent();
+         for Index = 1 to HighGroupCount do
+         begin
+            PinName = get_pin_name(HighGroupPins[Index]);
+            Line = '<Pin><PinAddr>' + HighGroupPins[Index] + '</PinAddr><PinName>' + PinName + '</PinName></Pin>';
+            write_line(Line);
+         end;
+         dec_indent();
+         write_line('</Pins>');
+      end;
+      dec_indent();
+      write_line('</HighGroup>');
+   end;
+   if ((LowGroupCount > 0) OR (StrCompare(LowGroupName, '') <> 0))
+   begin
+      write_line('<LowGroup>');
+      inc_indent();
+      Line = '<Name>' + LowGroupName + '</Name>';
+      write_line(Line);
+      if (LowGroupCount > 0)
+      begin
+         write_line('<Pins>');
+         inc_indent();
+         for Index = 1 to LowGroupCount do
+         begin
+            PinName = get_pin_name(LowGroupPins[Index]);
+            Line = '<Pin><PinAddr>' + LowGroupPins[Index] + '</PinAddr><PinName>' + PinName + '</PinName></Pin>';
+            write_line(Line);
+         end;
+         dec_indent();
+         write_line('</Pins>');
+      end;
+      dec_indent();
+      write_line('</LowGroup>');
+   end;
+   dec_indent();
+   write_line('</GroupPinBasics>');
+end;
+
+function write_one_lv_pin_basics(Name: string; Pin: integer): void;
+begin
+   write_line('<OneLVPinBasics>');
+   inc_indent();
+   Line = '<Name>' + Name + '</Name>';
+   write_line(Line);
+   Line = '<PinAddr>' + Pin + '</PinAddr>';
+   write_line(Line);
+
+   PinName = get_lv_pin_name(Pin);
+   Line = '<PinName>' + PinName + '</PinName>';
+   write_line(Line);
+
+   dec_indent();
+   write_line('</OneLVPinBasics>');
+end;
+
+function write_two_lv_pin_basics(Name: string; Pin1, Pin2: integer): void;
+begin
+   write_line('<TwoLVPinBasics>');
+   inc_indent();
+   Line = '<Name>' + Name + '</Name>';
+   write_line(Line);
+   Line = '<Pin1Addr>' + Pin1 + '</Pin1Addr>';
+   write_line(Line);
+   Line = '<Pin2Addr>' + Pin2 + '</Pin2Addr>';
+   write_line(Line);
+
+   PinName = get_lv_pin_name(Pin1);
+   Line = '<Pin1Name>' + PinName + '</Pin1Name>';
+   write_line(Line);
+   PinName = get_lv_pin_name(Pin2);
+   Line = '<Pin2Name>' + PinName + '</Pin2Name>';
+   write_line(Line);
+   dec_indent();
+   write_line('</TwoLVPinBasics>');
+end;
+
+function write_one_optical_pin_basics(Name: string; Pin: integer): void;
+begin
+   write_line('<OneOpticalPinBasics>');
+   inc_indent();
+   Line = '<Name>' + Name + '</Name>';
+   write_line(Line);
+   Line = '<PinAddr>' + Pin + '</PinAddr>';
+   write_line(Line);
+
+   PinName = get_optical_pin_name(Pin);
+   Line = '<PinName>' + PinName + '</PinName>';
+   write_line(Line);
+
+   dec_indent();
+   write_line('</OneLVPinBasics>');
+end;
+
+function write_two_optical_pin_basics(Name: string; Pin1, Pin2: integer): void;
+begin
+   write_line('<TwoOpticalPinBasics>');
+   inc_indent();
+   Line = '<Name>' + Name + '</Name>';
+   write_line(Line);
+   Line = '<Pin1Addr>' + Pin1 + '</Pin1Addr>';
+   write_line(Line);
+   Line = '<Pin2Addr>' + Pin2 + '</Pin2Addr>';
+   write_line(Line);
+
+   PinName = get_optical_pin_name(Pin1);
+   Line = '<Pin1Name>' + PinName + '</Pin1Name>';
+   write_line(Line);
+   PinName = get_optical_pin_name(Pin2);
+   Line = '<Pin2Name>' + PinName + '</Pin2Name>';
+   write_line(Line);
+   dec_indent();
+   write_line('</TwoOpticalPinBasics>');
+end;
+
+
+function write_value_and_tolerances(Value, LowerTol, UpperTol: real; MeasUnit: string = ''): void;
+begin
+   if (StrCompare(MeasUnit, '') <> 0)
+   begin
+      Line = '<ValueAndTolerances Unit="' + MeasUnit + '">';
+   end
+   else
+   begin
+      Line = '<ValueAndTolerances>';
+   end;
+   write_line(Line);
+   inc_indent();
+   Line = '<Value>' + Value + '</Value>';
+   write_line(Line);
+   Line = '<LowerTol>' + LowerTol + '</LowerTol>';
+   write_line(Line);
+   Line = '<UpperTol>' + UpperTol + '</UpperTol>';
+   write_line(Line);
+   dec_indent();
+   write_line('</ValueAndTolerances>');
+end;
+
+function write_limits(LowerLimit, UpperLimit: real; MeasUnit: string = ''): void;
+begin
+   if (StrCompare(MeasUnit, '') <> 0)
+   begin
+      Line = '<Limits Unit="' + MeasUnit + '">';
+   end
+   else
+   begin
+      Line = '<Limits>';
+   end;
+   write_line(Line);
+   inc_indent();
+   Line = '<LowerLimit>' + LowerLimit + '</LowerLimit>';
+   write_line(Line);
+   Line = '<UpperLimit>' + UpperLimit + '</UpperLimit>';
+   write_line(Line);
+   dec_indent();
+   write_line('</Limits>');
+end;

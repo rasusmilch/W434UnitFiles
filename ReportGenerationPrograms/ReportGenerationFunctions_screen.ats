@@ -1,0 +1,292 @@
+//Returns the name of a pin
+function get_pinname(Address: integer): string;
+begin
+   switch (Address)
+   begin
+      case PINADDRESS_SystemGround: begin
+         Result = LocalText('276#SystemGround');
+      end;
+      case PINADDRESS_Invalid: begin
+         Result = LocalText('272#!Invalid!');
+      end;
+      case PINADDRESS_NotSearched: begin
+         Result = LocalText('273#?NotSearched?');
+      end;
+      case PINADDRESS_NotFound: begin
+         Result = LocalText('274#?NotFound?');
+      end;
+      case PINADDRESS_None: begin
+         Result = LocalText('275#!None!');
+      end;
+      case PINADDRESS_None: begin
+         Result = LocalText('275#!None!');
+      end;
+      default: begin
+         Result = PinGetData(Address, PIN_AnyName);
+      end;
+   end;
+end;
+
+//Returns a resistance value with prefix
+function get_resistance_value(Prefix: string; Value: real): string;
+begin
+   if (StrCompare(Prefix, '%') == 0)
+   begin
+      Result = ' ';
+   end
+   else
+   begin
+      Result = FormatResistance(Value);
+      Result = StrAdd(Prefix, Result);
+   end;
+end;
+
+//Returns a capacitance value with prefix
+function get_capacitance_value(Prefix: string; Value: real): string;
+begin
+   if (StrCompare(Prefix, '%') == 0)
+   begin
+      Result = ' ';
+   end
+   else
+   begin
+      Result = FormatCapacitance(Value);
+      Result = StrAdd(Prefix, Result);
+   end;
+end;
+
+//Returns an inductance value with prefix
+function get_inductance_value(Prefix: string; Value: real): string;
+begin
+   if (StrCompare(Prefix, '%') == 0)
+   begin
+      Result = ' ';
+   end
+   else
+   begin
+      Result = FormatInductance(Value);
+      Result = StrAdd(Prefix, Result);
+   end;
+end;
+
+//Returns an voltage value with prefix
+function get_voltage_value(Prefix: string; Value: real): string;
+begin
+   if (StrCompare(Prefix, '%') == 0)
+   begin
+      Result = ' ';
+   end
+   else
+   begin
+      Result = FormatVoltage(Value);
+      Result = StrAdd(Prefix, Result);
+   end;
+end;
+
+//Returns a current value with prefix
+function get_current_value(Prefix: string; Value: real): string;
+begin
+   if (StrCompare(Prefix, '%') == 0)
+   begin
+      Result = ' ';
+   end
+   else
+   begin
+      Result = FormatCurrent(Value);
+      Result = StrAdd(Prefix, Result);
+   end;
+end;
+
+//Returns a attenuation value with prefix
+function get_attenuation_value(Prefix: string; Value: real): string;
+begin
+   if (StrCompare(Prefix, '%') == 0)
+   begin
+      Result = ' ';
+   end
+   else
+   begin
+      Result = FormatAttenuation(Value);
+      Result = StrAdd(Prefix, Result);
+   end;
+end;
+
+//Returns a power level value with prefix
+function get_powerlevel_value(Prefix: string; Value: real): string;
+begin
+   if (StrCompare(Prefix, '%') == 0)
+   begin
+      Result = ' ';
+   end
+   else
+   begin
+      Result = FormatPowerLevel(Value);
+      Result = StrAdd(Prefix, Result);
+   end;
+end;
+
+//Returns a frequency value with prefix
+function get_frequency_value(Prefix: string; Value: real): string;
+begin
+   if (StrCompare(Prefix, '%') == 0)
+   begin
+      Result = ' ';
+   end
+   else
+   begin
+      Result = FormatFrequency(Value);
+      Result = StrAdd(Prefix, Result);
+   end;
+end;
+
+//Returns the value for a dielectric breakdown measurement
+function get_dielectric_breakdown_value(Arc: boolean;
+            ValueValid: boolean; ValueIr: real; PrefixIr: string;
+            ValueIi: real; PrefixIi: string): string;
+begin
+   if (Arc)
+   begin
+      Result = ' ';
+   end
+   else
+   begin
+      if (ValueValid)
+      begin
+         ValueIr = get_current_value(PrefixIr, ValueIr);
+         ValueIi = get_current_value(PrefixIi, ValueIi);
+         if (StrCompare(ValueIr, ' ') == 0)
+         begin
+            if (StrCompare(ValueIr, ' ') <> 0)
+            begin
+               Result = StrAdd('Ii=', ValueIi);
+            end
+            else
+            begin
+               Result = ' ';
+            end;
+         end
+         else
+         begin
+            if (StrCompare(ValueIi, ' ') == 0)
+            begin
+               Result = StrAdd('Ir=', ValueIr);
+            end
+            else
+            begin
+               Result = StrAdd('Ir=', ValueIr);
+               Result = StrAdd(Result, '; Ii=');
+               Result = StrAdd(Result, ValueIi);
+            end;
+         end;
+      end
+      else
+      begin
+         Result = ' ';
+      end;
+   end;
+end;
+
+constants
+begin
+   TESTSTEP_RESULT_WIDTH = 20;
+   TESTSTEP_NAME_WIDTH = 25;
+   TESTSTEP_PIN_WIDTH = 25;
+end;
+
+//Formats the result of a teststep
+function format_teststep_result(Text: string): string;
+begin
+   if (StrCompare(Text, '') == 0)
+   begin
+      Text = ' ';
+   end;
+   Text = StrCopy(Text, 1, TESTSTEP_RESULT_WIDTH);
+   Result = FormatAlignLeft(Text, TESTSTEP_RESULT_WIDTH, ' ');
+end;
+
+//Formats the name of a teststep
+function format_teststep_name(Text: string): string;
+begin
+   if (StrCompare(Text, '') == 0)
+   begin
+      Text = ' ';
+   end;
+   Text = StrCopy(Text, 1, TESTSTEP_NAME_WIDTH);
+   Result = FormatAlignLeft(Text, TESTSTEP_NAME_WIDTH, ' ');
+end;
+
+//Formats a pin of a teststep
+function format_teststep_pin(Text: string): string;
+begin
+   if (StrCompare(Text, '') == 0)
+   begin
+      Text = ' ';
+   end;
+   Result = FormatAlignLeft(Text, TESTSTEP_PIN_WIDTH, ' ');
+end;
+
+//Output if external voltage was detected
+function external_voltage_error(Name: string; Pin1: integer;
+            Pin2: integer; Value: real; ValuePrefix: string): void;
+begin
+   ResultText = format_teststep_result(LocalText('50#Ext. Volt.'));
+   Name = format_teststep_name(Name);
+   Pin1 = format_teststep_pin(get_pinname(Pin1));
+   Pin2 = format_teststep_pin(get_pinname(Pin2));
+   Value = get_voltage_value(ValuePrefix, Value);
+
+   Line = StrAdd(ResultText, Name);
+   Line = StrAdd(Line, Pin1);
+   Line = StrAdd(Line, Pin2);
+   Line = StrAdd(Line, Value);
+   UIWriteError(Line);
+end;
+
+//Output if possible short to lower voltage level
+function short_to_lower_voltage_level(IsShort: boolean): void;
+begin
+   if (IsShort)
+   begin
+      Space = TESTSTEP_RESULT_WIDTH + TESTSTEP_NAME_WIDTH;
+      Space = FormatAlignLeft(' ', Space, ' ');
+      Line = StrAdd(Space, LocalText('85#Possible short to lower voltagelevel'));
+      UIWriteError(Line);
+   end;
+end;
+
+//Returns a value text for HV isolation test steps
+function get_hv_isolation_value_text(IsArc, IsdIdt, IsEnergyLimit: boolean;
+   Prefix: string; Value: real): string;
+begin
+   if (IsArc)
+   begin
+      Result = LocalText('202#Arc');
+   end
+   else
+   begin
+      if (IsdIdt)
+      begin
+         Result = LocalText('203#dIdt');
+      end
+      else
+      begin
+         if (IsEnergyLimit)
+         begin
+            Result = LocalText('164#Energy > 350 mJ');
+         end
+         else
+         begin
+            Result = get_resistance_value(Prefix, Value);
+         end;
+      end;
+   end;
+end;
+
+function get_default_line(ResultText, Name, PinName1, PinName2, Value: string): string;
+begin
+   ResultText = format_teststep_result(ResultText);
+   Name = format_teststep_name(Name);
+   PinName1 = format_teststep_pin(PinName1);
+   PinName2 = format_teststep_pin(PinName2);
+   Result = ResultText + Name + PinName1 + PinName2 + Value;
+end;

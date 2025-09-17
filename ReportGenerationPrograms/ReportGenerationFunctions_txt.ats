@@ -1,0 +1,870 @@
+//Returns the name of a pin
+function get_pinname(Address: integer): string;
+begin
+   switch (Address)
+   begin
+      case PINADDRESS_SystemGround: begin
+         Result = LocalText('276#SystemGround');
+      end;
+      case PINADDRESS_Invalid: begin
+         Result = LocalText('272#!Invalid!');
+      end;
+      case PINADDRESS_NotSearched: begin
+         Result = LocalText('273#?NotSearched?');
+      end;
+      case PINADDRESS_NotFound: begin
+         Result = LocalText('274#?NotFound?');
+      end;
+      case PINADDRESS_None: begin
+         Result = LocalText('275#!None!');
+      end;
+      case PINADDRESS_None: begin
+         Result = LocalText('275#!None!');
+      end;
+      default: begin
+         Result = PinGetData(Address, PIN_AnyName);
+      end;
+   end;
+end;
+
+//Returns a resistance value with prefix
+function get_resistance_value(Prefix: string; Value: real): string;
+begin
+   if (StrCompare(Prefix, '%') == 0)
+   begin
+      Result = ' ';
+   end
+   else
+   begin
+      Result = FormatResistance(Value);
+      Result = StrAdd(Prefix, Result);
+   end;
+end;
+
+//Returns a capacitance value with prefix
+function get_capacitance_value(Prefix: string; Value: real): string;
+begin
+   if (StrCompare(Prefix, '%') == 0)
+   begin
+      Result = ' ';
+   end
+   else
+   begin
+      Result = FormatCapacitance(Value);
+      Result = StrAdd(Prefix, Result);
+   end;
+end;
+
+//Returns a inductance value with prefix
+function get_inductance_value(Prefix: string; Value: real): string;
+begin
+   if (StrCompare(Prefix, '%') == 0)
+   begin
+      Result = ' ';
+   end
+   else
+   begin
+      Result = FormatInductance(Value);
+      Result = StrAdd(Prefix, Result);
+   end;
+end;
+
+//Returns a voltage value with prefix
+function get_voltage_value(Prefix: string; Value: real): string;
+begin
+   if (StrCompare(Prefix, '%') == 0)
+   begin
+      Result = ' ';
+   end
+   else
+   begin
+      Result = FormatVoltage(Value);
+      Result = StrAdd(Prefix, Result);
+   end;
+end;
+
+//Returns a current value with prefix
+function get_current_value(Prefix: string; Value: real): string;
+begin
+   if (StrCompare(Prefix, '%') == 0)
+   begin
+      Result = ' ';
+   end
+   else
+   begin
+      Result = FormatCurrent(Value);
+      Result = StrAdd(Prefix, Result);
+   end;
+end;
+
+//Returns an attenuation value with prefix
+function get_attenuation_value(Prefix: string; Value: real): string;
+begin
+   if (StrCompare(Prefix, '%') == 0)
+   begin
+      Result = ' ';
+   end
+   else
+   begin
+      Result = FormatAttenuation(Value);
+      Result = StrAdd(Prefix, Result);
+   end;
+end;
+
+//Returns a power level value with prefix
+function get_powerlevel_value(Prefix: string; Value: real): string;
+begin
+   if (StrCompare(Prefix, '%') == 0)
+   begin
+      Result = ' ';
+   end
+   else
+   begin
+      Result = FormatPowerLevel(Value);
+      Result = StrAdd(Prefix, Result);
+   end;
+end;
+
+//Returns a frequency value with prefix
+function get_frequency_value(Prefix: string; Value: real): string;
+begin
+   if (StrCompare(Prefix, '%') == 0)
+   begin
+      Result = ' ';
+   end
+   else
+   begin
+      Result = FormatFrequency(Value);
+      Result = StrAdd(Prefix, Result);
+   end;
+end;
+
+//Returns the value for a dielectric breakdown measurement
+function get_dielectric_breakdown_value(Arc: boolean;
+            ValueValid: boolean; ValueIr: real; PrefixIr: string;
+            ValueIi: real; PrefixIi: string): string;
+begin
+   if (Arc)
+   begin
+      Result = ' ';
+   end
+   else
+   begin
+      if (ValueValid)
+      begin
+         ValueIr = get_current_value(PrefixIr, ValueIr);
+         ValueIi = get_current_value(PrefixIi, ValueIi);
+         if (StrCompare(ValueIr, ' ') == 0)
+         begin
+            if (StrCompare(ValueIr, ' ') <> 0)
+            begin
+               Result = StrAdd('Ii=', ValueIi);
+            end
+            else
+            begin
+               Result = ' ';
+            end;
+         end
+         else
+         begin
+            if (StrCompare(ValueIi, ' ') == 0)
+            begin
+               Result = StrAdd('Ir=', ValueIr);
+            end
+            else
+            begin
+               Result = StrAdd('Ir=', ValueIr);
+               Result = StrAdd(Result, '; Ii=');
+               Result = StrAdd(Result, ValueIi);
+            end;
+         end;
+      end
+      else
+      begin
+         Result = ' ';
+      end;
+   end;
+end;
+
+//returns a line of dashes with the same length of the passed string
+function get_underline(Line: string): string;
+begin
+   Length = StrLength(Line);
+   Result = '';
+   for Zaehl = 1 to Length do
+   begin
+      Result = StrAdd(Result, '-');
+   end;
+end;
+
+constants
+begin
+   TESTSTEP_RESULT_WIDTH = 10;
+   TESTSTEP_NAME_WIDTH = 15;
+   TESTSTEP_PIN_WIDTH = 20;
+end;
+
+//Formats the result of a teststep
+function format_teststep_result(Text: string): string;
+begin
+   if (StrCompare(Text, '') == 0)
+   begin
+      Text = ' ';
+   end;
+   Text = StrCopy(Text, 1, TESTSTEP_RESULT_WIDTH);
+   Result = FormatAlignLeft(Text, TESTSTEP_RESULT_WIDTH, ' ');
+end;
+
+//Formats the name of a teststep
+function format_teststep_name(Text: string): string;
+begin
+   if (StrCompare(Text, '') == 0)
+   begin
+      Text = ' ';
+   end;
+   Text = StrCopy(Text, 1, TESTSTEP_NAME_WIDTH);
+   Result = FormatAlignLeft(Text, TESTSTEP_NAME_WIDTH, ' ');
+end;
+
+//Formats a pin of a teststep
+function format_teststep_pin(Text: string): string;
+begin
+   if (StrCompare(Text, '') == 0)
+   begin
+      Text = ' ';
+   end;
+   Result = FormatAlignLeft(Text, TESTSTEP_PIN_WIDTH, ' ');
+end;
+
+//Output if external voltage was detected
+function external_voltage_error(Name: string; Pin1: integer;
+            Pin2: integer; Value: real; ValuePrefix: string): void;
+begin
+   ResultText = format_teststep_result(LocalText('50#Ext. Volt.'));
+   Name = format_teststep_name(Name);
+   Pin1 = format_teststep_pin(get_pinname(Pin1));
+   Pin2 = format_teststep_pin(get_pinname(Pin2));
+   Value = get_voltage_value(ValuePrefix, Value);
+
+   Line = StrAdd(ResultText, Name);
+   Line = StrAdd(Line, Pin1);
+   Line = StrAdd(Line, Pin2);
+   Line = StrAdd(Line, Value);
+   Write(Line);
+end;
+
+//write section information into the report
+function display_sections(): void;
+begin
+   Count = ProjectGetSectionCount();
+   if (Count > 0)
+   begin
+      WriteLn(LocalText('70#Sections'));
+      Length = 40 + StrLength(LocalText('72#disabled'));
+      DashLine = FormatAlignLeft('-', Length, '-');
+      WriteLn(DashLine);
+      for Index = 1 to Count do
+      begin
+         Name = ProjectGetSectionName(Index);
+         Enabled = ProjectSectionEnabled(Name);
+         if (Enabled == TRUE)
+         begin
+            State = LocalText('71#enabled');
+         end
+         else
+         begin
+            State = LocalText('72#disabled');
+         end;
+         Line = FormatAlignLeft(Name, 40, ' ');
+         Line = StrAdd(Line, State);
+         WriteLn(Line);
+      end;
+      WriteLn(DashLine);
+      WriteLn('');
+   end;
+end;
+
+//Writes a warning into the report if not all required adapter cables were connected
+function check_adaptercables(): boolean;
+begin
+   Result = TRUE;
+   AllCableCount = AdapterCablesGetList(AllCables, ADAPTERCABLES_All);
+   ConnectedCableCount = 0;
+   NotConnectedCableCount = 0;
+   if (AllCableCount > 0)
+   begin
+      ConnectedCableCount = AdapterCablesGetList(ConnectedCables,
+                               ADAPTERCABLES_Connected);
+      MissingCableCount = AdapterCablesGetList(NotConnectedCables,
+                             ADAPTERCABLES_Missing);
+   end;
+   if (ConnectedCableCount <> AllCableCount)
+   begin
+      Result = FALSE;
+      WriteLn('');
+
+      TextAll = LocalText('76#Required adapter cables');
+      Length1 = StrLength(TextAll);
+      TextConnected = LocalText('77#Connected adapter cables');
+      Length2 = StrLength(TextConnected);
+      TextMissing = LocalText('78#Missing adapter cables');
+      Length3 = StrLength(TextMissing);
+
+      Length = ArithMax(Length1, Length2);
+      Length = ArithMax(Length, Length3);
+
+      TextAll = FormatAlignLeft(TextAll, Length, ' ');
+      TextAll = StrAdd(TextAll, ': ');
+      TextAll = StrAdd(TextAll, AllCableCount);
+      Length1 = StrLength(TextAll);
+
+      TextConnected = FormatAlignLeft(TextConnected, Length, ' ');
+      TextConnected = StrAdd(TextConnected, ': ');
+      TextConnected = StrAdd(TextConnected, ConnectedCableCount);
+      Length2 = StrLength(TextConnected);
+
+      TextMissing = FormatAlignLeft(TextMissing, Length, ' ');
+      TextMissing = StrAdd(TextMissing, ': ');
+      TextMissing = StrAdd(TextMissing, MissingCableCount);
+      Length3 = StrLength(TextMissing);
+
+      Length = ArithMax(Length1, Length2);
+      Length = ArithMax(Length, Length3);
+
+      Caption = FormatAlignCenter(LocalText('75#Test incomplete'), Length);
+      Line = FormatAlignLeft('-', Length, '-');
+      WriteLn(Caption);
+      WriteLn(Line);
+      WriteLn(TextAll);
+      WriteLn(TextConnected);
+      WriteLn(TextMissing);
+   end;
+end;
+
+function show_lastisolationtestcable(): void;
+begin
+   CableCount = AdapterCablesGetList(Cables, ADAPTERCABLES_All);
+   if (CableCount > 0)
+   begin
+      Pin = PinGetLastIsolationtestPin();
+      if (Pin <> PINADDRESS_Invalid)
+      begin
+         Cable = PinGetData(Pin, PIN_AdapterCableName);
+         Line = StrAdd(LocalText('86#Last cable tested in isolation test:'), ' ');
+         Line = StrAdd(Line, Cable);
+         WriteLn(Line);
+      end;
+   end;
+end;
+
+//Writes measurement parameters for continuity test
+function write_continuity_parameters(): void;
+begin
+   CommandsExecuted = (MiscGetNumberOfExecutedCommands(CMDGRP_Continuity) > 0);
+   if (ParamIsCommandGroupActive(CMDGRP_Continuity) AND
+       CommandsExecuted)
+   begin
+      Line = get_continuity_parameters();
+      WriteLn(LocalText('60#Parameters for continuity test'));
+      WriteLn(Line);
+      WriteLn('');
+   end;
+end;
+
+//Writes measurement parameters for LV isolation test
+function write_isolationlv_parameters(): void;
+begin
+   CommandsExecuted = (MiscGetNumberOfExecutedCommands(CMDGRP_IsolationLV) > 0);
+   if (ParamIsCommandGroupActive(CMDGRP_IsolationLV) AND
+       CommandsExecuted)
+   begin
+      Line = get_isolationlv_parameters();
+      WriteLn(LocalText('65#Parameters for LV isolation test'));
+      WriteLn(Line);
+      WriteLn('');
+   end;
+end;
+
+//Writes measurement parameters for HV isolation test
+function write_isolationhv_parameters(): void;
+begin
+   CommandsExecuted = (MiscGetNumberOfExecutedCommands(CMDGRP_IsolationHV) > 0);
+   if (ParamIsCommandGroupActive(CMDGRP_IsolationHV) AND
+       ParamGetIsolationHV(PARAM_IsolationHVValid) AND
+       CommandsExecuted)
+   begin
+      Line = get_isolationhv_parameters();
+      WriteLn(LocalText('67#Parameters for HV isolation test'));
+      WriteLn(Line);
+      WriteLn('');
+   end;
+end;
+
+//Writes measurement parameters for dielectric breakdown test
+function write_dielectricbreakdown_parameters(): void;
+begin
+   CommandsExecuted = (MiscGetNumberOfExecutedCommands(CMDGRP_DielectricBreakdown) > 0);
+   if (ParamIsCommandGroupActive(CMDGRP_DielectricBreakdown) AND
+       ParamGetDielectricBreakdown(PARAM_DielectricBreakdownValid) AND
+       CommandsExecuted)
+   begin
+      Line = get_dielectricbreakdown_parameters();
+      WriteLn(LocalText('68#Parameters for dielectric breakdown test'));
+      WriteLn(Line);
+      WriteLn('');
+   end;
+end;
+
+//writes the measurement parameters
+function write_parameters(): void;
+begin
+   WriteLn('');
+   write_continuity_parameters();
+   write_isolationlv_parameters();
+   write_isolationhv_parameters();
+   write_dielectricbreakdown_parameters();
+end;
+
+function writereport_comppath_design1(PinCount: integer; Pins: tarray): void;
+begin
+   for Count = 1 to PinCount do
+   begin
+      Pin = Pins[Count];
+      Pin = get_pinname(Pin);
+      if ((Count <> 1) AND (Count <> PinCount))
+      begin
+         Pin = StrAdd('   ', Pin);
+      end;
+      Pin = FormatAlignLeft(Pin, 20, ' ');
+      Zone = PinGetData(Pins[Count], PIN_InstallationZone);
+      Zone = FormatAlignLeft(Zone, 10, ' ');
+      Line = StrAdd(Pin, Zone);
+      if (Count == PinCount)
+      begin
+         Write(Line);
+      end
+      else
+      begin
+         WriteLn(Line);
+      end;
+   end;
+end;
+
+function writescreen_comppath_design1(PinCount: integer; Pins: tarray;
+            TeststepResult: integer): void;
+begin
+   for Count = 1 to PinCount do
+   begin
+      Pin = Pins[Count];
+      Pin = get_pinname(Pin);
+      if ((Count <> 1) AND (Count <> PinCount))
+      begin
+         Pin = StrAdd('   ', Pin);
+      end;
+      Pin = FormatAlignLeft(Pin, 20, ' ');
+      Zone = PinGetData(Pins[Count], PIN_InstallationZone);
+      Zone = FormatAlignLeft(Zone, 10, ' ');
+      Line = StrAdd(Pin, Zone);
+      if (TeststepResult == TESTSTEP_Passed)
+      begin
+         UIWriteNormal(Line);
+      end
+      else
+      begin
+         UIWriteError(Line);
+      end;
+   end;
+end;
+
+function display_rangetest(Length: integer): void;
+begin
+   if (MiscRangeTestRunning())
+   begin
+      RangeTestType = MiscRangeTestGetType();
+      WriteFunctions = FALSE;
+      WriteConnectors = FALSE;
+      WriteCables = FALSE;
+      if (RangeTestType == RANGETEST_Functions)
+      begin
+         WriteFunctions = TRUE;
+      end;
+      if (RangeTestType == RANGETEST_Connectors)
+      begin
+         UsedConnectorCount =
+            MiscRangeTestConnectors(RangeTestUsedConnectors, TRUE);
+         UnusedConnectorCount =
+            MiscRangeTestConnectors(RangeTestUnusedConnectors, FALSE);
+         WriteConnectors = TRUE;
+      end;
+      if ((RangeTestType == RANGETEST_AdtIsolationLV) OR
+          (RangeTestType == RANGETEST_AdtIsolationHV) OR
+          (RangeTestType == RANGETEST_AdtDielectricBreakdown))
+      begin
+         WriteCables = TRUE;
+      end;
+      Line = FormatAlignLeft(LocalText('74#Rangetest'), Length, ' ');
+      Line = StrAdd(Line, ': ');
+      //normal rangetest
+      if (WriteFunctions)
+      begin
+         FunctionCount = MiscRangeTestFunctionCount();
+         if (FunctionCount > 0)
+         begin
+            Line = StrAdd(Line, MiscRangeTestFunction(1));
+            WriteLn(Line);
+            for Index = 2 to FunctionCount do
+            begin
+               Line = FormatAlignLeft(' ', Length, ' ');
+               Line = StrAdd(Line, '  ');
+               Line = StrAdd(Line, MiscRangeTestFunction(Index));
+               WriteLn(Line);
+            end;
+         end;
+      end;
+      //Rangetest with connectors
+      if (WriteConnectors)
+      begin
+         if (UsedConnectorCount <= UnusedConnectorCount)
+         begin
+            Line = StrAdd(Line, RangeTestUsedConnectors[1]);
+            WriteLn(Line);
+            for Index = 2 to UsedConnectorCount do
+            begin
+               Line = FormatAlignLeft(' ', Length, ' ');
+               Line = StrAdd(Line, '  ');
+               Line = StrAdd(Line, RangeTestUsedConnectors[Index]);
+               WriteLn(Line);
+            end;
+         end
+         else
+         begin
+            Line = StrAdd(Line, LocalText('132#Disabled connectors'));
+            WriteLn(Line);
+            for Index = 1 to UnusedConnectorCount do
+            begin
+               Line = FormatAlignLeft(' ', Length, ' ');
+               Line = StrAdd(Line, '  ');
+               Line = StrAdd(Line, RangeTestUnusedConnectors[Index]);
+               WriteLn(Line);
+            end;
+         end;
+      end;
+      //Rangetest Isolation with adaptercables
+      if (WriteCables)
+      begin
+         CableCount = AdapterCablesGetList(AdapterCables,
+                         ADAPTERCABLES_RangeTestIsolation);
+         if (CableCount > 0)
+         begin
+            Line = StrAdd(Line, LocalText('83#From cable'));
+            Line = StrAdd(Line, ' "');
+            Line = StrAdd(Line, AdapterCables[1]);
+            Line = StrAdd(Line, '" ');
+            Line = StrAdd(Line, LocalText('84#to cable'));
+            Line = StrAdd(Line, ' "');
+            Line = StrAdd(Line, AdapterCables[CableCount]);
+            Line = StrAdd(Line, '"');
+            WriteLn(Line);
+         end;
+      end;
+   end;
+end;
+
+function display_ordernumber(Length: integer): void;
+begin
+   //write order number if exists
+   OrderNumber = GlobalDataGetOrderNumber();
+   if (StrCompare(OrderNumber, '') <> 0)
+   begin
+      Line = FormatAlignLeft(LocalText('93#Order number'), Length, ' ');
+      Line = StrAdd(Line, ': ');
+      Line = StrAdd(Line, OrderNumber);
+      WriteLn(Line);
+   end;
+end;
+
+function display_serialnumber(Length: integer): void;
+begin
+   //write serial number if exists
+   SerialNumber = GlobalDataGetSerialNumber();
+   if (StrCompare(SerialNumber, '') <> 0)
+   begin
+      Line = FormatAlignLeft(LocalText('113#Serial number'), Length, ' ');
+      Line = StrAdd(Line, ': ');
+      Line = StrAdd(Line, SerialNumber);
+      WriteLn(Line);
+   end;
+end;
+
+function display_teststart_inputdata(Length: integer): void;
+begin
+   //write additional input data form the test start program if exists
+   for Index = 1 to 6 do
+   begin
+      Text = GlobalDataRead(StrAdd('Text', Index), '', 'TestStart InputData');
+      Value = GlobalDataRead(StrAdd('Value', Index), '', 'TestStart InputData');
+      if ((StrCompare(Text, '') <> 0) AND (StrCompare(Value, '') <> 0))
+      begin
+         Line = FormatAlignLeft(Text, Length, ' ');
+         Line = StrAdd(Line, ': ');
+         Line = StrAdd(Line, Value);
+         WriteLn(Line);
+      end;
+   end;
+end;
+
+function display_username(Length: integer): void;
+begin
+   if (UserManagementGetEnabled())
+   begin
+      UserName = UserManagementGetUsername();
+      Line = FormatAlignLeft(LocalText('118#Username'), Length, ' ');
+      Line = StrAdd(Line, ': ');
+      Line = StrAdd(Line, UserName);
+      WriteLn(Line);
+   end;
+end;
+
+function display_fullusername(Length: integer): void;
+begin
+   if (UserManagementGetEnabled())
+   begin
+      FullUserName = UserManagementGetFullUsername();
+      Line = FormatAlignLeft(LocalText('119#Full name'), Length, ' ');
+      Line = StrAdd(Line, ': ');
+      Line = StrAdd(Line, FullUserName);
+      WriteLn(Line);
+   end;
+end;
+
+function display_usergroupname(Length: integer): void;
+begin
+   if (UserManagementGetEnabled())
+   begin
+      UserGroupName = UserManagementGetUserGroupName();
+      Line = FormatAlignLeft(LocalText('120#Group'), Length, ' ');
+      Line = StrAdd(Line, ': ');
+      Line = StrAdd(Line, UserGroupName);
+      WriteLn(Line);
+   end;
+end;
+
+function display_teststepcomment(Comment: string; 
+   DeclaredAsPassed: boolean = FALSE; DeclaredAsPassedBy: string = ''): void;
+begin
+   if (DeclaredAsPassed)
+   begin
+      Text = LocalText('146#Declared as "passed" by');
+      Text = StrAdd(Text, ': ');
+      Text = StrAdd(Text, DeclaredAsPassedBy);
+      if (StrCompare(Comment, '') <> 0)
+      begin
+         Text = StrAdd(Text, '<br>');
+         Comment = StrAdd(Text, Comment);
+      end
+      else
+      begin
+         Comment = Text;
+      end;
+   end;
+   if (StrCompare(Comment, '') <> 0)
+   begin
+      WriteLn('');
+      Pos = StrPosition('<br>', StrLowerCase(Comment));
+      while (Pos > 0)
+      begin
+         Pos = Pos - 1;
+         Line = StrCopy(Comment, 1, Pos);
+         WriteLn(Line);
+         Chars = Pos + 4;
+         Comment = StrDelete(Comment, 1, Chars);
+         Pos = StrPosition('<br>', StrLowerCase(Comment));
+      end;
+      Write(Comment);
+   end;
+end;
+
+//Funtion for ReportWriteNormal and ReportWriteError
+function report_write_teststep(Data: string): boolean;
+begin
+   Result = FALSE;
+   // Search for hidden tag
+   Tag = '<TESTSTEP>';
+   if (StrPosition(Tag, Data) == 1)
+   begin
+      Result = TRUE;
+      // Hidden tag found. Expected entry structure is as follows.
+      // ReportWriteNormal('<TESTSTEP>Passed;StepName;Pin1;Pin2;Value');
+      // Remaining text after tag will be separated by each semicolon and
+      // written into report like a test step.
+      Data = StrDelete(Data, 1, StrLength(Tag));
+      Columns = 5;
+      MiscCreateList(ColumnList, Columns);
+      PrelastColumn = Columns - 1;
+      for Column = 1 to PrelastColumn do
+      begin
+         SemicolonPos = StrPosition(';', Data);
+         Length = SemicolonPos - 1;
+         ColumnList[Column] = StrCopy(Data, 1, Length);
+         Data = StrDelete(Data, 1, SemicolonPos);
+      end;
+      ColumnList[Columns] = Data;
+
+      State = FormatAlignLeft(ColumnList[1], TESTSTEP_RESULT_WIDTH, ' ');
+      Name = FormatAlignLeft(ColumnList[2], TESTSTEP_NAME_WIDTH, ' ');
+      Pin1 = FormatAlignLeft(ColumnList[3], TESTSTEP_PIN_WIDTH, ' ');
+      Pin2 = FormatAlignLeft(ColumnList[4], TESTSTEP_PIN_WIDTH, ' ');
+      Value = ColumnList[5];
+      Line = StrAdd(StrAdd(StrAdd(StrAdd(State, Name), Pin1), Pin2), Value);
+      Write(Line);
+   end;
+end;
+
+//Writes the results of the command groups in the report
+function write_command_group_results(): void;
+begin
+   Text = get_command_group_result_string(CMDGRP_Continuity, 
+      FAILCOUNTER_Continuity);
+   if (StrCompare('', Text) <> 0)
+   begin
+      Line = FormatAlignLeft(LocalText('27#Continuity test'), 35, ' ');
+      Line = StrAdd(Line, ': ');
+      Line = StrAdd(Line, Text);
+      WriteLn(Line);
+   end;
+   Text = get_command_group_result_string(CMDGRP_IsolationLV,
+      FAILCOUNTER_IsolationLV);
+   if (StrCompare('', Text) <> 0)
+   begin
+      Line = FormatAlignLeft(LocalText('28#LV isolation test'), 35, ' ');
+      Line = StrAdd(Line, ': ');
+      Line = StrAdd(Line, Text);
+      WriteLn(Line);
+   end;
+   Text = get_command_group_result_string(CMDGRP_IsolationHV,
+      FAILCOUNTER_IsolationHV);
+   if (StrCompare('', Text) <> 0)
+   begin
+      Line = FormatAlignLeft(LocalText('29#HV isolation test'), 35, ' ');
+      Line = StrAdd(Line, ': ');
+      Line = StrAdd(Line, Text);
+      WriteLn(Line);
+   end;
+   Text = get_command_group_result_string(CMDGRP_DielectricBreakdown, 
+      FAILCOUNTER_DielectricBreakdown);
+   if (StrCompare('', Text) <> 0)
+   begin
+      Line = FormatAlignLeft(LocalText('30#Test for dielectric breakdown'), 35, ' ');
+      Line = StrAdd(Line, ': ');
+      Line = StrAdd(Line, Text);
+      WriteLn(Line);
+   end;
+   Text = get_command_group_result_string(CMDGRP_ElectricalComponents, 
+      FAILCOUNTER_ElectricalComponents);
+   if (StrCompare('', Text) <> 0)
+   begin
+      Line = FormatAlignLeft(LocalText('31#Test of electrical components'), 35, ' ');
+      Line = StrAdd(Line, ': ');
+      Line = StrAdd(Line, Text);
+      WriteLn(Line);
+   end;
+   Text = get_command_group_result_string(CMDGRP_VoltageAndCurrent, 
+      FAILCOUNTER_VoltageAndCurrent);
+   if (StrCompare('', Text) <> 0)
+   begin
+      Line = FormatAlignLeft(LocalText('179#Voltage and Current'), 35, ' ');
+      Line = StrAdd(Line, ': ');
+      Line = StrAdd(Line, Text);
+      WriteLn(Line);
+   end;
+   Text = get_command_group_result_string(CMDGRP_OpticalComponents, 
+      FAILCOUNTER_OpticalComponents);
+   if (StrCompare('', Text) <> 0)
+   begin
+      Line = FormatAlignLeft(LocalText('112#Test of optical components'), 35, ' ');
+      Line = StrAdd(Line, ': ');
+      Line = StrAdd(Line, Text);
+      WriteLn(Line);
+   end;
+   Text = get_command_group_result_string(CMDGRP_CANBus, FAILCOUNTER_CANBus);
+   if (StrCompare('', Text) <> 0)
+   begin
+      Line = FormatAlignLeft(LocalText('115#CAN bus'), 35, ' ');
+      Line = StrAdd(Line, ': ');
+      Line = StrAdd(Line, Text);
+      WriteLn(Line);
+   end;
+   Text = get_command_group_result_string(CMDGRP_IDD, FAILCOUNTER_IDD);
+   if (StrCompare('', Text) <> 0)
+   begin
+      Line = FormatAlignLeft(LocalText('180#IDD'), 35, ' ');
+      Line = StrAdd(Line, ': ');
+      Line = StrAdd(Line, Text);
+      WriteLn(Line);
+   end;
+   Text = get_command_group_result_string(CMDGRP_Detections, FAILCOUNTER_Detections);
+   if (StrCompare('', Text) <> 0)
+   begin
+      Line = FormatAlignLeft(LocalText('181#Detections'), 35, ' ');
+      Line = StrAdd(Line, ': ');
+      Line = StrAdd(Line, Text);
+      WriteLn(Line);
+   end;
+   Text = get_command_group_result_string(CMDGRP_Others, FAILCOUNTER_Others);
+   if (StrCompare('', Text) <> 0)
+   begin
+      Line = FormatAlignLeft(LocalText('32#Other tests'), 35, ' ');
+      Line = StrAdd(Line, ': ');
+      Line = StrAdd(Line, Text);
+      WriteLn(Line);
+   end;
+end;
+
+//Output if possible short to lower voltage level
+function short_to_lower_voltage_level(IsShort: boolean): void;
+begin
+   if (IsShort)
+   begin
+      WriteLn('');
+      Line = FormatAlignLeft(' ', 25, ' ');
+      Line = StrAdd(Line, LocalText('85#Possible short to lower voltagelevel'));
+      Write(Line);
+   end;
+end;
+
+//Returns a value text for HV isolation test steps
+function get_hv_isolation_value_text(IsArc, IsdIdt, IsEnergyLimit: boolean;
+   Prefix: string; Value: real): string;
+begin
+   if (IsArc)
+   begin
+      Result = LocalText('202#Arc');
+   end
+   else
+   begin
+      if (IsdIdt)
+      begin
+         Result = LocalText('203#dIdt');
+      end
+      else
+      begin
+         if (IsEnergyLimit)
+         begin
+            Result = LocalText('164#Energy > 350 mJ');
+         end
+         else
+         begin
+            Result = get_resistance_value(Prefix, Value);
+         end;
+      end;
+   end;
+end;
+
+function get_default_line(ResultText, Name, PinName1, PinName2, Value: string): string;
+begin
+   ResultText = format_teststep_result(ResultText);
+   Name = format_teststep_name(Name);
+   PinName1 = format_teststep_pin(PinName1);
+   PinName2 = format_teststep_pin(PinName2);
+   Result = ResultText + Name + PinName1 + PinName2 + Value;
+end;

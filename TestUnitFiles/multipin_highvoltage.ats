@@ -32,6 +32,9 @@
   get_netlist_primary(Debug: boolean = FALSE): string
   //  Retrieve all primary component pin names from the netlist as a semicolon-delimited string.
 
+  get_netlist_primary_all(Debug: boolean = FALSE): string;
+  // Aggregate primary pins from supported component types into a semicolon-delimited string.
+
   get_netlist_both(Debug: boolean = FALSE): string
   //  Retrieve a list of all named wire pins from the netlist.
 
@@ -47,20 +50,26 @@
   test_wires_guard(Debug: boolean = FALSE): integer;
   // Execute continuity guard tests across all discovered pin networks and compute an overall result.
 
-  no_conn_hv(Description: string; PinList: tpinarray)
-  //  Execute a high-voltage �no-connection� (isolation) test across a list of pins.
+  no_conn_hv_list(Description: string; PinList: tpinarray)
+  //  Execute a high-voltage "no-connection" (isolation) test across a list of pins.
 
   no_conn_hv_current_populated(Description: string; Tmeas: ttime = 1s)
-  //  Run a high-voltage DC dielectric breakdown test on POPULATED and UNPOPULATED contacts.
+  //  Run a high-voltage DC dielectric breakdown test on POPULATED and UNPOPULATED contacts (WIRES ONLY!).
 
   no_conn_hv_populated(Description: string; Tmeas: ttime = 1s)
-  //  Run a high-voltage "no-connection" (isolation) test on POPULATED and shorter duration on UNPOPULATED contacts.
+  //  Run a high-voltage "no-connection" (isolation) test on POPULATED and shorter duration on UNPOPULATED contacts (WIRES ONLY!).
 
-  no_conn_db(Description: string; PinList: tpinarray)
+  no_conn_db_list(Description: string; PinList: tpinarray)
   //  Execute a dielectric-breakdown "no-connection" test for each pin in a list.
 
   no_conn_db_populated(Description: string; Twait: ttime = 1s, Tmeas: ttime = 1s)
-  //  Run a dielectric-breakdown �no-connection� test on POPULATED and shorter duration on UNPOPULATED contacts.
+  //  Run a dielectric-breakdown "no-connection" test on POPULATED and shorter duration on UNPOPULATED contacts (WIRES ONLY!).
+
+  no_conn_lv_list(Description: string; PinList: tpinarray): void;
+  // Execute low-voltage “no-connection” guard checks across a list of pins.
+
+  isolation_test_lv_guard(Debug: boolean = FALSE): void;
+  // Run low-voltage isolation guard across all fixture pins.
 }
 
 
@@ -187,6 +196,319 @@ begin
    begin
       DebugNames = transform_pinlist_name_str(PinList);
       UIWriteNormal(DebugNames);
+   end;
+end;
+
+{**
+  @brief Build and return a semicolon-delimited list of all primary pins for the specified component.
+
+  @details
+  Queries the netlist for the given component type, collects its primary pins into
+  a list, and serializes that list as a semicolon-delimited string. If no pins are
+  found the function returns an empty string. When debug mode is enabled, a concise
+  summary of the discovered pins is emitted to the operator interface.
+
+  @param Component Integer identifier of the component type to query for primary pins.
+  @param Debug When TRUE, emits a diagnostic summary of the discovered pins.
+
+  @return Semicolon-delimited string of primary pins for the component; empty string if none.
+
+  @pre Helper routines are available and the component/netlist data are initialized:
+       - NWCreatePinlist(listRef, componentId, dataSelector, namePattern, pinClass, includeHidden)
+       - MiscListToString(listRef, delimiter)
+       - strip_list_empty_string(strRef)
+       - StrAdd(base, suffix)
+       - UIWriteWarning(message)
+
+  @post If Debug is TRUE, a diagnostic message is written to the operator interface.
+
+  @sideeffects May write a diagnostic line to the UI when Debug is TRUE.
+
+  @header
+  get_component_netlist_primary(Component: integer; Debug: boolean = FALSE): string;
+  Return semicolon-delimited primary pins for a component.
+*}
+function get_component_netlist_primary(Component: integer; Debug: boolean = FALSE): string;
+begin
+   // Initialize the return value to an empty string; indicates "no pins" until proven otherwise.
+   Result = '';
+
+   // Create a pin list containing all primary pins for the specified component type.
+   Count = NWCreatePinlist(PinList, Component, COMPONENTDATA_Name, '*', COMPONENTPINS_Primary, FALSE);
+
+   // If any primary pins were found, serialize them to a semicolon-delimited string and normalize.
+   if (Count > 0)
+   begin
+      // Convert the pin list to a string representation for return.
+      Result = MiscListToString(PinList, ';');
+      // Remove any empty elements from the serialized string (assumes in-place normalization).
+      strip_list_empty_string(Result);
+   end;
+
+   // When debugging, emit a summary of pins discovered for the component.
+   if (Debug)
+   begin
+      // Build a concise, human-readable message with the component id and resulting pin string.
+      Str = StrAdd('Pins found for component: ', Component);
+      Str = StrAdd(Str, ' --> ');
+      Str = StrAdd(Str, Result);
+      // Present the message to the operator interface.
+      UIWriteWarning(Str);
+   end;
+
+end;
+
+{**
+  @brief Aggregate and serialize all primary pins across relevant components.
+
+  @details
+  Builds a unified collection of primary pins drawn from the standard component
+  index range (0..8) and an additional variable-resistor component. For each
+  component, the routine retrieves its primary-pin netlist as a semicolon-delimited
+  string, tokenizes it into a list, and merges it into an accumulator. The final
+  result is serialized into a semicolon-delimited string with empty entries removed.
+  When debug mode is enabled, a human-readable name string for all accumulated pins
+  is emitted to the operator interface.
+
+  @param Debug When TRUE, emits diagnostic output of aggregated primary-pin names.
+
+  @return Semicolon-delimited string of all aggregated primary pins.
+
+  @pre Helper routines must be available and the active fixture context selected:
+       - get_component_netlist_primary(index, Debug)
+       - MiscCreateList(listRef, initialSize)
+       - MiscListFromString(srcStr, dstList, delimiter)
+       - MiscAddLists(dst, listA, listB)
+       - MiscListToString(listRef, delimiter)
+       - strip_list_empty_string(str)
+       - transform_pinlist_name_str(listRef)
+       - UIWriteWarning(message)
+
+  @post Result contains a normalized, semicolon-delimited list of all primary pins.
+
+  @sideeffects May write debug information to the operator interface when Debug is TRUE.
+
+  @note The explicit variable-resistor component is processed after the 0..8 range.
+
+  @header
+  get_netlist_primary_all(Debug: boolean = FALSE): string;
+  Aggregate and serialize all primary pins for the active fixture components.
+*}
+function get_netlist_primary_all(Debug: boolean = FALSE): string;
+begin
+
+   // Create the accumulator list that will hold all primary pins collected below.
+   MiscCreateList(PrimaryPins, 1);
+   
+   // Iterate the standard component index range and collect primary pins per component.
+   for Component = 0 to 8 do
+   begin
+      // Fetch the component's primary-pin netlist as a semicolon-delimited string.
+      ListStr = get_component_netlist_primary(Component, Debug);
+
+      // Process only non-empty netlist strings.
+      if (StrCompare(ListStr, '') <> 0)
+      begin
+         // Tokenize the string into PinList; Count returns number of tokens parsed.
+         Count = MiscListFromString(ListStr, PinList, ';');
+
+         // If tokens were parsed, merge them into the running accumulator list.
+         if (Count > 0)
+         begin
+            // Merge the primary pins into the accumulator.
+            MiscAddLists(PrimaryPins, PrimaryPins, PinList);
+         end;
+      end;
+   end;
+
+   // Handle the variable-resistor component explicitly and merge its primary pins.
+   ListStr = get_component_netlist_primary(COMPONENT_VariableResistor, Debug);
+
+   // Process only non-empty netlist strings for the variable-resistor component.
+   if (StrCompare(ListStr, '') <> 0)
+   begin
+      // Tokenize the variable-resistor netlist into PinList.
+      Count = MiscListFromString(ListStr, PinList, ';');
+
+      // If tokens were parsed, merge them into the running accumulator list.
+      if (Count > 0)
+      begin
+         // Merge the primary pins into the accumulator.
+         MiscAddLists(PrimaryPins, PrimaryPins, PinList);
+      end;
+   end;
+
+   // Serialize the aggregated list of primary pins into a semicolon-delimited string.
+   Result = MiscListToString(PrimaryPins, ';');
+
+   // Normalize the serialized string by removing empty elements.
+   Result = strip_list_empty_string(Result);
+
+   // When debugging, emit a human-readable list of all accumulated primary pins.
+   if (Debug)
+   begin
+      // Transform the pin list into a human-readable name string.
+      DebugNames = transform_pinlist_name_str(PrimaryPins);
+      // Present the names to the operator interface.
+      UIWriteWarning(DebugNames);
+   end;
+end;
+
+
+{**
+  @brief Build and return a semicolon-delimited list of both primary and secondary pins for the specified component.
+
+  @details
+  For the provided component identifier, this routine queries the netlist for all pins
+  classified as both primary and secondary. When any pins are found, they are serialized
+  into a semicolon-delimited string and normalized to remove empty elements. If no pins
+  are present, an empty string is returned. When debug mode is enabled, a concise summary
+  of the discovered pins is emitted to the operator interface.
+
+  @param Component Integer identifier of the component type to query for pins (both classes).
+  @param Debug When TRUE, emits a diagnostic summary of the discovered pins.
+
+  @return Semicolon-delimited string of pins for the component; empty string if none.
+
+  @pre Helper routines are available and the component/netlist data are initialized:
+       - NWCreatePinlist(listRef, componentId, dataSelector, namePattern, pinClass, includeHidden)
+       - MiscListToString(listRef, delimiter)
+       - strip_list_empty_string(strRef)
+       - StrAdd(base, suffix)
+       - UIWriteWarning(message)
+
+  @post If Debug is TRUE, a diagnostic message is written to the operator interface.
+
+  @sideeffects May write a diagnostic line to the UI when Debug is TRUE.
+
+  @header
+  get_component_netlist_both(Component: integer; Debug: boolean = FALSE): string;
+  Return semicolon-delimited primary+secondary pins for a component.
+*}
+function get_component_netlist_both(Component: integer; Debug: boolean = FALSE): string;
+begin
+   // Initialize the return value to an empty string; indicates "no pins" until populated.
+   Result = '';
+
+   // Create a pin list containing both primary and secondary pins for the specified component type.
+   Count = NWCreatePinlist(PinList, Component, COMPONENTDATA_Name, '*', COMPONENTPINS_Both, FALSE);
+
+   // If any pins were found, serialize them to a semicolon-delimited string and normalize.
+   if (Count > 0)
+   begin
+      // Convert the pin list to a string representation for return.
+      Result = MiscListToString(PinList, ';');
+      // Remove any empty elements from the serialized string (assumes in-place normalization).
+      strip_list_empty_string(Result);
+   end;
+
+   // When debugging, emit a summary of pins discovered for the component.
+   if (Debug)
+   begin
+      // Build a concise, human-readable message with the component id and resulting pin string.
+      Str = StrAdd('Pins found for component: ', Component);
+      Str = StrAdd(Str, ' --> ');
+      Str = StrAdd(Str, Result);
+      // Present the message to the operator interface.
+      UIWriteWarning(Str);
+   end;
+
+end;
+
+
+{**
+  @brief Aggregate and serialize both primary and secondary pins across relevant components.
+
+  @details
+  Builds a unified collection of pins classified as both primary and secondary from the
+  standard component index range (0..8) and the variable-resistor component. For each
+  component, the routine retrieves its both-class pin netlist as a semicolon-delimited
+  string, tokenizes it into a list, and merges it into an accumulator. The aggregated
+  set is serialized to a semicolon-delimited string and normalized by removing empty
+  entries. When debug mode is enabled, a human-readable name string for all accumulated
+  pins is emitted to the operator interface.
+
+  @param Debug When TRUE, emits diagnostic output of aggregated pin names.
+
+  @return Semicolon-delimited string of all aggregated pins (both classes).
+
+  @pre Helper routines must be available and the active fixture context selected:
+       - get_component_netlist_both(index, Debug)
+       - MiscCreateList(listRef, initialSize)
+       - MiscListFromString(srcStr, dstList, delimiter)
+       - MiscAddLists(dst, listA, listB)
+       - MiscListToString(listRef, delimiter)
+       - strip_list_empty_string(strRef)
+       - transform_pinlist_name_str(listRef)
+       - UIWriteWarning(message)
+
+  @post Result contains a normalized, semicolon-delimited list of all pins (both classes).
+
+  @sideeffects May write debug information to the operator interface when Debug is TRUE.
+
+  @note The variable-resistor component is processed explicitly after the 0..8 range.
+
+  @header
+  get_netlist_both_all(Debug: boolean = FALSE): string;
+  Aggregate and serialize both-class pins for the active fixture components.
+*}
+function get_netlist_both_all(Debug: boolean = FALSE): string;
+begin
+
+   // Create the accumulator list that will hold all pins (both classes) collected below.
+   MiscCreateList(BothPins, 1);
+   
+   // Iterate the standard component index range and collect both-class pins per component.
+   for Component = 0 to 8 do
+   begin
+      // Fetch the component's both-class pin netlist as a semicolon-delimited string.
+      ListStr = get_component_netlist_both(Component, Debug);
+
+      // Process only non-empty netlist strings.
+      if (StrCompare(ListStr, '') <> 0)
+      begin
+         // Tokenize the string into PinList; Count returns number of tokens parsed.
+         Count = MiscListFromString(ListStr, PinList, ';');
+
+         // If tokens were parsed, merge them into the running accumulator list.
+         if (Count > 0)
+         begin
+            // Merge the pins into the accumulator list.
+            MiscAddLists(BothPins, BothPins, PinList);
+         end;
+      end;
+   end;
+
+   // Handle the variable-resistor component explicitly and merge its both-class pins.
+   ListStr = get_component_netlist_both(COMPONENT_VariableResistor, Debug);
+
+   // Process only non-empty netlist strings for the variable-resistor component.
+   if (StrCompare(ListStr, '') <> 0)
+   begin
+      // Tokenize the variable-resistor netlist into PinList.
+      Count = MiscListFromString(ListStr, PinList, ';');
+
+      // If tokens were parsed, merge them into the running accumulator list.
+      if (Count > 0)
+      begin
+         // Merge the pins into the accumulator list.
+         MiscAddLists(BothPins, BothPins, PinList);
+      end;
+   end;
+
+   // Serialize the aggregated list of pins into a semicolon-delimited string.
+   Result = MiscListToString(BothPins, ';');
+
+   // Normalize the serialized string by removing empty elements.
+   Result = strip_list_empty_string(Result);
+
+   // When debugging, emit a human-readable list of all accumulated pins.
+   if (Debug)
+   begin
+      // Transform the pin list into a human-readable name string.
+      DebugNames = transform_pinlist_name_str(BothPins);
+      // Present the names to the operator interface.
+      UIWriteWarning(DebugNames);
    end;
 end;
 
@@ -401,7 +723,7 @@ end;
 
 function no_conn_all_lv_guard(Name: string; Pin1: tpin; Debug: boolean = FALSE): integer;
 begin
-   Result = NoConnAllLV('Name', Pin1);
+   Result = NoConnAllLV(Name, Pin1);
 
    // If the test did not pass, run the standardized failure timing/diagnostic handler.
    if (Result <> TESTSTEP_Passed)
@@ -419,7 +741,7 @@ end;
 
 function no_conn_all_hv_guard(Name: string; Pin1: tpin; Debug: boolean = FALSE): integer;
 begin
-   Result = NoConnAllHV('Name', Pin1);
+   Result = NoConnAllHV(Name, Pin1);
 
    // If the test did not pass, run the standardized failure timing/diagnostic handler.
    if (Result <> TESTSTEP_Passed)
@@ -437,7 +759,7 @@ end;
 
 function no_conn_all_db_guard(Name: string; Pin1: tpin; Debug: boolean = FALSE): integer;
 begin
-   Result = NoConnAllDB('Name', Pin1);
+   Result = NoConnAllDB(Name, Pin1);
 
    // If the test did not pass, run the standardized failure timing/diagnostic handler.
    if (Result <> TESTSTEP_Passed)
@@ -502,7 +824,6 @@ begin
       set_guard_tested('CONTINUITY', Debug);
    end;
 end;
-
 
 {**
   @brief Execute continuity guard tests across all discovered pin networks and compute an overall result.
@@ -1118,7 +1439,7 @@ end;
 
  @see NoConnAllHV, MiscGetListSize, PinGetData
 }
-function no_conn_hv(Description: string; PinList: tpinarray): void;
+function no_conn_hv_list(Description: string; PinList: tpinarray): void;
 begin
    AllPassed = TRUE;  // assume success until a failure occurs
 
@@ -1146,8 +1467,8 @@ end;
  @brief Run a high-voltage DC dielectric breakdown test on POPULATED and UNPOPULATED contacts.
 
  @details
- The routine executes two HV isolation passes using no_conn_hv():
- 1) POPULATED contacts taken from the primary netlist, and
+ The routine executes two HV isolation passes using no_conn_hv_list():
+ 1) POPULATED contacts taken from the primary netlist (WIRES ONLY!), and
  2) UNPOPULATED contacts computed as the set difference between all defined pins and all wired pins.
 
  Workflow:
@@ -1157,9 +1478,9 @@ end;
    except the fifth argument, which is set from @p Tmeas (timing/measurement dwell as defined
    by your platform).
  - Records the active measurement parameters under CMDGRP_IsolationHV.
- - Invokes no_conn_hv() for each pin set, forwarding @p Description for report/log traceability.
+ - Invokes no_conn_hv_list() for each pin set, forwarding @p Description for report/log traceability.
 
- @param Description  Human-readable label/identifier forwarded to no_conn_hv() for consistent reporting.
+ @param Description  Human-readable label/identifier forwarded to no_conn_hv_list() for consistent reporting.
  @param Tmeas        Measurement/hold time applied through ParamIsolationHV()'s fifth parameter (default 1s).
 
  @return void
@@ -1167,7 +1488,7 @@ end;
  @pre
  - Helper routines/identifiers are available: blank_line(), msg_box_border(), get_netlist_primary(),
    get_named_pin_list_all(), get_netlist_both(), MiscListFromString(), MiscSubtractLists(),
-   ParamIsolationHV(), ReportWriteMeasurementParameters(), no_conn_hv(), CMDGRP_IsolationHV.
+   ParamIsolationHV(), ReportWriteMeasurementParameters(), no_conn_hv_list(), CMDGRP_IsolationHV.
  - Variables/handles exist and are compatible with the helpers:
    PopulatedPinListStr, PopulatedPinList, AllPinsListStr, AllWireListStr,
    FullPinList, WirePinList, UnconnectedPinList.
@@ -1193,7 +1514,7 @@ begin
    PopulatedPinListStr = get_netlist_primary(); // Acquire semicolon-delimited primary-netlist pins
    MiscListFromString(PopulatedPinListStr,PopulatedPinList,';'); // Tokenize into PopulatedPinList
 
-   no_conn_hv(Description, PopulatedPinList); // Execute HV isolation test on POPULATED pins with label
+   no_conn_hv_list(Description, PopulatedPinList); // Execute HV isolation test on POPULATED pins with label
 
    blank_line(); // Spacer between sections
    msg_box_border('Testing contacts -NOT- in netlist', '*'); // Section header for UNPOPULATED pins
@@ -1212,15 +1533,15 @@ begin
    // Compute Unconnected pins by removing netlist wires from the full list
    MiscSubtractLists(UnconnectedPinList, FullPinList, WirePinList); // Unconnected = FullPinList - WirePinList
 
-   no_conn_hv(Description, UnconnectedPinList); // Execute HV isolation test on UNPOPULATED pins with same label
+   no_conn_hv_list(Description, UnconnectedPinList); // Execute HV isolation test on UNPOPULATED pins with same label
 end;
 
 {**
- @brief Run a high-voltage isolation (�no-connection�) test on POPULATED and UNPOPULATED contacts.
+ @brief Run a high-voltage isolation (no-connection) test on POPULATED and UNPOPULATED contacts.
 
  @details
- The routine executes two HV isolation passes using no_conn_hv():
- 1) POPULATED contacts taken from the primary netlist, and
+ The routine executes two HV isolation passes using no_conn_hv_list():
+ 1) POPULATED contacts taken from the primary netlist (WIRES ONLY!), and
  2) UNPOPULATED contacts computed as the set difference between all defined pins and all wired pins.
 
  Workflow:
@@ -1230,9 +1551,9 @@ end;
    except the fifth argument, which is set from @p Tmeas (timing/measurement dwell as defined
    by your platform).
  - Records the active measurement parameters under CMDGRP_IsolationHV.
- - Invokes no_conn_hv() for each pin set, forwarding @p Description for report/log traceability.
+ - Invokes no_conn_hv_list() for each pin set, forwarding @p Description for report/log traceability.
 
- @param Description  Human-readable label/identifier forwarded to no_conn_hv() for consistent reporting.
+ @param Description  Human-readable label/identifier forwarded to no_conn_hv_list() for consistent reporting.
  @param Tmeas        Measurement/hold time applied through ParamIsolationHV()�s fifth parameter (default 1s).
 
  @return void
@@ -1240,7 +1561,7 @@ end;
  @pre
  - Helper routines/identifiers are available: blank_line(), msg_box_border(), get_netlist_primary(),
    get_named_pin_list_all(), get_netlist_both(), MiscListFromString(), MiscSubtractLists(),
-   ParamIsolationHV(), ReportWriteMeasurementParameters(), no_conn_hv(), CMDGRP_IsolationHV.
+   ParamIsolationHV(), ReportWriteMeasurementParameters(), no_conn_hv_list(), CMDGRP_IsolationHV.
  - Variables/handles exist and are compatible with the helpers:
    PopulatedPinListStr, PopulatedPinList, AllPinsListStr, AllWireListStr,
    FullPinList, WirePinList, UnconnectedPinList.
@@ -1266,7 +1587,7 @@ begin
    PopulatedPinListStr = get_netlist_primary(); // Acquire semicolon-delimited primary-netlist pins
    MiscListFromString(PopulatedPinListStr,PopulatedPinList,';'); // Tokenize into PopulatedPinList
 
-   no_conn_hv(Description, PopulatedPinList); // Execute HV isolation test on POPULATED pins with label
+   no_conn_hv_list(Description, PopulatedPinList); // Execute HV isolation test on POPULATED pins with label
 
    blank_line(); // Spacer between sections
    msg_box_border('Testing contacts -NOT- in netlist', '*'); // Section header for UNPOPULATED pins
@@ -1285,7 +1606,7 @@ begin
    // Compute Unconnected pins by removing netlist wires from the full list
    MiscSubtractLists(UnconnectedPinList, FullPinList, WirePinList); // Unconnected = FullPinList - WirePinList
 
-   no_conn_hv(Description, UnconnectedPinList); // Execute HV isolation test on UNPOPULATED pins with same label
+   no_conn_hv_list(Description, UnconnectedPinList); // Execute HV isolation test on UNPOPULATED pins with same label
 end;
 
 {**
@@ -1394,7 +1715,7 @@ end;
 
  @see NoConnAllDB, MiscGetListSize, PinGetData
 }
-function no_conn_db(Description: string; PinList: tpinarray): void;
+function no_conn_db_list(Description: string; PinList: tpinarray): void;
 begin
    AllPassed = TRUE;  // assume success until a failure occurs
 
@@ -1415,16 +1736,15 @@ begin
          end;
       end;
    end;
-
 end;
 
 
 {**
- @brief Run a dielectric-breakdown �no-connection� test on POPULATED and UNPOPULATED contacts.
+ @brief Run a dielectric-breakdown 'no-connection' test on POPULATED and UNPOPULATED contacts.
 
  @details
- Executes two dielectric-breakdown (DB) passes using no_conn_db():
- 1) POPULATED contacts obtained from the primary netlist, then
+ Executes two dielectric-breakdown (DB) passes using no_conn_db_list():
+ 1) POPULATED contacts obtained from the primary netlist (WIRES ONLY!), then
  2) UNPOPULATED contacts computed as the set difference of all defined pins and all wired pins.
 
  The routine:
@@ -1432,9 +1752,9 @@ end;
  - Builds pin lists by tokenizing semicolon-delimited strings.
  - Applies DB timing via ParamDielectricBreakdown() using @p Twait and @p Tmeas.
  - Records the active measurement parameters under CMDGRP_IsolationDB.
- - Invokes no_conn_db() for both pin sets, forwarding @p Description for report/log traceability.
+ - Invokes no_conn_db_list() for both pin sets, forwarding @p Description for report/log traceability.
 
- @param Description  Human-readable label/identifier forwarded to no_conn_db() for consistent reporting.
+ @param Description  Human-readable label/identifier forwarded to no_conn_db_list() for consistent reporting.
  @param Twait        Wait time before the DB measurement window (default 1s).
  @param Tmeas        Duration of the DB measurement window (default 1s).
 
@@ -1443,7 +1763,7 @@ end;
  @pre
  - Helper routines/identifiers are available: blank_line(), msg_box_border(), get_netlist_primary(),
    get_named_pin_list_all(), get_netlist_both(), MiscListFromString(), MiscSubtractLists(),
-   ParamDielectricBreakdown(), ReportWriteMeasurementParameters(), no_conn_db(), CMDGRP_IsolationDB.
+   ParamDielectricBreakdown(), ReportWriteMeasurementParameters(), no_conn_db_list(), CMDGRP_IsolationDB.
  - Variables/handles exist and are compatible with the helpers:
    PopulatedPinListStr, PopulatedPinList, AllPinsListStr, AllWireListStr,
    FullPinList, WirePinList, UnconnectedPinList.
@@ -1469,10 +1789,11 @@ begin
 
    msg_box_border('Testing contacts -CONTAINED- in netlist', '*'); // Section header for POPULATED pins
 
+   // NOTE: This only gathers WIRE pins, not other components.
    PopulatedPinListStr = get_netlist_primary(); // Acquire semicolon-delimited primary-netlist pins
    MiscListFromString(PopulatedPinListStr,PopulatedPinList,';'); // Tokenize into PopulatedPinList
 
-   no_conn_db(Description, PopulatedPinList); // Execute dielectric-breakdown test on POPULATED pins with label
+   no_conn_db_list(Description, PopulatedPinList); // Execute dielectric-breakdown test on POPULATED pins with label
 
    blank_line(); // Spacer between sections
    msg_box_border('Testing contacts -NOT- in netlist', '*'); // Section header for UNPOPULATED pins
@@ -1491,5 +1812,109 @@ begin
    // Compute Unconnected pins by removing netlist wires from the full list
    MiscSubtractLists(UnconnectedPinList, FullPinList, WirePinList); // Unconnected = FullPinList - WirePinList
 
-   no_conn_db(Description, UnconnectedPinList); // Execute dielectric-breakdown test on UNPOPULATED pins with same label
+   no_conn_db_list(Description, UnconnectedPinList); // Execute dielectric-breakdown test on UNPOPULATED pins with same label
+end;
+
+{**
+  @brief Execute low-voltage “no-connection” guard checks across a list of pins.
+
+  @param Description  Human-readable context string forwarded to the per-pin guard routine.
+  @param PinList      Array of pins to evaluate for unintended low-voltage connectivity.
+
+  @return void
+
+  @details
+  For each pin in PinList, this routine invokes the low-voltage isolation guard
+  (no-connection check). It tracks an aggregate success flag (AllPassed), marking
+  it FALSE on any failing subtest. Optional UI echoes of the pin count and the
+  current pin under test are present but commented out.
+
+  @pre MiscGetListSize, PinGetData, no_conn_all_lv_guard, and UIWriteNormal exist.
+  @post Aggregate success is recorded in AllPassed; callers may inspect it if in scope.
+**}
+function no_conn_lv_list(Description: string; PinList: tpinarray): void;
+begin
+   // Initialize aggregate pass flag; assume success until a failure occurs.
+   AllPassed = TRUE;
+
+   // Determine how many pins are in the provided list.
+   Count = MiscGetListSize(PinList);
+   //UIWriteNormal(Count)
+
+   // Run the low-voltage no-connection guard across each listed pin (if any).
+   if (Count >= 1)
+   begin
+      // Iterate over each pin to evaluate isolation.
+      for Index = 1 to Count do
+      begin
+         // Fetch a friendly pin name for optional logging/diagnostics.
+         PinName = PinGetData(PinList[Index], PIN_Name);
+         //UIWriteNormal(PinName)
+         // Invoke the per-pin low-voltage no-connection guard; returns TRUE on pass.
+         Result = no_conn_all_lv_guard(Description, PinList[Index]);
+         // If any pin fails isolation, record the overall failure.
+         if (Result == FALSE)
+         begin
+            AllPassed = FALSE;
+         end;
+      end;
+   end;
+end;
+
+{**
+  @brief Run a low-voltage isolation (no-connection) guard across all pins in the current fixture/connector scope.
+
+  @details
+  This routine performs a guard pass intended to catch unintended connections at low voltage:
+  1) Inserts a visual spacer into the log for readability.
+  2) Retrieves the primary netlist’s complete pin inventory as a semicolon-delimited string.
+  3) Tokenizes that string into a list structure for downstream processing.
+  4) Invokes the no-connection guard at low voltage over the full pin set, recorded under the label "NCA LV".
+
+  @param Debug When TRUE, subordinate helper routines may emit diagnostic output useful during development and troubleshooting.
+
+  @return None (procedure has side effects only).
+
+  @pre The active fixture/connector context must be selected and populated; helper functions must be available:
+       - get_netlist_primary_all(Debug): returns a semicolon-delimited string of all defined pins in scope.
+       - MiscListFromString(src, dst, delim): tokenizes the string into a list.
+       - no_conn_lv_list(label, list): performs the low-voltage no-connection guard using the provided list.
+
+  @post The test plan/log will reflect execution of a low-voltage isolation guard over the full pin set, labeled "NCA LV".
+
+  @sideeffects May append human-readable output to logs; may influence subsequent guard/reporting state.
+
+  @note "LV" refers to low voltage. The "NCA LV" label is used for operator and report visibility.
+
+  @header
+  isolation_test_lv_guard(Debug: boolean = FALSE): void;
+  Run low-voltage isolation guard across all fixture pins.
+*}
+function isolation_test_lv_guard(Debug: boolean = FALSE): void;
+begin
+   // Insert a visual spacer in the operator/test log for readability.
+   blank_line();
+
+   // Find all non-netlist pins
+   AllPinsStr = get_named_pin_list_all(); // Retrieve all defined pins (fixture/connector scope)
+
+   AllPrimaryPinListStr = get_netlist_primary_all();
+
+   AllComponentsBothStr = get_netlist_both_all(); // Retrieve all wired pins/ends from the combined netlist
+
+   MiscListFromString(AllPinsStr,AllPinList,';'); // Tokenize full pin inventory
+   MiscListFromString(AllComponentsBothStr,ComponentBothPinList,';'); // Tokenize wired-pin inventory
+   MiscListFromString(AllPrimaryPinListStr, AllPinPrimaryList, ';');
+
+   // Compute Unconnected pins by removing netlist wires from the full list
+   MiscSubtractLists(UnconnectedPinList, AllPinList, ComponentBothPinList); // Unconnected = FullPinList - WirePinList
+   MiscAddLists(PrimaryPlusUnconnectedList, AllPinPrimaryList, UnconnectedPinList);
+
+   if (Debug)
+   begin
+      PrimaryPlusUnconnectedListStr = MiscListToString(PrimaryPlusUnconnectedList, ',');
+      ui_print_str_2('Pins to Test: ', PrimaryPlusUnconnectedListStr, FALSE, TRUE, FALSE, Debug);
+   end;
+   // Execute the low-voltage no-connection guard across the complete pin list with reporting label "NCA LV".
+   no_conn_lv_list('NCL LV', PrimaryPlusUnconnectedList);
 end;

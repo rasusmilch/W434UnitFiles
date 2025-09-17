@@ -1,0 +1,310 @@
+//Output for the command ParamIsolationHVFirstLevel
+template ParamIsolationHVFirstLevel
+begin
+   Line = get_isolationhv_parameters_text(RES_VoltageChanged, RES_HVFLVoltage,
+      RES_ThresholdChanged, RES_HVFLThreshold, RES_HVFLUseIThreshold,
+      RES_HVFLIThreshold, RES_TriseChanged, RES_HVFLTrise,
+      RES_TwaitChanged, RES_HVFLTwait, RES_TmeasChanged, RES_HVFLTmeas,
+      RES_AutoRangeChanged, RES_HVFLAutoRange,
+      RES_CurrentLimitChanged, RES_HVFLCurrentLimit,
+      RES_TmeasReductionChanged, RES_HVFLTmeasReduction,
+      RES_TmeasFactorChanged, RES_HVFLTmeasFactor,
+      RES_VoltageRampChanged, RES_HVFLVoltageRamp,
+      RES_dIdtEnabledChanged, RES_HVFLdIdtEnabled,
+      RES_dIdtCurrentThresholdChanged, RES_HVFLdIdtCurrentThreshold,
+      RES_dIdtTimeThresholdChanged, RES_HVFLdIdtTimeThreshold);
+   if (StrCompare(Line, '') <> 0)
+   begin
+      WriteLn(LocalText('161#Parameters for first level of the two level HV isolation test'));
+      Write(Line);
+   end;
+end;
+
+//Output commands for the command NoConnectionHVTwoLevels
+template NoConnectionHVTwoLevels
+begin
+   Name = get_teststep_name(RES_Name, LocalText('222#NC HV2L'));
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+            FailText = ' ';
+            Level2Value = TRUE;
+         end;
+         case TESTSTEP_Failed:
+         begin
+            IsArc = RES_Level1Arc OR RES_Level2Arc;
+            IsdIdt = RES_Level1dIdt OR RES_Level2dIdt;
+            IsEnergyLimit = RES_Level1ELim OR RES_Level2ELim;
+            IsShort = (NOT IsArc) AND (NOT IsdIdt) AND (NOT IsEnergyLimit);
+            ResultText = get_hv_isolation_error_text(IsArc, IsdIdt, IsEnergyLimit);
+            FailText = get_hv_two_levels_fail_text(RES_Level1Error);
+            Level2Value = NOT RES_Level1Error;
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+            FailText = ' ';
+            Level2Value = FALSE;
+         end;
+      end;
+      ResultText = format_teststep_result(ResultText);
+      Value = LocalText('220#Lvl1') + ': ';
+      ValueText = get_hv_isolation_value_text(RES_Level1Arc, RES_Level1dIdt,
+         RES_Level1ELim, RES_Level1Prefix, RES_Level1Value);
+      Value = StrAdd(Value, ValueText);
+      if (Level2Value)
+      begin
+         Value = StrAdd(Value, get_double_dash_text(LocalText('221#Lvl2')));
+         ValueText = get_hv_isolation_value_text(RES_Level2Arc, RES_Level2dIdt,
+            RES_Level2ELim, RES_Level2Prefix, RES_Level2Value);
+         Value = StrAdd(Value, ValueText);
+      end;
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      Line1 = StrAdd(ResultText, Name);
+      Line1 = StrAdd(Line1, Pin1);
+      Line1 = StrAdd(Line1, Pin2);
+      Line1 = StrAdd(Line1, FailText);
+      Space = format_teststep_result(' ');
+      Line2 = StrAdd(Space, Value);
+      if (RES_Result == TESTSTEP_Passed)
+      begin
+         WriteLn(Line1);
+         Write(Line2);
+      end
+      else
+      begin
+         WriteLn(Line1);
+         if (RES_ShortToLowerVoltageLevel)
+         begin
+            Space = TESTSTEP_RESULT_WIDTH + TESTSTEP_NAME_WIDTH;
+            Space = FormatAlignLeft(' ', Space, ' ');
+            Line = StrAdd(Space, LocalText('85#Possible short to lower voltagelevel'));
+            WriteLn(Line);
+         end;
+         Write(Line2);
+      end;
+   end;
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+
+//Output for the command NoConnAllHVTwoLevels
+template NoConnAllHVTwoLevels
+begin
+   Name = get_teststep_name(RES_Name, LocalText('223#NCA HV2L'));
+   Name = format_teststep_name(Name);
+   Pin1 = format_teststep_pin(get_pinname(RES_Pin));
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      Value = LocalText('220#Lvl1') + ': ';
+      Value = StrAdd(Value, get_resistance_value(RES_Level1Prefix, RES_Level1Value));
+      Value = StrAdd(Value, get_double_dash_text(LocalText('221#Lvl2')));
+      Value = StrAdd(Value, get_resistance_value(RES_Level2Prefix, RES_Level2Value));
+      Line1 = StrAdd(format_teststep_result(LocalText('5#Passed')), Name);
+      Line1 = StrAdd(Line1, Pin1);
+      Line1 = StrAdd(Line1, format_teststep_pin(' '));
+      Line2 = StrAdd(format_teststep_result(' '), Value);
+      WriteLn(Line1);
+      Write(Line2);
+   end
+   else
+   begin
+      for Index = 1 to RES_ErrorPinCount do
+      begin
+         ResultText = get_hv_isolation_error_text(RES_Arcs[Index], RES_dIdts[Index], RES_ELims[Index]);
+         IsShort = (NOT RES_Arcs[Index]) AND (NOT RES_dIdts[Index]) AND (NOT RES_ELims[Index]);
+         Value = ' ';
+         if (IsShort)
+         begin
+            Value = get_resistance_value(RES_Prefixes[Index], RES_Values[Index]);
+         end;
+         Pin2 = format_teststep_pin(get_pinname(RES_ErrorPins[Index]));
+         FailText = get_hv_two_levels_fail_text(RES_Level1Errors[Index]);
+         Line1 = StrAdd(format_teststep_result(ResultText), Name);
+         Line1 = StrAdd(Line1, Pin1);
+         Line1 = StrAdd(Line1, Pin2);
+         Line1 = StrAdd(Line1, FailText);
+         WriteLn(Line1);
+         if (StrCompare(StrTrim(Value), '') <> 0)
+         begin
+            Line2 = StrAdd(format_teststep_result(' '), Value);
+            if (Index == RES_ErrorPinCount)
+            begin
+               Write(Line2);
+            end
+            else
+            begin
+               WriteLn(Line2);
+            end;
+         end;
+      end;
+   end;
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+
+//Output for the command NoConnLowerHVTwoLevels
+template NoConnLowerHVTwoLevels
+begin
+   Name = get_teststep_name(RES_Name, LocalText('224#NCL HV2L'));
+   Name = format_teststep_name(Name);
+   Pin1 = format_teststep_pin(get_pinname(RES_Pin));
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      Value = LocalText('220#Lvl1') + ': ';
+      Value = StrAdd(Value, get_resistance_value(RES_Level1Prefix, RES_Level1Value));
+      Value = StrAdd(Value, get_double_dash_text(LocalText('221#Lvl2')));
+      Value = StrAdd(Value, get_resistance_value(RES_Level2Prefix, RES_Level2Value));
+      Line1 = StrAdd(format_teststep_result(LocalText('5#Passed')), Name);
+      Line1 = StrAdd(Line1, Pin1);
+      Line1 = StrAdd(Line1, format_teststep_pin(' '));
+      Line2 = StrAdd(format_teststep_result(' '), Value);
+      WriteLn(Line1);
+      Write(Line2);
+   end
+   else
+   begin
+      for Index = 1 to RES_ErrorPinCount do
+      begin
+         ResultText = get_hv_isolation_error_text(RES_Arcs[Index], RES_dIdts[Index], RES_ELims[Index]);
+         IsShort = (NOT RES_Arcs[Index]) AND (NOT RES_dIdts[Index]) AND (NOT RES_ELims[Index]);
+         Value = ' ';
+         if (IsShort)
+         begin
+            Value = get_resistance_value(RES_Prefixes[Index], RES_Values[Index]);
+         end;
+         Pin2 = format_teststep_pin(get_pinname(RES_ErrorPins[Index]));
+         FailText = get_hv_two_levels_fail_text(RES_Level1Errors[Index]);
+         Line1 = StrAdd(format_teststep_result(ResultText), Name);
+         Line1 = StrAdd(Line1, Pin1);
+         Line1 = StrAdd(Line1, Pin2);
+         Line1 = StrAdd(Line1, FailText);
+         WriteLn(Line1);
+         if (StrCompare(StrTrim(Value), '') <> 0)
+         begin
+            Line2 = StrAdd(format_teststep_result(' '), Value);
+            if (Index == RES_ErrorPinCount)
+            begin
+               Write(Line2);
+            end
+            else
+            begin
+               WriteLn(Line2);
+            end;
+         end;
+      end;
+   end;
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+
+//Output for the command NoConnGroupHVTwoLevels
+template NoConnGroupHVTwoLevels
+begin
+   Name = get_teststep_name(RES_Name, LocalText('225#NCG HV2L'));
+   Name = format_teststep_name(Name);
+   HighGroup = format_teststep_pin(RES_HighGroup);
+   LowGroup = format_teststep_pin(RES_LowGroup);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      Value = LocalText('220#Lvl1') + ': ';
+      Value = StrAdd(Value, get_resistance_value(RES_Level1Prefix, RES_Level1Value));
+      Value = StrAdd(Value, get_double_dash_text(LocalText('221#Lvl2')));
+      Value = StrAdd(Value, get_resistance_value(RES_Level2Prefix, RES_Level2Value));
+      Line1 = StrAdd(format_teststep_result(LocalText('5#Passed')), Name);
+      Line1 = StrAdd(Line1, HighGroup);
+      Line1 = StrAdd(Line1, LowGroup);
+      Line2 = StrAdd(format_teststep_result(' '), Value);
+      WriteLn(Line1);
+      Space = format_teststep_result(' ');
+      Line2 = StrAdd(Space, Value);
+      Write(Line2);
+   end
+   else
+   begin
+      for Index = 1 to RES_ErrorCount do
+      begin
+         ResultText = get_hv_isolation_error_text(RES_Arcs[Index], RES_dIdts[Index], RES_ELims[Index]);
+         IsShort = (NOT RES_Arcs[Index]) AND (NOT RES_dIdts[Index]) AND (NOT RES_ELims[Index]);
+         Value = ' ';
+         if (IsShort)
+         begin
+            Value = get_resistance_value(RES_Prefixes[Index], RES_Values[Index]);
+         end;
+         if ((RES_ErrorHighPins[Index] == PINADDRESS_NotSearched) OR
+             (RES_ErrorHighPins[Index] == PINADDRESS_NotFound))
+         begin
+            Pin1 = RES_HighGroup;
+         end
+         else
+         begin
+            Pin1 = get_pinname(RES_ErrorHighPins[Index]);
+         end;
+         if ((RES_ErrorLowPins[Index] == PINADDRESS_NotSearched) OR
+             (RES_ErrorLowPins[Index] == PINADDRESS_NotFound))
+         begin
+            Pin2 = RES_LowGroup;
+         end
+         else
+         begin
+            Pin2 = get_pinname(RES_ErrorLowPins[Index]);
+         end;
+         Pin1 = format_teststep_pin(Pin1);
+         Pin2 = format_teststep_pin(Pin2);
+         FailText = get_hv_two_levels_fail_text(RES_Level1Errors[Index]);
+         Line1 = StrAdd(format_teststep_result(ResultText), Name);
+         Line1 = StrAdd(Line1, Pin1);
+         Line1 = StrAdd(Line1, Pin2);
+         Line1 = StrAdd(Line1, FailText);
+         Line2 = '';
+         if (StrCompare(StrTrim(Value), '') <> 0)
+         begin
+            Space = format_teststep_result(' ');
+            Line2 = StrAdd(Space, Value);
+         end;
+         if (RES_ShortToLowerVoltageLevel)
+         begin
+            Space = TESTSTEP_RESULT_WIDTH + TESTSTEP_NAME_WIDTH;
+            Space = FormatAlignLeft(' ', Space, ' ');
+            Line2 = StrAdd(Space, LocalText('85#Possible short to lower voltagelevel'));
+         end;
+         Line2Data = StrCompare(StrTrim(Line2), '') <> 0;
+         if (Line2Data)
+         begin
+            WriteLn(Line1);
+         end
+         else
+         begin
+            if (Index == RES_ErrorCount)
+            begin
+               Write(Line1);
+            end
+            else
+            begin
+               WriteLn(Line1);
+            end;
+         end;
+         if (Line2Data)
+         begin
+            if (Index == RES_ErrorCount)
+            begin
+               Write(Line2);
+            end
+            else
+            begin
+               WriteLn(Line2);
+            end;
+         end;
+      end;
+   end;
+   display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+end;
+

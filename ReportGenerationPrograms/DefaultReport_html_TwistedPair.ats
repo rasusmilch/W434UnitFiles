@@ -1,0 +1,443 @@
+constants
+begin
+   //0 = Without images
+   //1 = With images
+   TWISTED_PAIR_IMAGE_MODE = 1;
+end;
+
+function write_twisted_pair_error(Section, Value: string): void;
+begin
+   write_default_table_line('&nbsp;', '&nbsp;', '&nbsp;', Section, '&nbsp;', Value);
+end;
+
+function write_twisted_pair_wire_errors(IsContinuityOk, IsIsolationOk: boolean): void;
+begin
+   if (NOT IsContinuityOk)
+   begin
+      Section = LocalText('290#Continuity');
+      Value = LocalText('114#Failed');
+      write_twisted_pair_error(Section, Value);
+   end;
+   if (NOT IsIsolationOk)
+   begin
+      Section = LocalText('291#Isolation');
+      Value = LocalText('114#Failed');
+      write_twisted_pair_error(Section, Value);
+   end;
+end;
+
+function write_twisted_pair_attenuation_errors(InsertionLossErrorCount, ReturnLossErrorCount,
+   NEXTErrorCount, FEXTErrorCount: integer): void;
+begin
+   if (InsertionLossErrorCount > 0)
+   begin
+      Section = LocalText('292#Insertion Loss');
+      Value = LocalText('298#error/s');
+      Value = InsertionLossErrorCount + ' ' + Value;
+      write_twisted_pair_error(Section, Value);
+   end;
+   if (ReturnLossErrorCount > 0)
+   begin
+      Section = LocalText('293#Return Loss');
+      Value = LocalText('298#error/s');
+      Value = ReturnLossErrorCount + ' ' + Value;
+      write_twisted_pair_error(Section, Value);
+   end;
+   if (NEXTErrorCount > 0)
+   begin
+      Section = LocalText('294#NEXT');
+      Value = LocalText('298#error/s');
+      Value = NEXTErrorCount + ' ' + Value;
+      write_twisted_pair_error(Section, Value);
+   end;
+   if (FEXTErrorCount > 0)
+   begin
+      Section = LocalText('295#FEXT');
+      Value = LocalText('298#error/s');
+      Value = FEXTErrorCount + ' ' + Value;
+      write_twisted_pair_error(Section, Value);
+   end;
+end;
+
+function write_twisted_pair_propagation_errors(PropagationDelayErrorCount, DelaySkewErrorCount: integer): void;
+begin
+   if (PropagationDelayErrorCount > 0)
+   begin
+      Section = LocalText('296#Propagation Delay');
+      Value = LocalText('298#error/s');
+      Value = PropagationDelayErrorCount + ' ' + Value;
+      write_twisted_pair_error(Section, Value);
+   end;
+   if (DelaySkewErrorCount > 0)
+   begin
+      Section = LocalText('297#Delay Skew');
+      Value = LocalText('298#error/s');
+      Value = DelaySkewErrorCount + ' ' + Value;
+      write_twisted_pair_error(Section, Value);
+   end;
+end;
+
+function write_twisted_pair_dcloopresistance_errors(DCLoopResistanceErrorCount: integer): void;
+begin
+   if (DCLoopResistanceErrorCount > 0)
+   begin
+      Section = LocalText('301#DC Loop Resistance');
+      Value = LocalText('298#error/s');
+      Value = DCLoopResistanceErrorCount + ' ' + Value;
+      write_twisted_pair_error(Section, Value);
+   end;
+end;
+
+function write_twisted_pair_cablelength_errors(IsCableLengthOk: boolean; ExpectedCableLength_m, LowerTol_m, UpperTol_m, CableLength_m: real): void;
+begin
+   if (NOT IsCableLengthOk)
+   begin
+      Section = LocalText('303#Cable Length');
+      Value = FormatLength(CableLength_m);
+      CableLength = FormatLength(ExpectedCableLength_m) + ' (-' + FormatLength(LowerTol_m) +
+         '/+' + FormatLength(UpperTol_m) + ')';
+      Limit = ExpectedCableLength_m - LowerTol_m;
+      if (CableLength_m < Limit)
+      begin
+         CableLength = CableLength + ' >';
+      end
+      else
+      begin
+         CableLength = CableLength + ' <';
+      end;
+      write_default_table_line('&nbsp;', '&nbsp;', '&nbsp;', Section, CableLength, Value);
+   end;
+end;
+
+function write_twisted_pair_frequency_errors(FrequencyErrorCount: integer): void;
+begin
+   if (FrequencyErrorCount > 0)
+   begin
+      Section = LocalText('299#Frequencies');
+      Value = LocalText('298#error/s');
+      Value = FrequencyErrorCount + ' ' + Value;
+      write_twisted_pair_error(Section, Value);
+   end;
+end;
+
+function get_twisted_pair_wire_map_image(IsWireMapOk, WireMapFileName: string): string;
+begin
+   Result = '&nbsp;';
+   if (StrCompare(WireMapFileName, '') <> 0)
+   begin
+      Result = '<TABLE Border=0 Width=320 class=standard>';
+      if (IsWireMapOk)
+      begin
+         Style = '';
+      end
+      else
+      begin
+         Style = 'Style="color:red;"';
+      end;
+      Result = Result + '<TR><TD Class=centered_in_cell ' + Style + '>' + LocalText('302#Wire Map') + '</TD></TR>';
+      Result = Result + '<TR><TD Class=centered_in_cell><IMG Src="' + WireMapFileName + '" Width=320></TD></TR>';
+      Result = Result + '<TR><TD Class=centered_in_cell><HR></TD></TR>';
+      Result = Result + '</TABLE>';
+   end;
+end;
+
+function get_twisted_pair_data_line(Pair: string; PropagationDelay, DelaySkew, DCLoopResistance: real;
+   IsDCLoopResistanceValid: boolean): string;
+begin
+   PDelay = FormatTime(PropagationDelay);
+   DSkew = FormatTime(DelaySkew);
+   Result = '<TR><TD Class=centered_in_cell>' + Pair + '</TD>' + '<TD Class=centered_in_cell>' + PDelay + '</TD>' + '<TD Class=centered_in_cell>' + DSkew + '</TD>';
+   if (IsDCLoopResistanceValid)
+   begin
+      Resistance = FormatResistance(DCLoopResistance);
+      Result = Result + '<TD Class=centered_in_cell>' + Resistance + '</TD>';
+   end;
+   Result = Result + '</TR>';
+end;
+
+function get_twisted_pair_data_table(PairCount: integer; PropagationDelay, DelaySkew, DCLoopResistance: tarray;
+   IsDCLoopResistanceValid: boolean): string;
+begin
+   PDelay = 'P. Delay';
+   DSkew = 'D. Skew';
+   Result = '<TABLE Border=1 Width=300 class=standard>';
+   Result = Result + '<TR><TD Class=centered_in_cell>&nbsp;</TD>' + '<TD Class=centered_in_cell>' + PDelay + '</TD>' + '<TD Class=centered_in_cell>' + DSkew + '</TD>';
+   if (IsDCLoopResistanceValid)
+   begin
+      Resistance = 'DC Loop R';
+      Result = Result + '<TD Class=centered_in_cell>' + Resistance + '</TD>';
+   end;
+   Result = Result + '</TR>';
+   Result = Result + get_twisted_pair_data_line('A', PropagationDelay[1], DelaySkew[1], DCLoopResistance[1], IsDCLoopResistanceValid);
+   if (PairCount > 1)
+   begin
+      Result = Result + get_twisted_pair_data_line('B', PropagationDelay[2], DelaySkew[2], DCLoopResistance[2], IsDCLoopResistanceValid);
+   end;
+   if (PairCount > 2)
+   begin
+      Result = Result + get_twisted_pair_data_line('C', PropagationDelay[3], DelaySkew[3], DCLoopResistance[3], IsDCLoopResistanceValid);
+      Result = Result + get_twisted_pair_data_line('D', PropagationDelay[4], DelaySkew[4], DCLoopResistance[4], IsDCLoopResistanceValid);
+   end;
+   Result = Result + '</TABLE>';
+end;
+
+function insert_twisted_pair_images_small(IsWireMapOk, IsInsertionLossOk, IsReturnLossOk, IsNEXTOk,
+   IsFEXTOk: boolean; WireMapFileName, InsertionLossFileName, ReturnLossFileName, NEXTFileName,
+   FEXTFileName: string; PairCount: integer; PropagationDelay, DelaySkew, DCLoopResistance: tarray;
+   IsDCLoopResistanceValid: boolean): void;
+begin
+   HasWireMap = StrCompare(WireMapFileName, '') <> 0;
+   HasLoss = StrCompare(InsertionLossFileName, '') <> 0;
+   HasXT = StrCompare(NEXTFileName, '') <> 0;
+
+   WireMap = get_twisted_pair_wire_map_image(IsWireMapOk, WireMapFileName);
+   if (IsWireMapOk)
+   begin
+      DataTable = get_twisted_pair_data_table(PairCount, PropagationDelay, DelaySkew, DCLoopResistance, IsDCLoopResistanceValid);
+   end
+   else
+   begin
+      DataTable = '&nbsp;';
+   end;
+   WriteLn('<TABLE Border=0 Width=640 CellPadding=0 CellSpacing=0 Class=standard>');
+   Line = '<TR><TD Width=320 Class=centered_in_cell>' + WireMap + '</TD><TD  Align=center VAlign=middle>' + DataTable + '</TD></TR>';
+   WriteLn(Line);
+   WriteLn('</TABLE>');
+
+   if (IsWireMapOk AND HasLoss)
+   begin
+      WriteLn('<TABLE Border=0 Width=640 Class=teststeppass>');
+      if (IsInsertionLossOk)
+      begin
+         Text = '<TR><TD Align=Center VAlign=Middle class=standard>';
+      end
+      else
+      begin
+         Text = '<TR><TD Align=Center VAlign=Middle class=standard_red>';
+      end;
+      Write(Text);
+      Write(LocalText('292#Insertion Loss'));
+      Write(' [dB]</TD>');
+      if (IsReturnLossOk)
+      begin
+         Text = '<TD Align=Center VAlign=Middle class=standard>';
+      end
+      else
+      begin
+         Text = '<TD Align=Center VAlign=Middle class=standard_red>';
+      end;
+      Write(Text);
+      Write(LocalText('293#Return Loss'));
+      WriteLn(' [dB]</TD></TR>');
+
+      Write('<TR><TD Align=Center VAlign=Top><IMG Src="');
+      Write(InsertionLossFileName);
+      WriteLn('" Width=320></TD>');
+      Write('<TD Align=Center VAlign=Top><IMG Src="');
+      Write(ReturnLossFileName);
+      WriteLn('" Width=320></TD></TR>');
+      WriteLn('<TR><TD Align=Center VAlign=Top>MHz<BR><HR></TD><TD Align=Center VAlign=Top>MHz<BR><HR></TD></TR>');
+      WriteLn('</TABLE>');
+   end;
+
+   if (IsWireMapOk AND HasXT)
+   begin
+      WriteLn('<TABLE Border=0 Width=640 Class=teststeppass>');
+      if (IsNEXTOk)
+      begin
+         Text = '<TR><TD Align=Center VAlign=Middle class=standard>';
+      end
+      else
+      begin
+         Text = '<TR><TD Align=Center VAlign=Middle class=standard_red>';
+      end;
+      Write(Text);
+      Write(LocalText('294#NEXT'));
+      Write(' [dB]</TD>');
+      if (IsFEXTOk)
+      begin
+         Text = '<TD Align=Center VAlign=Middle class=standard>';
+      end
+      else
+      begin
+         Text = '<TD Align=Center VAlign=Middle class=standard_red>';
+      end;
+      Write(Text);
+      Write(LocalText('295#FEXT'));
+      WriteLn(' [dB]</TD></TR>');
+
+      Write('<TR><TD Align=Center VAlign=Top><IMG Src="');
+      Write(NEXTFileName);
+      WriteLn('" Width=320></TD>');
+      Write('<TD Align=Center VAlign=Top><IMG Src="');
+      Write(FEXTFileName);
+      WriteLn('" Width=320></TD></TR>');
+      WriteLn('<TR><TD Align=Center VAlign=Top>MHz<BR><HR></TD><TD Align=Center VAlign=Top>MHz<BR><HR></TD></TR>');
+      WriteLn('</TABLE>');
+   end;
+end;
+
+template TwistedPairTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('281#Twisted Pair'));
+   Write('<TABLE Border=0 Width=640 class=');
+   File = get_teststepimage(RES_Result, RES_ManualTest);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      WriteLn('teststeppass>');
+      ResultText = LocalText('5#Passed');
+      write_default_table_line(File, ResultText, Name, get_twisted_pair_cat_text(RES_Category));
+   end
+   else
+   begin
+      WriteLn('teststepfail>');
+      if (RES_Result == TESTSTEP_Failed)
+      begin
+         ResultText = LocalText('114#Failed');
+      end
+      else
+      begin
+         ResultText = LocalText('7#Invalid');
+      end;
+      write_default_table_line(File, ResultText, Name, get_twisted_pair_cat_text(RES_Category));
+      write_twisted_pair_wire_errors(RES_IsContinuityOk, RES_IsIsolationOk);
+      if (RES_IsAttenuationTestEnabled)
+      begin
+         write_twisted_pair_attenuation_errors(RES_InsertionLossErrorCount, RES_ReturnLossErrorCount,
+            RES_NEXTErrorCount, RES_FEXTErrorCount);
+      end;
+      if (RES_IsPropagationTestEnabled)
+      begin
+         write_twisted_pair_propagation_errors(RES_PropagationDelayErrorCount, RES_DelaySkewErrorCount);
+      end;
+      if (RES_IsDCLoopResistanceTestEnabled)
+      begin
+         write_twisted_pair_dcloopresistance_errors(RES_DCLoopResistanceErrorCount);
+      end;
+      if (RES_IsCableLengthTestEnabled)
+      begin
+         write_twisted_pair_cablelength_errors(RES_IsCableLengthOk, RES_ExpectedCableLength,
+            RES_CableLengthLowerTol, RES_CableLengthUpperTol, RES_CableLength);
+      end;
+      write_twisted_pair_frequency_errors(RES_FrequencyErrorCount);
+   end;
+   display_teststepcomment(RES_Comment, '', RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   WriteLn('</TABLE>');
+   if ((TWISTED_PAIR_IMAGE_MODE == 1) AND RES_IsAttenuationTestEnabled)
+   begin
+      insert_twisted_pair_images_small(RES_IsWireMapOk, RES_IsInsertionLossOk, RES_IsReturnLossOk,
+         RES_IsNEXTOk, RES_IsFEXTOk, RES_WireMapImageFileName, RES_InsertionLossImageFileName,
+         RES_ReturnLossImageFileName, RES_NEXTImageFileName, RES_FEXTImageFileName, RES_PairCount,
+         RES_PropagationDelay, RES_DelaySkew, RES_DCLoopResistance, RES_IsDCLoopResistanceValid);
+   end;
+end;
+
+template TwistedPairTestFrequencies
+begin
+   Name = get_teststep_name(RES_Name, LocalText('281#Twisted Pair'));
+   Write('<TABLE Border=0 Width=640 class=');
+   File = get_teststepimage(RES_Result, RES_ManualTest);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      WriteLn('teststeppass>');
+      ResultText = LocalText('5#Passed');
+      write_default_table_line(File, ResultText, Name, get_twisted_pair_cat_text(RES_Category));
+   end
+   else
+   begin
+      WriteLn('teststepfail>');
+      if (RES_Result == TESTSTEP_Failed)
+      begin
+         ResultText = LocalText('114#Failed');
+      end
+      else
+      begin
+         ResultText = LocalText('7#Invalid');
+      end;
+      write_default_table_line(File, ResultText, Name, get_twisted_pair_cat_text(RES_Category));
+      write_twisted_pair_wire_errors(RES_IsContinuityOk, RES_IsIsolationOk);
+      if (RES_IsAttenuationTestEnabled)
+      begin
+         write_twisted_pair_attenuation_errors(RES_InsertionLossErrorCount, RES_ReturnLossErrorCount,
+            RES_NEXTErrorCount, RES_FEXTErrorCount);
+      end;
+      if (RES_IsPropagationTestEnabled)
+      begin
+         write_twisted_pair_propagation_errors(RES_PropagationDelayErrorCount, RES_DelaySkewErrorCount);
+      end;
+      if (RES_IsDCLoopResistanceTestEnabled)
+      begin
+         write_twisted_pair_dcloopresistance_errors(RES_DCLoopResistanceErrorCount);
+      end;
+      if (RES_IsCableLengthTestEnabled)
+      begin
+         write_twisted_pair_cablelength_errors(RES_IsCableLengthOk, RES_ExpectedCableLength,
+            RES_CableLengthLowerTol, RES_CableLengthUpperTol, RES_CableLength);
+      end;
+      write_twisted_pair_frequency_errors(RES_FrequencyErrorCount);
+   end;
+   display_teststepcomment(RES_Comment, '', RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   WriteLn('</TABLE>');
+   if ((TWISTED_PAIR_IMAGE_MODE == 1) AND RES_IsAttenuationTestEnabled)
+   begin
+      insert_twisted_pair_images_small(RES_IsWireMapOk, RES_IsInsertionLossOk, RES_IsReturnLossOk,
+         RES_IsNEXTOk, RES_IsFEXTOk, RES_WireMapImageFileName, RES_InsertionLossImageFileName,
+         RES_ReturnLossImageFileName, RES_NEXTImageFileName, RES_FEXTImageFileName, RES_PairCount,
+         RES_PropagationDelay, RES_DelaySkew, RES_DCLoopResistance, RES_IsDCLoopResistanceValid);
+   end;
+end;
+
+template TwistedPairTest2PE
+begin
+   Name = get_teststep_name(RES_Name, LocalText('281#Twisted Pair'));
+   Write('<TABLE Border=0 Width=640 class=');
+   File = get_teststepimage(RES_Result, RES_ManualTest);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      WriteLn('teststeppass>');
+      ResultText = LocalText('5#Passed');
+      write_default_table_line(File, ResultText, Name, get_twisted_pair_cat_text(RES_Category));
+   end
+   else
+   begin
+      WriteLn('teststepfail>');
+      if (RES_Result == TESTSTEP_Failed)
+      begin
+         ResultText = LocalText('114#Failed');
+      end
+      else
+      begin
+         ResultText = LocalText('7#Invalid');
+      end;
+      write_default_table_line(File, ResultText, Name, get_twisted_pair_cat_text(RES_Category));
+      write_twisted_pair_wire_errors(RES_IsContinuityOk, RES_IsIsolationOk);
+      if (RES_IsAttenuationTestEnabled)
+      begin
+         write_twisted_pair_attenuation_errors(RES_InsertionLossErrorCount, RES_ReturnLossErrorCount,
+            RES_NEXTErrorCount, RES_FEXTErrorCount);
+      end;
+      if (RES_IsPropagationTestEnabled)
+      begin
+         write_twisted_pair_propagation_errors(RES_PropagationDelayErrorCount, RES_DelaySkewErrorCount);
+      end;
+      if (RES_IsDCLoopResistanceTestEnabled)
+      begin
+         write_twisted_pair_dcloopresistance_errors(RES_DCLoopResistanceErrorCount);
+      end;
+      if (RES_IsCableLengthTestEnabled)
+      begin
+         write_twisted_pair_cablelength_errors(RES_IsCableLengthOk, RES_ExpectedCableLength,
+            RES_CableLengthLowerTol, RES_CableLengthUpperTol, RES_CableLength);
+      end;
+      write_twisted_pair_frequency_errors(RES_FrequencyErrorCount);
+   end;
+   display_teststepcomment(RES_Comment, '', RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   WriteLn('</TABLE>');
+   if ((TWISTED_PAIR_IMAGE_MODE == 1) AND RES_IsAttenuationTestEnabled)
+   begin
+      insert_twisted_pair_images_small(RES_IsWireMapOk, RES_IsInsertionLossOk, RES_IsReturnLossOk,
+         RES_IsNEXTOk, RES_IsFEXTOk, RES_WireMapImageFileName, RES_InsertionLossImageFileName,
+         RES_ReturnLossImageFileName, RES_NEXTImageFileName, RES_FEXTImageFileName, RES_PairCount,
+         RES_PropagationDelay, RES_DelaySkew, RES_DCLoopResistance, RES_IsDCLoopResistanceValid);
+   end;
+end;

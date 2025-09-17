@@ -1,0 +1,581 @@
+//Verbindungstest-Funktionen sind die Funktionen, bei denen die
+//Durchgangsparameter für die Messung verwendet werden.
+
+//Continuity functions are those, for which the continuity parameters are used
+
+function get_continuity_result_text(ResultValue: integer; IsArc: boolean): string;
+begin
+   switch (ResultValue)
+   begin
+      case TESTSTEP_Passed:
+      begin
+         Result = LocalText('5#Passed');
+      end;
+      case TESTSTEP_Failed:
+      begin
+         if (IsArc)
+         begin
+            Result = LocalText('202#Arc');
+         end
+         else
+         begin
+            Result = LocalText('6#Open');
+         end;
+      end;
+      default:
+      begin
+         Result = LocalText('7#Invalid');
+      end;
+   end;
+end;
+
+//Output for the command ParamContinuity
+template ParamContinuity
+begin
+   Line = '';
+   if (RES_CurrentChanged)
+   begin
+      Value = FormatCurrent(RES_CCurrent);
+      Line = StrAdd(Line, LocalText('51#Current'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_ThresholdChanged)
+   begin
+      Value = FormatResistance(RES_CThreshold);
+      Line = StrAdd(Line, LocalText('52#Threshold'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TriseChanged)
+   begin
+      Value = FormatTime(RES_CTrise);
+      Line = StrAdd(Line, LocalText('53#Trise'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TwaitChanged)
+   begin
+      Value = FormatTime(RES_CTwait);
+      Line = StrAdd(Line, LocalText('54#Twait'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TmeasChanged)
+   begin
+      Value = FormatTime(RES_CTmeas);
+      Line = StrAdd(Line, LocalText('55#Tmeas'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_AutoRangeChanged)
+   begin
+      if (RES_CAutoRange)
+      begin
+         Value = LocalText('56#On');
+      end
+      else
+      begin
+         Value = LocalText('57#Off');
+      end;
+      Line = StrAdd(Line, LocalText('58#Auto ranging'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_VoltageLimitChanged)
+   begin
+      Value = FormatVoltage(RES_CVoltageLimit);
+      Line = StrAdd(Line, LocalText('59#Voltage limit'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (StrCompare(Line, '') <> 0)
+   begin
+      Pos = StrLength(Line) - 1;
+      Line = StrDelete(Line, Pos, 2);
+      UIWriteNormal(LocalText('60#Parameters for continuity test'));
+      UIWriteNormal(Line);
+   end;
+end;
+
+//Output for the command ParamResetContinuity
+template ParamResetContinuity
+begin
+   Line = '';
+   if (RES_CurrentChanged)
+   begin
+      Value = FormatCurrent(RES_CCurrent);
+      Line = StrAdd(Line, LocalText('51#Current'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_ThresholdChanged)
+   begin
+      Value = FormatResistance(RES_CThreshold);
+      Line = StrAdd(Line, LocalText('52#Threshold'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TriseChanged)
+   begin
+      Value = FormatTime(RES_CTrise);
+      Line = StrAdd(Line, LocalText('53#Trise'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TwaitChanged)
+   begin
+      Value = FormatTime(RES_CTwait);
+      Line = StrAdd(Line, LocalText('54#Twait'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TmeasChanged)
+   begin
+      Value = FormatTime(RES_CTmeas);
+      Line = StrAdd(Line, LocalText('55#Tmeas'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_AutoRangeChanged)
+   begin
+      if (RES_CAutoRange)
+      begin
+         Value = LocalText('56#On');
+      end
+      else
+      begin
+         Value = LocalText('57#Off');
+      end;
+      Line = StrAdd(Line, LocalText('58#Auto ranging'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_VoltageLimitChanged)
+   begin
+      Value = FormatVoltage(RES_CVoltageLimit);
+      Line = StrAdd(Line, LocalText('59#Voltage limit'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (StrCompare(Line, '') <> 0)
+   begin
+      Pos = StrLength(Line) - 1;
+      Line = StrDelete(Line, Pos, 2);
+      UIWriteNormal(LocalText('60#Parameters for continuity test'));
+      UIWriteNormal(Line);
+   end;
+end;
+
+//Output for the command WireTest
+template WireTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('8#Wire'));
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      ResultText = get_continuity_result_text(RES_Result, RES_Arc);
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      if (RES_AutoRangePassedAfterFail)
+      begin
+         Value = get_resistance_value('>', RES_CThreshold);
+         Value = StrAdd(Value, '!');
+      end
+      else
+      begin
+         Value = get_resistance_value(RES_Prefix, RES_Value);
+      end;
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      if (RES_Result == TESTSTEP_Passed)
+      begin
+         UIWriteNormal(Line);
+      end
+      else
+      begin
+         UIWriteError(Line);
+      end;
+      if (RES_Result == TESTSTEP_Failed)
+      begin
+         if (RES_InterchangedWiresPin1 <> PINADDRESS_None)
+         begin
+            ResultText = format_teststep_result(LocalText('69#Connected'));
+            Space = format_teststep_name(' ');
+            Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+            Pin2 = format_teststep_pin(get_pinname(RES_InterchangedWiresPin1));
+            Line = StrAdd(Space, ResultText);
+            Line = StrAdd(Line, Pin1);
+            Line = StrAdd(Line, Pin2);
+            UIWriteError(Line);
+         end;
+         if (RES_InterchangedWiresPin2 <> PINADDRESS_None)
+         begin
+            ResultText = format_teststep_result(LocalText('69#Connected'));
+            Space = format_teststep_name(' ');
+            Pin1 = format_teststep_pin(get_pinname(RES_Pin2));
+            Pin2 = format_teststep_pin(get_pinname(RES_InterchangedWiresPin2));
+            Line = StrAdd(Space, ResultText);
+            Line = StrAdd(Line, Pin1);
+            Line = StrAdd(Line, Pin2);
+            UIWriteError(Line);
+         end;
+      end;
+   end;
+end;
+
+//Output for the command SwitchTest
+template SwitchTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('11#Switch'));
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      if ((RES_Result == TESTSTEP_Failed) AND (NOT RES_Arc))
+      begin
+         if (RES_SwitchClosed)
+         begin
+            ResultText = LocalText('9#Open');
+         end
+         else
+         begin
+            ResultText = LocalText('33#Closed');
+         end;
+      end
+      else
+      begin
+         ResultText = get_continuity_result_text(RES_Result, RES_Arc);
+      end;
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      if (RES_AutoRangePassedAfterFail)
+      begin
+         Value = get_resistance_value('>', RES_CThreshold);
+         Value = StrAdd(Value, '!');
+      end
+      else
+      begin
+         Value = get_resistance_value(RES_Prefix, RES_Value);
+      end;
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      if (RES_Result == TESTSTEP_Passed)
+      begin
+         UIWriteNormal(Line);
+      end
+      else
+      begin
+         UIWriteError(Line);
+      end;
+   end;
+end;
+
+//Output for the command ConnectionTest
+template ConnectionTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('40#Connection'));
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      ResultText = get_continuity_result_text(RES_Result, RES_Arc);
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      if (RES_AutoRangePassedAfterFail)
+      begin
+         Value = get_resistance_value('>', RES_CThreshold);
+         Value = StrAdd(Value, '!');
+      end
+      else
+      begin
+         Value = get_resistance_value(RES_Prefix, RES_Value);
+      end;
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      if (RES_Result == TESTSTEP_Passed)
+      begin
+         UIWriteNormal(Line);
+      end
+      else
+      begin
+         UIWriteError(Line);
+      end;
+      if (RES_Result == TESTSTEP_Failed)
+      begin
+         if (RES_InterchangedWiresPin1 <> PINADDRESS_None)
+         begin
+            ResultText = format_teststep_result(LocalText('69#Connected'));
+            Space = format_teststep_name(' ');
+            Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+            Pin2 = format_teststep_pin(get_pinname(RES_InterchangedWiresPin1));
+            Line = StrAdd(Space, ResultText);
+            Line = StrAdd(Line, Pin1);
+            Line = StrAdd(Line, Pin2);
+            UIWriteError(Line);
+         end;
+         if (RES_InterchangedWiresPin2 <> PINADDRESS_None)
+         begin
+            ResultText = format_teststep_result(LocalText('69#Connected'));
+            Space = format_teststep_name(' ');
+            Pin1 = format_teststep_pin(get_pinname(RES_Pin2));
+            Pin2 = format_teststep_pin(get_pinname(RES_InterchangedWiresPin2));
+            Line = StrAdd(Space, ResultText);
+            Line = StrAdd(Line, Pin1);
+            Line = StrAdd(Line, Pin2);
+            UIWriteError(Line);
+         end;
+      end;
+   end;
+end;
+
+//Output for the command ProbeTest
+template ProbeTest
+begin
+   Name = get_teststep_name(RES_Name, '');
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      ResultText = get_continuity_result_text(RES_Result, RES_Arc);
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin));
+      Pin2 = format_teststep_pin(LocalText('117#Probe'));
+      Value = get_resistance_value(RES_Prefix, RES_Value);
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      if (RES_Result == TESTSTEP_Passed)
+      begin
+         UIWriteNormal(Line);
+      end
+      else
+      begin
+         UIWriteError(Line);
+      end;
+   end;
+end;
+
+//Output for the command ProbeTest
+template ProbeTestSearch
+begin
+   Name = get_teststep_name(RES_Name, '');
+   ResultText = get_continuity_result_text(RES_Result, RES_Arc);
+   ResultText = format_teststep_result(ResultText);
+   Name = format_teststep_name(Name);
+   Pin1 = format_teststep_pin(get_pinname(RES_Pin));
+   Pin2 = format_teststep_pin(LocalText('117#Probe'));
+   Line = StrAdd(ResultText, Name);
+   Line = StrAdd(Line, Pin1);
+   Line = StrAdd(Line, Pin2);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      UIWriteNormal(Line);
+   end
+   else
+   begin
+      UIWriteError(Line);
+   end;
+end;
+
+//Output for the command NoConnection
+template NoConnection
+begin
+   Name = get_teststep_name(RES_Name, LocalText('232#NC'));
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      if ((RES_Result == TESTSTEP_Failed) AND (NOT RES_Arc))
+      begin
+         ResultText = LocalText('15#Short');
+      end
+      else
+      begin
+         ResultText = get_continuity_result_text(RES_Result, RES_Arc);
+      end;
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      if (RES_Arc)
+      begin
+         Value = ' ';
+      end
+      else
+      begin
+         Value = get_resistance_value(RES_Prefix, RES_Value);
+      end;
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      if (RES_Result == TESTSTEP_Passed)
+      begin
+         UIWriteNormal(Line);
+      end
+      else
+      begin
+         UIWriteError(Line);
+      end;
+   end;
+end;
+
+//Output for the command WireTestAnalysis
+template WireTestAnalysis
+begin
+   Name = get_teststep_name(RES_Name, LocalText('8#Wire'));
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      ResultText = get_continuity_result_text(RES_Result, RES_Arc);
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      Value = get_resistance_value(RES_Prefix, RES_Value);
+
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      if (RES_Result == TESTSTEP_Passed)
+      begin
+         UIWriteNormal(Line);
+      end
+      else
+      begin
+         UIWriteError(Line);
+      end;
+      if (RES_Result == TESTSTEP_Failed)
+      begin
+         //Write results of continuity analysis
+         for Network = 1 to RES_NetworkCount do
+         begin
+            Space = TESTSTEP_RESULT_WIDTH + TESTSTEP_NAME_WIDTH;
+            Space = FormatAlignLeft(' ', Space, ' ');
+            for Index = 1 to RES_NetworkPinCount[Network] do
+            begin
+               UIWriteError(StrAdd(Space, get_pinname(RES_NetworkPins[Network, Index])));
+            end;
+            if (Network < RES_NetworkCount)
+            begin
+               if (RES_ValuesToNextNWArc[Network])
+               begin
+                  Value = LocalText('202#Arc');
+               end
+               else
+               begin
+                  Value = get_resistance_value(RES_ValuesToNextNWPrefix[Network], RES_ValuesToNextNW[Network]);
+               end;
+               UIWriteError(Value);
+            end;
+         end;
+         //Write results of LV isolation analysis
+         for Network = 1 to RES_NetworkCount do
+         begin
+            if (RES_NCAExecuted[Network])
+            begin
+               if (RES_ShortCount[Network] == 0)
+               begin
+                  Value = get_resistance_value(RES_NCAValuesPrefix[Network], RES_NCAValues[Network]);
+                  Width = TESTSTEP_RESULT_WIDTH + TESTSTEP_NAME_WIDTH;
+                  Name = FormatAlignLeft(LocalText('233#NCA'), Width, ' ');
+                  Width = 2 * TESTSTEP_PIN_WIDTH;
+                  Pin = FormatAlignLeft(get_pinname(RES_NetworkPins[Network, 1]), 50, ' ');
+                  Line = StrAdd(Name, Pin);
+                  Line = StrAdd(Line, Value);
+                  UIWriteNormal(Line);
+               end
+               else
+               begin
+                  Width = TESTSTEP_RESULT_WIDTH + TESTSTEP_NAME_WIDTH;
+                  Line = FormatAlignLeft(LocalText('43#Short'), Width, ' ');
+                  Pin1 = format_teststep_pin(get_pinname(RES_NetworkPins[Network, 1]));
+                  Line = StrAdd(Line, Pin1);
+                  for Index = 1 to RES_ShortCount[Network] do
+                  begin
+                     Pin2 = format_teststep_pin(get_pinname(RES_Shorts[Network, Index]));
+                     if (RES_ShortArcs[Network, Index])
+                     begin
+                        Value = LocalText('202#Arc');
+                     end
+                     else
+                     begin
+                        Value = get_resistance_value(RES_ShortPrefixes[Network, Index], RES_ShortValues[Network, Index]);
+                     end;
+                     Line = StrAdd(Line, Pin2);
+                     Line = StrAdd(Line, Value);
+                     UIWriteError(Line);
+                  end;
+               end;
+            end;
+         end;
+      end;
+   end;
+end;
+
+//Output for the command NoConnAll
+template NoConnAll
+begin
+   Name = get_teststep_name(RES_Name, LocalText('233#NCA'));
+   Name = format_teststep_name(Name);
+   Pin1 = format_teststep_pin(get_pinname(RES_Pin));
+
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      ResultText = format_teststep_result(LocalText('5#Passed'));
+      Pin2 = format_teststep_pin(' ');
+      Value = get_resistance_value(RES_Prefix, RES_Value);
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      UIWriteNormal(Line);
+   end
+   else
+   begin
+      if (RES_ErrorPinCount > 0)
+      begin
+         Index = RES_ErrorPinCount;
+         if (RES_Arcs[Index])
+         begin
+            ResultText = LocalText('202#Arc');
+            Value = ' ';
+         end
+         else
+         begin
+            ResultText = LocalText('15#Short');
+            Value = get_resistance_value(RES_Prefixes[Index], RES_Values[Index]);
+         end;
+         ResultText = format_teststep_result(ResultText);
+         Pin2 = format_teststep_pin(get_pinname(RES_ErrorPins[Index]));
+
+         Line = StrAdd(ResultText, Name);
+         Line = StrAdd(Line, Pin1);
+         Line = StrAdd(Line, Pin2);
+         Line = StrAdd(Line, Value);
+         UIWriteError(Line);
+      end;
+   end;
+end;

@@ -1,0 +1,276 @@
+function write_twisted_pair_error(Section, Value: string): void;
+begin
+   Line = get_default_line(' ', ' ', Section, ' ', Value);
+   Write(Line);
+end;
+
+function write_twisted_pair_wire_errors(IsContinuityOk, IsIsolationOk: boolean): void;
+begin
+   if (NOT IsContinuityOk)
+   begin
+      WriteLn('');
+      Section = LocalText('290#Continuity');
+      Value = LocalText('114#Failed');
+      write_twisted_pair_error(Section, Value);
+   end;
+   if (NOT IsIsolationOk)
+   begin
+      WriteLn('');
+      Section = LocalText('291#Isolation');
+      Value = LocalText('114#Failed');
+      write_twisted_pair_error(Section, Value);
+   end;
+end;
+
+function write_twisted_pair_attenuation_errors(InsertionLossErrorCount, ReturnLossErrorCount,
+   NEXTErrorCount, FEXTErrorCount: integer): void;
+begin
+   if (InsertionLossErrorCount > 0)
+   begin
+      WriteLn('');
+      Section = LocalText('292#Insertion Loss');
+      Value = LocalText('298#error/s');
+      Value = InsertionLossErrorCount + ' ' + Value;
+      write_twisted_pair_error(Section, Value);
+   end;
+   if (ReturnLossErrorCount > 0)
+   begin
+      WriteLn('');
+      Section = LocalText('293#Return Loss');
+      Value = LocalText('298#error/s');
+      Value = ReturnLossErrorCount + ' ' + Value;
+      write_twisted_pair_error(Section, Value);
+   end;
+   if (NEXTErrorCount > 0)
+   begin
+      WriteLn('');
+      Section = LocalText('294#NEXT');
+      Value = LocalText('298#error/s');
+      Value = NEXTErrorCount + ' ' + Value;
+      write_twisted_pair_error(Section, Value);
+   end;
+   if (FEXTErrorCount > 0)
+   begin
+      WriteLn('');
+      Section = LocalText('295#FEXT');
+      Value = LocalText('298#error/s');
+      Value = FEXTErrorCount + ' ' + Value;
+      write_twisted_pair_error(Section, Value);
+   end;
+end;
+
+function write_twisted_pair_propagation_errors(PropagationDelayErrorCount, DelaySkewErrorCount: integer): void;
+begin
+   if (PropagationDelayErrorCount > 0)
+   begin
+      WriteLn('');
+      Section = LocalText('296#Propagation Delay');
+      Value = LocalText('298#error/s');
+      Value = PropagationDelayErrorCount + ' ' + Value;
+      write_twisted_pair_error(Section, Value);
+   end;
+   if (DelaySkewErrorCount > 0)
+   begin
+      WriteLn('');
+      Section = LocalText('297#Delay Skew');
+      Value = LocalText('298#error/s');
+      Value = DelaySkewErrorCount + ' ' + Value;
+      write_twisted_pair_error(Section, Value);
+   end;
+end;
+
+function write_twisted_pair_dcloopresistance_errors(DCLoopResistanceErrorCount: integer): void;
+begin
+   if (DCLoopResistanceErrorCount > 0)
+   begin
+      WriteLn('');
+      Section = LocalText('301#DC Loop Resistance');
+      Value = LocalText('298#error/s');
+      Value = DCLoopResistanceErrorCount + ' ' + Value;
+      write_twisted_pair_error(Section, Value);
+   end;
+end;
+
+function write_twisted_pair_cablelength_errors(IsCableLengthOk: boolean; ExpectedCableLength_m, LowerTol_m, UpperTol_m, CableLength_m: real): void;
+begin
+   if (NOT IsCableLengthOk)
+   begin
+      WriteLn('');
+      Section = LocalText('303#Cable Length');
+      Value = FormatLength(CableLength_m);
+      CableLength = FormatLength(ExpectedCableLength_m) + ' (-' + FormatLength(LowerTol_m) +
+         '/+' + FormatLength(UpperTol_m) + ')';
+      Limit = ExpectedCableLength_m - LowerTol_m;
+      if (CableLength_m < Limit)
+      begin
+         CableLength = CableLength + ' >';
+      end
+      else
+      begin
+         CableLength = CableLength + ' <';
+      end;
+      Write(get_default_line(' ', ' ', Section, CableLength, Value));
+   end;
+end;
+
+function write_twisted_pair_frequency_errors(FrequencyErrorCount: integer): void;
+begin
+   if (FrequencyErrorCount > 0)
+   begin
+      WriteLn('');
+      Section = LocalText('299#Frequencies');
+      Value = LocalText('298#error/s');
+      Value = FrequencyErrorCount + ' ' + Value;
+      write_twisted_pair_error(Section, Value);
+   end;
+end;
+
+template TwistedPairTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('281#Twisted Pair'));
+   Name = format_teststep_name(Name);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      ResultText = format_teststep_result(LocalText('5#Passed'));
+      Line = ResultText + Name + format_teststep_pin(get_twisted_pair_cat_text(RES_Category));
+      WriteLn(Line);
+   end
+   else
+   begin
+      if (RES_Result == TESTSTEP_Failed)
+      begin
+         ResultText = format_teststep_result(LocalText('114#Failed'));
+      end
+      else
+      begin
+         ResultText = format_teststep_result(LocalText('7#Invalid'));
+      end;
+      Line = ResultText + Name + format_teststep_pin(get_twisted_pair_cat_text(RES_Category));
+      Write(Line);
+      write_twisted_pair_wire_errors(RES_IsContinuityOk, RES_IsIsolationOk);
+      if (RES_IsAttenuationTestEnabled)
+      begin
+         write_twisted_pair_attenuation_errors(RES_InsertionLossErrorCount, RES_ReturnLossErrorCount,
+            RES_NEXTErrorCount, RES_FEXTErrorCount);
+      end;
+      if (RES_IsPropagationTestEnabled)
+      begin
+         write_twisted_pair_propagation_errors(RES_PropagationDelayErrorCount, RES_DelaySkewErrorCount);
+      end;
+      if (RES_IsDCLoopResistanceTestEnabled)
+      begin
+         write_twisted_pair_dcloopresistance_errors(RES_DCLoopResistanceErrorCount);
+      end;
+      if (RES_IsCableLengthTestEnabled)
+      begin
+         write_twisted_pair_cablelength_errors(RES_IsCableLengthOk, RES_ExpectedCableLength,
+            RES_CableLengthLowerTol, RES_CableLengthUpperTol, RES_CableLength);
+      end;
+      write_twisted_pair_frequency_errors(RES_FrequencyErrorCount);
+   end;
+   if (StrCompare(RES_Comment, '') <> 0)
+   begin
+      WriteLn('');
+      display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   end;
+end;
+
+template TwistedPairTestFrequencies
+begin
+   Name = get_teststep_name(RES_Name, LocalText('281#Twisted Pair'));
+   Name = format_teststep_name(Name);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      ResultText = format_teststep_result(LocalText('5#Passed'));
+      Line = ResultText + Name + format_teststep_pin(get_twisted_pair_cat_text(RES_Category));
+      WriteLn(Line);
+   end
+   else
+   begin
+      if (RES_Result == TESTSTEP_Failed)
+      begin
+         ResultText = format_teststep_result(LocalText('114#Failed'));
+      end
+      else
+      begin
+         ResultText = format_teststep_result(LocalText('7#Invalid'));
+      end;
+      Line = ResultText + Name + format_teststep_pin(get_twisted_pair_cat_text(RES_Category));
+      Write(Line);
+      write_twisted_pair_wire_errors(RES_IsContinuityOk, RES_IsIsolationOk);
+      if (RES_IsAttenuationTestEnabled)
+      begin
+         write_twisted_pair_attenuation_errors(RES_InsertionLossErrorCount, RES_ReturnLossErrorCount,
+            RES_NEXTErrorCount, RES_FEXTErrorCount);
+      end;
+      if (RES_IsPropagationTestEnabled)
+      begin
+         write_twisted_pair_propagation_errors(RES_PropagationDelayErrorCount, RES_DelaySkewErrorCount);
+      end;
+      if (RES_IsDCLoopResistanceTestEnabled)
+      begin
+         write_twisted_pair_dcloopresistance_errors(RES_DCLoopResistanceErrorCount);
+      end;
+      if (RES_IsCableLengthTestEnabled)
+      begin
+         write_twisted_pair_cablelength_errors(RES_IsCableLengthOk, RES_ExpectedCableLength,
+            RES_CableLengthLowerTol, RES_CableLengthUpperTol, RES_CableLength);
+      end;
+      write_twisted_pair_frequency_errors(RES_FrequencyErrorCount);
+   end;
+   if (StrCompare(RES_Comment, '') <> 0)
+   begin
+      WriteLn('');
+      display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   end;
+end;
+
+template TwistedPairTest2PE
+begin
+   Name = get_teststep_name(RES_Name, LocalText('281#Twisted Pair'));
+   Name = format_teststep_name(Name);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      ResultText = format_teststep_result(LocalText('5#Passed'));
+      Line = ResultText + Name + format_teststep_pin(get_twisted_pair_cat_text(RES_Category));
+      WriteLn(Line);
+   end
+   else
+   begin
+      if (RES_Result == TESTSTEP_Failed)
+      begin
+         ResultText = format_teststep_result(LocalText('114#Failed'));
+      end
+      else
+      begin
+         ResultText = format_teststep_result(LocalText('7#Invalid'));
+      end;
+      Line = ResultText + Name + format_teststep_pin(get_twisted_pair_cat_text(RES_Category));
+      Write(Line);
+      write_twisted_pair_wire_errors(RES_IsContinuityOk, RES_IsIsolationOk);
+      if (RES_IsAttenuationTestEnabled)
+      begin
+         write_twisted_pair_attenuation_errors(RES_InsertionLossErrorCount, RES_ReturnLossErrorCount,
+            RES_NEXTErrorCount, RES_FEXTErrorCount);
+      end;
+      if (RES_IsPropagationTestEnabled)
+      begin
+         write_twisted_pair_propagation_errors(RES_PropagationDelayErrorCount, RES_DelaySkewErrorCount);
+      end;
+      if (RES_IsDCLoopResistanceTestEnabled)
+      begin
+         write_twisted_pair_dcloopresistance_errors(RES_DCLoopResistanceErrorCount);
+      end;
+      if (RES_IsCableLengthTestEnabled)
+      begin
+         write_twisted_pair_cablelength_errors(RES_IsCableLengthOk, RES_ExpectedCableLength,
+            RES_CableLengthLowerTol, RES_CableLengthUpperTol, RES_CableLength);
+      end;
+      write_twisted_pair_frequency_errors(RES_FrequencyErrorCount);
+   end;
+   if (StrCompare(RES_Comment, '') <> 0)
+   begin
+      WriteLn('');
+      display_teststepcomment(RES_Comment, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   end;
+end;

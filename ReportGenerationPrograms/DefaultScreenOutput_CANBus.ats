@@ -1,0 +1,120 @@
+template CANRxTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('261#CANRxTest'));
+   switch (RES_Result)
+   begin
+      case TESTSTEP_Passed:
+      begin
+         ResultText = LocalText('5#Passed');
+      end;
+      case TESTSTEP_Failed:
+      begin
+         ResultText = LocalText('114#Failed');
+      end;
+      default:
+      begin
+         ResultText = LocalText('7#Invalid');
+      end;
+   end;
+   ResultText = format_teststep_result(ResultText);
+   Line = StrAdd(ResultText, Name);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      UIWriteNormal(Line);
+   end
+   else
+   begin
+      UIWriteError(Line);
+   end;
+end;
+
+template CANTxRxTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('262#CANTxRxTest'));
+   switch (RES_Result)
+   begin
+      case TESTSTEP_Passed:
+      begin
+         ResultText = LocalText('5#Passed');
+      end;
+      case TESTSTEP_Failed:
+      begin
+         ResultText = LocalText('114#Failed');
+      end;
+      default:
+      begin
+         ResultText = LocalText('7#Invalid');
+      end;
+   end;
+   ResultText = format_teststep_result(ResultText);
+   Line = StrAdd(ResultText, Name);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      UIWriteNormal(Line);
+   end
+   else
+   begin
+      UIWriteError(Line);
+   end;
+end;
+
+template CANRtrRxTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('263#CANRtrRxTest'));
+   switch (RES_Result)
+   begin
+      case TESTSTEP_Passed:
+      begin
+         ResultText = LocalText('5#Passed');
+      end;
+      case TESTSTEP_Failed:
+      begin
+         ResultText = LocalText('114#Failed');
+      end;
+      default:
+      begin
+         ResultText = LocalText('7#Invalid');
+      end;
+   end;
+   ResultText = format_teststep_result(ResultText);
+   Line = StrAdd(ResultText, Name);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      UIWriteNormal(Line);
+   end
+   else
+   begin
+      UIWriteError(Line);
+   end;
+end;
+
+template CANISO15765TxRxTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('264#CANISO15765TxRxTest'));
+   switch (RES_Result)
+   begin
+      case TESTSTEP_Passed:
+      begin
+         ResultText = LocalText('5#Passed');
+      end;
+      case TESTSTEP_Failed:
+      begin
+         ResultText = LocalText('114#Failed');
+      end;
+      default:
+      begin
+         ResultText = LocalText('7#Invalid');
+      end;
+   end;
+   ResultText = format_teststep_result(ResultText);
+   Line = StrAdd(ResultText, Name);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      UIWriteNormal(Line);
+   end
+   else
+   begin
+      UIWriteError(Line);
+   end;
+end;
+

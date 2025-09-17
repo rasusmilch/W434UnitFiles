@@ -1,0 +1,179 @@
+//Achtung!
+//Änderungen an den Programmen für die Protokollerzeugung, die an den
+//Original-Dateien durchgeführt werden, werden bei der Installation eines
+//Softwareupdates überschrieben.
+//Falls Sie Anpassungen am Protokoll benötigen, ändern Sie nicht die
+//Script-Dateien, die mit CEETIS ausgeliefert werden.
+//Erstellen Sie Kopien der Scripte ("Datei->Programm speichern unter" oder
+//"Datei->Speichern unter") und führen Sie die Änderungen in den Kopien durch.
+//Um die geänderten Programme immer automatisch in Ihre Projekte einzubinden
+//können Sie Projektvorlagen erstellen.
+
+//Attention!
+//Changes in the programs for report generation, which are made in the original
+//files will be overwritten when installing a software-update.
+//If you need to cusomize the report do not change the script-files that are
+//distributed with CEETIS.
+//Make a copy of these files ("File->Save Program as" or "File->Save as") and
+//customize the copies.
+//If you want to bind the customized programs automatically to your projects,
+//you can create project templates.
+
+//Output commands for the header
+template Header
+begin
+   //Caption
+   CompanyName = '';
+   CompanyLogo = '';
+   CompanyLogoWidth = 0;
+   CompanyLogoHeight = 0;
+   MiscGetCompanyInfo(CompanyName, CompanyLogo, CompanyLogoWidth, CompanyLogoHeight);
+   if (StrCompare(CompanyName, '') <> 0)
+   begin
+      WriteLn(CompanyName);
+      Line = get_underline(CompanyName);
+      WriteLn(Line);
+      WriteLn('');
+   end;
+
+   //General informations
+   Length = StrLength(LocalText('119#Full name'));
+   Line = FormatAlignLeft(LocalText('18#Software version'), Length, ' ');
+   Line = StrAdd(Line, ': ');
+   Line = StrAdd(Line, RES_SoftwareVersion);
+   WriteLn(Line);
+   Line = FormatAlignLeft(LocalText('19#Unit under test'), Length, ' ');
+   Line = StrAdd(Line, ': ');
+   Line = StrAdd(Line, ProjectGetName());
+   WriteLn(Line);
+   Line = FormatAlignLeft(LocalText('20#Filename'), Length, ' ');
+   Line = StrAdd(Line, ': ');
+   Line = StrAdd(Line, get_relative_filename(ProjectGetFilename()));
+   WriteLn(Line);
+   DateTime = DTGetTestDateTime();
+   DateTime = DTDateTimeString(DateTime);
+   Line = FormatAlignLeft(LocalText('21#Date/Time'), Length, ' ');
+   Line = StrAdd(Line, ': ');
+   Line = StrAdd(Line, DateTime);
+   WriteLn(Line);
+
+   //Order number
+   display_ordernumber(Length);
+
+   //Serial number
+   display_serialnumber(Length);
+   
+   //User name
+   display_username(Length);
+
+   //Full user name
+   // display_fullusername(Length);
+   
+   //Group name
+   // display_usergroupname(Length);
+
+   //Additional input data from the test start program
+   display_teststart_inputdata(Length);
+
+   //Rangetest
+   display_rangetest(Length);
+
+   WriteLn('');
+
+   //Sections
+   display_sections();
+
+   //Test result
+   switch (RES_Result)
+   begin
+      case TEST_Passed:
+      begin
+         ResultText = LocalText('34#P A S S E D');
+         DetailedResult = TRUE;
+      end;
+      case TEST_Failed:
+      begin
+         ResultText = LocalText('35#F A I L E D');
+         DetailedResult = TRUE;
+      end;
+      case TEST_Aborted:
+      begin
+         ResultText = LocalText('36#A B O R T E D');
+         DetailedResult = FALSE;
+      end;
+      default:
+      begin
+         ResultText = LocalText('37#I N V A L I D');
+         DetailedResult = FALSE;
+      end;
+   end;
+   ResultText = FormatAlignCenter(ResultText, 24);
+   ResultText = StrAdd(ResultText, '---------------');
+   ResultText = StrAdd('---------------', ResultText);
+   Length = StrLength(ResultText);
+
+   if (DetailedResult)
+   begin
+      //Passed + Failed
+      Caption = FormatAlignCenter(LocalText('38#T e s t   r e s u l t'), Length);
+      WriteLn(Caption);
+      Line = FormatAlignLeft('-', Length, '-');
+      WriteLn(Line);
+
+      write_command_group_results();
+      WriteLn(ResultText);
+   end
+   else
+   begin
+      //Aborted + Invalid
+      WriteLn(ResultText);
+   end;
+   
+   //Remove "//" from the next line to write the measurement parameters into the report
+   //write_parameters();
+
+   //Adaptercables
+   check_adaptercables();
+   show_lastisolationtestcable();
+   
+   WriteLn('');
+end;
+
+//Output commands for the footer
+template Footer
+begin
+end;
+
+//Output commands for the command ManualTestProbe
+template ManualTestProbe
+begin
+   WriteLn(LocalText('82#Probe in manual test:'));
+   PinCount = 0;
+   PinsPerLine = 4;
+   Line= '';
+   for Count = 1 to RES_PinCount do
+   begin
+      PinName = PinGetData(RES_Pins[Count], PIN_AnyName);
+      Line = StrAdd(Line, PinName);
+      if (Count < RES_PinCount)
+      begin
+         Line = StrAdd(Line, ', ');
+      end;
+      PinCount = PinCount + 1;
+      if (PinCount == PinsPerLine)
+      begin
+         WriteLn(Line);
+         PinCount = 0;
+      end;
+   end;
+   if (PinCount > 0)
+   begin
+      WriteLn(Line);
+   end;
+end;
+
+
+
+
+
+

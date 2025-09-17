@@ -1,0 +1,61 @@
+//Output for the command LV_ConnectorDetectionTest
+template LV_ConnectorDetectionTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('268#CON DET'));
+   Name = format_teststep_name(Name);
+   Pin = format_teststep_pin(get_lv_pinname(RES_Pin));
+   Line = Name;
+   Line = StrAdd(Line, Pin);
+
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      ResultText = format_teststep_result(LocalText('5#Passed'));
+      Line = StrAdd(ResultText, Line);
+      UIWriteNormal(Line);
+   end
+   else
+   begin
+      if (RES_On)
+      begin
+         ResultText = format_teststep_result(LocalText('57#Off'));
+      end
+      else
+      begin
+         ResultText = format_teststep_result(LocalText('56#On'));
+      end;
+      Line = StrAdd(ResultText, Line);
+      UIWriteError(Line);
+   end;
+end;
+
+//Output for the command LV_DetectionTest
+template LV_DetectionTest
+begin
+   Name = get_teststep_name(RES_Name, LocalText('269#DET'));
+   Name = format_teststep_name(Name);
+   Pin1 = format_teststep_pin(get_lv_pinname(RES_Pin1));
+   Pin2 = format_teststep_pin(get_lv_pinname(RES_Pin2));
+   Line = Name;
+   Line = StrAdd(Line, Pin1);
+   Line = StrAdd(Line, Pin2);
+
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      ResultText = format_teststep_result(LocalText('5#Passed'));
+      Line = StrAdd(ResultText, Line);
+      UIWriteNormal(Line);
+   end
+   else
+   begin
+      if (RES_On)
+      begin
+         ResultText = format_teststep_result(LocalText('57#Off'));
+      end
+      else
+      begin
+         ResultText = format_teststep_result(LocalText('56#On'));
+      end;
+      Line = StrAdd(ResultText, Line);
+      UIWriteError(Line);
+   end;
+end;

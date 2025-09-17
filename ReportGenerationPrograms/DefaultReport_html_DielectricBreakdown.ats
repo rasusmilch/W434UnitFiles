@@ -1,0 +1,615 @@
+//Funktionen für den Test auf dielektrischen Durchschlag, sind die Funktionen,
+//bei denen die AC-Parameter für die Messung verwendet werden.
+
+//Dielectric breakdown test functions are those, for which the AC parameters are used
+
+
+//Output for the command ParamDielectricBreakdown
+template ParamDielectricBreakdown
+begin
+   Line = '';
+   if (RES_VoltageChanged)
+   begin
+      Value = FormatVoltage(RES_DBVoltage);
+      Line = StrAdd(Line, LocalText('61#Voltage'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TriseChanged)
+   begin
+      Value = FormatTime(RES_DBTrise);
+      Line = StrAdd(Line, LocalText('53#Trise'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TwaitChanged)
+   begin
+      Value = FormatTime(RES_DBTwait);
+      Line = StrAdd(Line, LocalText('54#Twait'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TmeasChanged)
+   begin
+      Value = FormatTime(RES_DBTmeas);
+      Line = StrAdd(Line, LocalText('55#Tmeas'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TmeasFactorChanged)
+   begin
+      Value = RES_DBTmeasFactor;
+      Line = StrAdd(Line, LocalText('64#Tmeas fact.'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_VoltageRampChanged)
+   begin
+      Value = FormatVoltageRamp(RES_DBVoltageRamp);
+      Line = StrAdd(Line, LocalText('66#Voltage ramp'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_FrequencyChanged)
+   begin
+      Value = StrAdd(RES_DBFrequency, 'Hz');
+      Line = StrAdd(Line, LocalText('79#Frequency'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_ThresholdIrChanged)
+   begin
+      Value = FormatCurrent(RES_DBThresholdIr);
+      Line = StrAdd(Line, LocalText('80#Threshold (Ir)'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_ThresholdIiChanged)
+   begin
+      Value = FormatCurrent(RES_DBThresholdIi);
+      Line = StrAdd(Line, LocalText('81#Threshold (Ii)'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (StrCompare(Line, '') <> 0)
+   begin
+      Pos = StrLength(Line) - 1;
+      Line = StrDelete(Line, Pos, 2);
+      WriteLn('<TABLE Border=0 Width=640 class=teststeppass>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD class=bold>');
+      Write(LocalText('68#Parameters for dielectric breakdown test'));
+      WriteLn('</TD></TR>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD>');
+      Write(Line);
+      WriteLn('</TD></TR>');
+      WriteLn('</TABLE>');
+   end;
+end;
+
+//Output for the command ParamResetDielectricBreakdown
+template ParamResetDielectricBreakdown
+begin
+   Line = '';
+   if (RES_VoltageChanged)
+   begin
+      Value = FormatVoltage(RES_DBVoltage);
+      Line = StrAdd(Line, LocalText('61#Voltage'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TriseChanged)
+   begin
+      Value = FormatTime(RES_DBTrise);
+      Line = StrAdd(Line, LocalText('53#Trise'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TwaitChanged)
+   begin
+      Value = FormatTime(RES_DBTwait);
+      Line = StrAdd(Line, LocalText('54#Twait'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TmeasChanged)
+   begin
+      Value = FormatTime(RES_DBTmeas);
+      Line = StrAdd(Line, LocalText('55#Tmeas'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TmeasFactorChanged)
+   begin
+      Value = RES_DBTmeasFactor;
+      Line = StrAdd(Line, LocalText('64#Tmeas fact.'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_VoltageRampChanged)
+   begin
+      Value = FormatVoltageRamp(RES_DBVoltageRamp);
+      Line = StrAdd(Line, LocalText('66#Voltage ramp'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_FrequencyChanged)
+   begin
+      Value = StrAdd(RES_DBFrequency, 'Hz');
+      Line = StrAdd(Line, LocalText('79#Frequency'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_ThresholdIrChanged)
+   begin
+      Value = FormatCurrent(RES_DBThresholdIr);
+      Line = StrAdd(Line, LocalText('80#Threshold (Ir)'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_ThresholdIiChanged)
+   begin
+      Value = FormatCurrent(RES_DBThresholdIi);
+      Line = StrAdd(Line, LocalText('81#Threshold (Ii)'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (StrCompare(Line, '') <> 0)
+   begin
+      Pos = StrLength(Line) - 1;
+      Line = StrDelete(Line, Pos, 2);
+      WriteLn('<TABLE Border=0 Width=640 class=teststeppass>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD class=bold>');
+      Write(LocalText('68#Parameters for dielectric breakdown test'));
+      WriteLn('</TD></TR>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD>');
+      Write(Line);
+      WriteLn('</TD></TR>');
+      WriteLn('</TABLE>');
+   end;
+end;
+
+//Output for the command NoConnectionDB
+template NoConnectionDB
+begin
+   Name = get_teststep_name(RES_Name, LocalText('251#NC DB'));
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+            Style = 'teststeppass';
+         end;
+         case TESTSTEP_Failed:
+         begin
+            if (RES_Arc)
+            begin
+               ResultText = LocalText('202#Arc');
+            end
+            else
+            begin
+               ResultText = LocalText('15#Short');
+            end;
+            Style = 'teststepfail';
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+            Style = 'teststepfail';
+         end;
+      end;
+      File = get_teststepimage(RES_Result, RES_ManualTest);
+      Write('<TABLE Border=0 Width=640 class=');
+      Write(Style);
+      WriteLn('>');
+      Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+      Write('<IMG SRC="');
+      Write(File);
+      WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+      Write('<TD Width=100 class=bold>');
+      Write(ResultText);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Name);
+      WriteLn('</TD>');
+      Pin1 = get_pinname(RES_Pin1);
+      Pin2 = get_pinname(RES_Pin2);
+      Write('<TD Width=130>');
+      Write(Pin1);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Pin2);
+      WriteLn('</TD>');
+      Value = get_dielectric_breakdown_value(RES_Arc, RES_ValueValid, RES_ValueIr, RES_PrefixIr,
+         RES_ValueIi, RES_PrefixIi);
+      Write('<TD Align=RIGHT>');
+      Write(Value);
+      WriteLn('</TD></TR>');
+      display_teststepcomment(RES_Comment, Style,
+         RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+      WriteLn('</TABLE>');
+   end;
+end;
+
+//Output for the command NoConnAllDB
+template NoConnAllDB
+begin
+   Name = get_teststep_name(RES_Name, LocalText('252#NCA DB'));
+   Pin1 = get_pinname(RES_Pin);
+   Write('<TABLE Border=0 Width=640 class=');
+   File = get_teststepimage(RES_Result, RES_ManualTest);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      Style = 'teststeppass';
+      WriteLn(StrAdd(Style, '>'));
+      Value = get_dielectric_breakdown_value(RES_Arc, RES_ValueValid, RES_ValueIr, RES_PrefixIr,
+         RES_ValueIi, RES_PrefixIi);
+      Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+      Write('<IMG SRC="');
+      Write(File);
+      WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+      Write('<TD Width=100 class=bold>');
+      Write(LocalText('5#Passed'));
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Name);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Pin1);
+      WriteLn('</TD>');
+      Write('<TD Width=130>&nbsp;</TD>');
+      Write('<TD Align=RIGHT>');
+      Write(Value);
+      WriteLn('</TD></TR>');
+   end
+   else
+   begin
+      Style = 'teststepfail';
+      WriteLn(StrAdd(Style, '>'));
+      for Index = 1 to RES_ErrorPinCount do
+      begin
+         Pin2 = get_pinname(RES_ErrorPins[Index]);
+         Value = get_dielectric_breakdown_value(RES_Arcs[Index], RES_ValuesValid[Index],
+            RES_ValuesIr[Index], RES_PrefixesIr[Index], RES_ValuesIi[Index], RES_PrefixesIi[Index]);
+         if (RES_Arcs[Index])
+         begin
+            ResultText = LocalText('202#Arc');
+         end
+         else
+         begin
+            ResultText = LocalText('15#Short');
+         end;
+         Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+         Write('<IMG SRC="');
+         Write(File);
+         WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+         Write('<TD Width=100 class=bold>');
+         Write(ResultText);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Name);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Pin1);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Pin2);
+         WriteLn('</TD>');
+         Write('<TD Align=RIGHT>');
+         Write(Value);
+         WriteLn('</TD></TR>');
+      end;
+   end;
+   display_teststepcomment(RES_Comment, Style,
+      RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   WriteLn('</TABLE>');
+end;
+
+//Output for the command NoConnLowerDB
+template NoConnLowerDB
+begin
+   Name = get_teststep_name(RES_Name, LocalText('253#NCL DB'));
+   Pin1 = get_pinname(RES_Pin);
+   Write('<TABLE Border=0 Width=640 class=');
+   File = get_teststepimage(RES_Result, FALSE);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      Style = 'teststeppass';
+      WriteLn(StrAdd(Style, '>'));
+      Value = get_dielectric_breakdown_value(RES_Arc, RES_ValueValid, RES_ValueIr, RES_PrefixIr,
+         RES_ValueIi, RES_PrefixIi);
+      Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+      Write('<IMG SRC="');
+      Write(File);
+      WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+      Write('<TD Width=100 class=bold>');
+      Write(LocalText('5#Passed'));
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Name);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Pin1);
+      WriteLn('</TD>');
+      Write('<TD Width=130>&nbsp;</TD>');
+      Write('<TD Align=RIGHT>');
+      Write(Value);
+      WriteLn('</TD></TR>');
+   end
+   else
+   begin
+      Style = 'teststepfail';
+      WriteLn(StrAdd(Style, '>'));
+      for Index = 1 to RES_ErrorPinCount do
+      begin
+         Pin2 = get_pinname(RES_ErrorPins[Index]);
+         Value = get_dielectric_breakdown_value(RES_Arcs[Index], RES_ValuesValid[Index],
+            RES_ValuesIr[Index], RES_PrefixesIr[Index], RES_ValuesIi[Index], RES_PrefixesIi[Index]);
+         if (RES_Arcs[Index])
+         begin
+            ResultText = LocalText('202#Arc');
+         end
+         else
+         begin
+            ResultText = LocalText('15#Short');
+         end;
+         Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+         Write('<IMG SRC="');
+         Write(File);
+         WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+         Write('<TD Width=100 class=bold>');
+         Write(ResultText);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Name);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Pin1);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Pin2);
+         WriteLn('</TD>');
+         Write('<TD Align=RIGHT>');
+         Write(Value);
+         WriteLn('</TD></TR>');
+      end;
+   end;
+   display_teststepcomment(RES_Comment, Style,
+      RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   WriteLn('</TABLE>');
+end;
+
+//Output for the command NoConnGroupDB
+template NoConnGroupDB
+begin
+   Name = get_teststep_name(RES_Name, LocalText('254#NCG DB'));
+   Write('<TABLE Border=0 Width=640 class=');
+   File = get_teststepimage(RES_Result, RES_ManualTest);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      Style = 'teststeppass';
+      WriteLn(StrAdd(Style, '>'));
+      Value = get_dielectric_breakdown_value(RES_Arc, RES_ValueValid, RES_ValueIr, RES_PrefixIr,
+         RES_ValueIi, RES_PrefixIi);
+      Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+      Write('<IMG SRC="');
+      Write(File);
+      WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+      Write('<TD Width=100 class=bold>');
+      Write(LocalText('5#Passed'));
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Name);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(RES_HighGroup);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(RES_LowGroup);
+      WriteLn('</TD>');
+      Write('<TD Align=RIGHT>');
+      Write(Value);
+      WriteLn('</TD></TR>');
+   end
+   else
+   begin
+      Style = 'teststepfail';
+      WriteLn(StrAdd(Style, '>'));
+      for Index = 1 to RES_ErrorCount do
+      begin
+         Value = get_dielectric_breakdown_value(RES_Arcs[Index], RES_ValuesValid[Index],
+            RES_ValuesIr[Index], RES_PrefixesIr[Index], RES_ValuesIi[Index], RES_PrefixesIi[Index]);
+         if (RES_Arcs[Index])
+         begin
+            ResultText = LocalText('202#Arc');
+         end
+         else
+         begin
+            ResultText = LocalText('15#Short');
+         end;
+         if ((RES_ErrorHighPins[Index] == PINADDRESS_NotSearched) OR (RES_ErrorHighPins[Index] == PINADDRESS_NotFound))
+         begin
+            Pin1 = RES_HighGroup;
+         end
+         else
+         begin
+            Pin1 = get_pinname(RES_ErrorHighPins[Index]);
+         end;
+         if ((RES_ErrorLowPins[Index] == PINADDRESS_NotSearched) OR  (RES_ErrorLowPins[Index] == PINADDRESS_NotFound))
+         begin
+            Pin2 = RES_LowGroup;
+         end
+         else
+         begin
+            Pin2 = get_pinname(RES_ErrorLowPins[Index]);
+         end;
+         Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+         Write('<IMG SRC="');
+         Write(File);
+         WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+         Write('<TD Width=100 class=bold>');
+         Write(ResultText);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Name);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Pin1);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Pin2);
+         WriteLn('</TD>');
+         Write('<TD Align=RIGHT>');
+         Write(Value);
+         WriteLn('</TD></TR>');
+      end;
+      display_short_to_lower_voltage_level(RES_ShortToLowerVoltageLevel);
+   end;
+   display_teststepcomment(RES_Comment, Style, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   WriteLn('</TABLE>');
+end;
+
+//Output for the command ConnectionTestDB
+template ConnectionTestDB
+begin
+   Name = get_teststep_name(RES_Name, LocalText('255#ConnectionTestDB'));
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+            Style = 'teststeppass';
+         end;
+         case TESTSTEP_Failed:
+         begin
+            if (RES_Arc)
+            begin
+               ResultText = LocalText('202#Arc');
+            end
+            else
+            begin
+               ResultText = LocalText('6#Open');
+            end;
+            Style = 'teststepfail';
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+            Style = 'teststepfail';
+         end;
+      end;
+      File = get_teststepimage(RES_Result, RES_ManualTest);
+      Write('<TABLE Border=0 Width=640 class=');
+      Write(Style);
+      WriteLn('>');
+      Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+      Write('<IMG SRC="');
+      Write(File);
+      WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+      Write('<TD Width=100 class=bold>');
+      Write(ResultText);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Name);
+      WriteLn('</TD>');
+      Pin1 = get_pinname(RES_Pin1);
+      Pin2 = get_pinname(RES_Pin2);
+      Write('<TD Width=130>');
+      Write(Pin1);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Pin2);
+      WriteLn('</TD>');
+      Value = get_dielectric_breakdown_value(RES_Arc, RES_ValueValid, RES_ValueIr, RES_PrefixIr,
+         RES_ValueIi, RES_PrefixIi);
+      Write('<TD Align=RIGHT>');
+      Write(Value);
+      WriteLn('</TD></TR>');
+      display_teststepcomment(RES_Comment, Style, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+      WriteLn('</TABLE>');
+   end;
+end;
+
+//Output for the command SimpleNoConnPinVsGroupDB
+template SimpleNoConnPinVsGroupDB
+begin
+   Name = get_teststep_name(RES_Name, LocalText('256#SPvG DB'));
+   HighPin = get_pinname(RES_Pin);
+   Write('<TABLE Border=0 Width=640 class=');
+   File = get_teststepimage(RES_Result, RES_ManualTest);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      Style = 'teststeppass';
+      WriteLn(StrAdd(Style, '>'));
+      Value = get_dielectric_breakdown_value(RES_Arc, RES_ValueValid, RES_ValueIr, RES_PrefixIr,
+         RES_ValueIi, RES_PrefixIi);
+      Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+      Write('<IMG SRC="');
+      Write(File);
+      WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+      Write('<TD Width=100 class=bold>');
+      Write(LocalText('5#Passed'));
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(Name);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(HighPin);
+      WriteLn('</TD>');
+      Write('<TD Width=130>');
+      Write(RES_LowGroup);
+      WriteLn('</TD>');
+      Write('<TD Align=RIGHT>');
+      Write(Value);
+      WriteLn('</TD></TR>');
+   end
+   else
+   begin
+      Style = 'teststepfail';
+      WriteLn(StrAdd(Style, '>'));
+      for Index = 1 to RES_ErrorPinCount do
+      begin
+         Value = get_dielectric_breakdown_value(RES_Arcs[Index], RES_ValuesValid[Index],
+            RES_ValuesIr[Index], RES_PrefixesIr[Index], RES_ValuesIi[Index], RES_PrefixesIi[Index]);
+         if (RES_Arcs[Index])
+         begin
+            ResultText = LocalText('202#Arc');
+         end
+         else
+         begin
+            ResultText = LocalText('15#Short');
+         end;
+         if ((RES_ErrorPins[Index] == PINADDRESS_NotSearched) OR
+             (RES_ErrorPins[Index] == PINADDRESS_NotFound))
+         begin
+            LowPin = RES_LowGroup;
+         end
+         else
+         begin
+            LowPin = get_pinname(RES_ErrorPins[Index]);
+         end;
+         Write('<TR><TD Width=20 Align=CENTER VAlign=Middle>');
+         Write('<IMG SRC="');
+         Write(File);
+         WriteLn('" Width=16 Height=16>&nbsp;</TD>');
+         Write('<TD Width=100 class=bold>');
+         Write(ResultText);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(Name);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(HighPin);
+         WriteLn('</TD>');
+         Write('<TD Width=130>');
+         Write(LowPin);
+         WriteLn('</TD>');
+         Write('<TD Align=RIGHT>');
+         Write(Value);
+         WriteLn('</TD></TR>');
+      end;
+      display_short_to_lower_voltage_level(RES_ShortToLowerVoltageLevel);
+   end;
+   display_teststepcomment(RES_Comment, Style, RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   WriteLn('</TABLE>');
+end;
+

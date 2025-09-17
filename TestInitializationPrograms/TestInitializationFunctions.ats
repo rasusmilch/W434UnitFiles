@@ -1,0 +1,18 @@
+function ordernumber(): boolean;
+begin
+   InputResult = '';
+   //show edit dialog
+   Button = UIEditDialog(LocalText('90#Order number'),
+               LocalText('91#Enter order number'), FALSE, TRUE, InputResult);
+   if (Button == DIALOGRESULT_Ok)
+   begin
+      //write to Global Data for later use in the report
+      GlobalDataSetOrderNumber(InputResult);
+      Result = TRUE;
+   end
+   else
+   begin
+      Result = FALSE;
+   end;
+end;
+

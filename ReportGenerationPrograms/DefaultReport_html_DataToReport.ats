@@ -1,0 +1,154 @@
+//Output for ReportWriteNormal
+template ReportWriteNormal
+begin
+   if (NOT report_write_teststep(RES_Text, TRUE))
+   begin
+      WriteLn('<TABLE Border=0 Width=640 class=teststeppass>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD>');
+      Write(RES_Text);
+      WriteLn('</TD></TR>');
+      WriteLn('</TABLE>');
+   end;
+end;
+
+//Output for ReportWriteError
+template ReportWriteError
+begin
+   if (NOT report_write_teststep(RES_Text, FALSE))
+   begin
+      WriteLn('<TABLE Border=0 Width=640 class=teststepfail>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD>');
+      Write(RES_Text);
+      WriteLn('</TD></TR>');
+      WriteLn('</TABLE>');
+   end;
+end;
+
+//Output for ReportWriteTag
+template ReportWriteTag
+begin
+   Tag = RES_Tag;
+   if (StrPosition('Image', Tag) == 1)
+   begin
+      ImageWidth = 0;
+      ImageHeight = 0;
+      if (report_write_tag_get_image_size(RES_Tag, ImageWidth, ImageHeight))
+      begin
+         Tag = 'Image';
+      end;
+   end;
+   switch (Tag)
+   begin
+      case 'Headline': begin
+         WriteLn('<TABLE Border=0 Width=640 class=teststeppass >');
+         WriteLn('<TR><TD Width=640 Align=CENTER VAlign=Middle bgcolor="#0000FF">');
+         Write(RES_Text);
+         WriteLn('</TD></TR>');
+         WriteLn('</TABLE>');
+      end;
+      case 'HeadlineFF': begin
+         WriteLn('<TABLE Border=0 Width=640 class=teststeppass style="page-break-before:always">');
+         WriteLn('<TR><TD Width=640 Align=CENTER VAlign=Middle bgcolor="#0000FF">');
+         Write(RES_Text);
+         WriteLn('</TD></TR>');
+         WriteLn('</TABLE>');
+      end;
+      case 'Warning': begin
+         WriteLn('<TABLE Border=0 Width=640 class=teststeppass >');
+         WriteLn('<TR><TD Width=640 Align=LEFT VAlign=Middle bgcolor="#FFFF00">');
+         Write(RES_Text);
+         WriteLn('</TD></TR>');
+         WriteLn('</TABLE>');
+      end;
+      case 'Image': begin
+         insert_image(RES_Text, ImageWidth, ImageHeight);
+      end;
+      default: begin
+         WriteLn('<TABLE Border=0 Width=640 class=teststeppass>');
+         WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+         Write('<TD>');
+         Write(RES_Text);
+         WriteLn('</TD></TR>');
+         WriteLn('</TABLE>');
+      end;
+   end;
+end;
+
+//Output commands for the command ReportWriteStrings
+template ReportWriteStrings
+begin
+   WriteLn('<TABLE Border=0 Width=640 class=teststeppass>');
+   WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+   Write('<TD>');
+   Write(RES_Text);
+   WriteLn('</TD></TR>');
+   for Index = 1 to RES_StringCount do
+   begin
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD>');
+      Write(RES_Strings[Index]);
+      WriteLn('</TD></TR>');
+   end;
+   WriteLn('</TABLE>');
+end;
+
+//Output commands for the command ReportWriteMeasurementParameters
+template ReportWriteMeasurementParameters
+begin
+   Text = '';
+   Parameters = '';
+   switch (RES_CommandGroup)
+   begin
+      case CMDGRP_Continuity: begin
+         Text = LocalText('60#Parameters for continuity test');
+         Parameters = get_continuity_parameters_text(RES_CCurrent,
+                         RES_CThreshold, RES_CTrise, RES_CTwait, RES_CTmeas,
+                         RES_CAutoRange, RES_CVoltageLimit);
+      end;
+      case CMDGRP_IsolationLV: begin
+         Text = LocalText('65#Parameters for LV isolation test');
+         Parameters = get_isolationlv_parameters_text(RES_LVVoltage,
+                         RES_LVThreshold, RES_LVTrise, RES_LVTwait, RES_LVTmeas,
+                         RES_LVAutoRange, RES_LVCurrentLimit,
+                         RES_LVTmeasReduction);
+      end;
+      case CMDGRP_IsolationHV: begin
+         if (ParamGetIsolationHV(PARAM_IsolationHVValid))
+         begin
+            Text = LocalText('67#Parameters for HV isolation test');
+            Parameters = get_all_isolationhv_parameters_text(RES_HVVoltage,
+               RES_HVThreshold, RES_HVUseIThreshold, RES_HVIThreshold,
+               RES_HVTrise, RES_HVTwait, RES_HVTmeas, RES_HVAutoRange,
+               RES_HVCurrentLimit, RES_HVTmeasReduction, RES_HVTmeasFactor,
+               RES_HVVoltageRamp, RES_HVdIdtEnabled, RES_HVdIdtCurrentThreshold,
+               RES_dIdtTimeThresholdChanged);
+         end;
+      end;
+      case CMDGRP_DielectricBreakdown: begin
+         if (ParamGetDielectricBreakdown(PARAM_DielectricBreakdownValid))
+         begin
+            Text = LocalText('68#Parameters for dielectric breakdown test');
+            Parameters = get_dielectricbreakdown_parameters_text(RES_DBVoltage,
+                            RES_DBTrise, RES_DBTwait, RES_DBTmeas,
+                            RES_DBTmeasFactor, RES_DBVoltageRamp,
+                            RES_DBThresholdIr, RES_DBThresholdIi);
+         end;
+      end;
+   end;
+   if (StrCompare('Parameters', '') <> 0)
+   begin
+      WriteLn('<TABLE Border=0 Width=640 class=header>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD class=bold>');
+      Write(Text);
+      WriteLn('</TD></TR>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD>');
+      Write(Parameters);
+      WriteLn('</TD></TR>');
+      WriteLn('</TABLE>');
+      WriteLn('<BR>');
+   end;
+end;

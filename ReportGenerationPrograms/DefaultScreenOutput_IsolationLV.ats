@@ -1,0 +1,474 @@
+//LV-Isolationstest-Funktionen sind die Funktionen, bei denen die
+//LV-Parameter für die Messung verwendet werden.
+
+//LV isolation test functions are those, for which the LV parameters are used
+
+
+//Output for the command ParamIsolationLV
+template ParamIsolationLV
+begin
+   Line = '';
+   if (RES_VoltageChanged)
+   begin
+      Value = FormatVoltage(RES_LVVoltage);
+      Line = StrAdd(Line, LocalText('61#Voltage'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_ThresholdChanged)
+   begin
+      Value = FormatResistance(RES_LVThreshold);
+      Line = StrAdd(Line, LocalText('52#Threshold'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TriseChanged)
+   begin
+      Value = FormatTime(RES_LVTrise);
+      Line = StrAdd(Line, LocalText('53#Trise'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TwaitChanged)
+   begin
+      Value = FormatTime(RES_LVTwait);
+      Line = StrAdd(Line, LocalText('54#Twait'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TmeasChanged)
+   begin
+      Value = FormatTime(RES_LVTmeas);
+      Line = StrAdd(Line, LocalText('55#Tmeas'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_AutoRangeChanged)
+   begin
+      if (RES_LVAutoRange)
+      begin
+         Value = LocalText('56#On');
+      end
+      else
+      begin
+         Value = LocalText('57#Off');
+      end;
+      Line = StrAdd(Line, LocalText('58#Auto ranging'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_CurrentLimitChanged)
+   begin
+      Value = FormatCurrent(RES_LVCurrentLimit);
+      Line = StrAdd(Line, LocalText('62#Current limit'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TmeasReductionChanged)
+   begin
+      if (RES_LVTmeasReduction)
+      begin
+         Value = LocalText('56#On');
+      end
+      else
+      begin
+         Value = LocalText('57#Off');
+      end;
+      Line = StrAdd(Line, LocalText('63#Tmeas red.'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TmeasFactorChanged)
+   begin
+      Value = RES_LVTmeasFactor;
+      Line = StrAdd(Line, LocalText('64#Tmeas fact.'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (StrCompare(Line, '') <> 0)
+   begin
+      Pos = StrLength(Line) - 1;
+      Line = StrDelete(Line, Pos, 2);
+      UIWriteNormal(LocalText('65#Parameters for LV isolation test'));
+      UIWriteNormal(Line);
+   end;
+end;
+
+//Output for the command ParamResetIsolationLV
+template ParamResetIsolationLV
+begin
+   Line = '';
+   if (RES_VoltageChanged)
+   begin
+      Value = FormatVoltage(RES_LVVoltage);
+      Line = StrAdd(Line, LocalText('61#Voltage'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_ThresholdChanged)
+   begin
+      Value = FormatResistance(RES_LVThreshold);
+      Line = StrAdd(Line, LocalText('52#Threshold'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TriseChanged)
+   begin
+      Value = FormatTime(RES_LVTrise);
+      Line = StrAdd(Line, LocalText('53#Trise'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TwaitChanged)
+   begin
+      Value = FormatTime(RES_LVTwait);
+      Line = StrAdd(Line, LocalText('54#Twait'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TmeasChanged)
+   begin
+      Value = FormatTime(RES_LVTmeas);
+      Line = StrAdd(Line, LocalText('55#Tmeas'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_AutoRangeChanged)
+   begin
+      if (RES_LVAutoRange)
+      begin
+         Value = LocalText('56#On');
+      end
+      else
+      begin
+         Value = LocalText('57#Off');
+      end;
+      Line = StrAdd(Line, LocalText('58#Auto ranging'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_CurrentLimitChanged)
+   begin
+      Value = FormatCurrent(RES_LVCurrentLimit);
+      Line = StrAdd(Line, LocalText('62#Current limit'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TmeasReductionChanged)
+   begin
+      if (RES_LVTmeasReduction)
+      begin
+         Value = LocalText('56#On');
+      end
+      else
+      begin
+         Value = LocalText('57#Off');
+      end;
+      Line = StrAdd(Line, LocalText('63#Tmeas red.'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_TmeasFactorChanged)
+   begin
+      Value = RES_LVTmeasFactor;
+      Line = StrAdd(Line, LocalText('64#Tmeas fact.'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (StrCompare(Line, '') <> 0)
+   begin
+      Pos = StrLength(Line) - 1;
+      Line = StrDelete(Line, Pos, 2);
+      UIWriteNormal(LocalText('65#Parameters for LV isolation test'));
+      UIWriteNormal(Line);
+   end;
+end;
+
+//Output for the command NoConnectionLV
+template NoConnectionLV
+begin
+   Name = get_teststep_name(RES_Name, LocalText('234#NC LV'));
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+         end;
+         case TESTSTEP_Failed:
+         begin
+            if (RES_Arc)
+            begin
+               ResultText = LocalText('202#Arc');
+            end
+            else
+            begin
+               ResultText = LocalText('15#Short');
+            end;
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+         end;
+      end;
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      if (RES_Arc)
+      begin
+         Value = ' ';
+      end
+      else
+      begin
+         Value = get_resistance_value(RES_Prefix, RES_Value);
+      end;
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      if (RES_Result == TESTSTEP_Passed)
+      begin
+         UIWriteNormal(Line);
+      end
+      else
+      begin
+         UIWriteError(Line);
+         short_to_lower_voltage_level(RES_ShortToLowerVoltageLevel);
+      end;
+   end;
+end;
+
+//Output for the command NoConnAllLV
+template NoConnAllLV
+begin
+   Name = get_teststep_name(RES_Name, LocalText('235#NCA LV'));
+   Name = format_teststep_name(Name);
+   Pin1 = format_teststep_pin(get_pinname(RES_Pin));
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      ResultText = format_teststep_result(LocalText('5#Passed'));
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Pin2 = format_teststep_pin(' ');
+      Value = get_resistance_value(RES_Prefix, RES_Value);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      UIWriteNormal(Line);
+   end
+   else
+   begin
+      if (RES_ErrorPinCount > 0)
+      begin
+         Index = RES_ErrorPinCount;
+         if (RES_Arcs[Index])
+         begin
+            ResultText = LocalText('202#Arc');
+            Value = ' ';
+         end
+         else
+         begin
+            ResultText = LocalText('15#Short');
+            Value = get_resistance_value(RES_Prefixes[Index], RES_Values[Index]);
+         end;
+         ResultText = format_teststep_result(ResultText);
+         Pin2 = format_teststep_pin(get_pinname(RES_ErrorPins[Index]));
+         Line = StrAdd(ResultText, Name);
+         Line = StrAdd(Line, Pin1);
+         Line = StrAdd(Line, Pin2);
+         Line = StrAdd(Line, Value);
+         UIWriteError(Line);
+      end;
+   end;
+end;
+
+//Output for the command NoConnLowerLV
+template NoConnLowerLV
+begin
+   Name = get_teststep_name(RES_Name, LocalText('236#NCL LV'));
+   Name = format_teststep_name(Name);
+   Pin1 = format_teststep_pin(get_pinname(RES_Pin));
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      ResultText = format_teststep_result(LocalText('5#Passed'));
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Pin2 = format_teststep_pin(' ');
+      Value = get_resistance_value(RES_Prefix, RES_Value);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      UIWriteNormal(Line);
+   end
+   else
+   begin
+      if (RES_ErrorPinCount > 0)
+      begin
+         Index = RES_ErrorPinCount;
+         if (RES_Arcs[Index])
+         begin
+            ResultText = LocalText('202#Arc');
+            Value = ' ';
+         end
+         else
+         begin
+            ResultText = LocalText('15#Short');
+            Value = get_resistance_value(RES_Prefixes[Index], RES_Values[Index]);
+         end;
+         ResultText = format_teststep_result(ResultText);
+         Pin2 = format_teststep_pin(get_pinname(RES_ErrorPins[Index]));
+         Line = StrAdd(ResultText, Name);
+         Line = StrAdd(Line, Pin1);
+         Line = StrAdd(Line, Pin2);
+         Line = StrAdd(Line, Value);
+         UIWriteError(Line);
+      end;
+   end;
+end;
+
+//Output for the command PinScan
+template PinScan
+begin
+   if (RES_ManualTest)
+   begin
+      Name = format_teststep_name(LocalText('239#PinScan'));
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin));
+      if (RES_Result == TESTSTEP_Passed)
+      begin
+         ResultText = format_teststep_result(' ');
+         Pin2 = format_teststep_pin(' ');
+         Value = get_resistance_value(RES_Prefix, RES_Value);
+         Line = StrAdd(ResultText, Name);
+         Line = StrAdd(Line, Pin1);
+         Line = StrAdd(Line, Pin2);
+         Line = StrAdd(Line, Value);
+         UIWriteNormal(Line);
+      end
+      else
+      begin
+         if (RES_ErrorPinCount > 0)
+         begin
+            Index = RES_ErrorPinCount;
+            ResultText = format_teststep_result(LocalText('17#Found'));
+            Pin2 = format_teststep_pin(get_pinname(RES_ErrorPins[Index]));
+            Value = get_resistance_value(RES_Prefixes[Index], RES_Values[Index]);
+            Line = StrAdd(ResultText, Name);
+            Line = StrAdd(Line, Pin1);
+            Line = StrAdd(Line, Pin2);
+            Line = StrAdd(Line, Value);
+            UIWriteNormal(Line);
+         end;
+      end;
+   end;
+end;
+
+//Output for the command NoConnGroupLV
+template NoConnGroupLV
+begin
+   Name = get_teststep_name(RES_Name, LocalText('237#NCG LV'));
+   Name = format_teststep_name(Name);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      ResultText = format_teststep_result(LocalText('5#Passed'));
+      HighGroup = format_teststep_pin(RES_HighGroup);
+      LowGroup = format_teststep_pin(RES_LowGroup);
+      Value = get_resistance_value(RES_Prefix, RES_Value);
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, HighGroup);
+      Line = StrAdd(Line, LowGroup);
+      Line = StrAdd(Line, Value);
+      UIWriteNormal(Line);
+   end
+   else
+   begin
+      if (RES_ErrorCount > 0)
+      begin
+         Index = RES_ErrorCount;
+         if (RES_Arcs[Index])
+         begin
+            ResultText = LocalText('202#Arc');
+            Value = ' ';
+         end
+         else
+         begin
+            ResultText = LocalText('15#Short');
+            Value = get_resistance_value(RES_Prefixes[Index], RES_Values[Index]);
+         end;
+         if ((RES_ErrorHighPins[Index] == PINADDRESS_NotSearched) OR
+             (RES_ErrorHighPins[Index] == PINADDRESS_NotFound))
+         begin
+            Pin1 = RES_HighGroup;
+         end
+         else
+         begin
+            Pin1 = get_pinname(RES_ErrorHighPins[Index]);
+         end;
+         if ((RES_ErrorLowPins[Index] == PINADDRESS_NotSearched) OR
+             (RES_ErrorLowPins[Index] == PINADDRESS_NotFound))
+         begin
+            Pin2 = RES_LowGroup;
+         end
+         else
+         begin
+            Pin2 = get_pinname(RES_ErrorLowPins[Index]);
+         end;
+         ResultText = format_teststep_result(ResultText);
+         Pin1 = format_teststep_pin(Pin1);
+         Pin2 = format_teststep_pin(Pin2);
+
+         Line = StrAdd(ResultText, Name);
+         Line = StrAdd(Line, Pin1);
+         Line = StrAdd(Line, Pin2);
+         Line = StrAdd(Line, Value);
+         UIWriteError(Line);
+         short_to_lower_voltage_level(RES_ShortToLowerVoltageLevel);
+      end;
+   end;
+end;
+
+//Output for the command ConnectionTestLV
+template ConnectionTestLV
+begin
+   Name = get_teststep_name(RES_Name, LocalText('238#ConnectionTestLV'));
+   if (RES_ExtVoltageFound)
+   begin
+      external_voltage_error(Name, RES_ExtVoltagePin1, RES_ExtVoltagePin2,
+         RES_ExtVoltageValue, RES_ExtVoltagePrefix);
+   end
+   else
+   begin
+      switch (RES_Result)
+      begin
+         case TESTSTEP_Passed:
+         begin
+            ResultText = LocalText('5#Passed');
+         end;
+         case TESTSTEP_Failed:
+         begin
+            if (RES_Arc)
+            begin
+               ResultText = LocalText('202#Arc');
+            end
+            else
+            begin
+               ResultText = LocalText('6#Open');
+            end;
+         end;
+         default:
+         begin
+            ResultText = LocalText('7#Invalid');
+         end;
+      end;
+      ResultText = format_teststep_result(ResultText);
+      Name = format_teststep_name(Name);
+      Pin1 = format_teststep_pin(get_pinname(RES_Pin1));
+      Pin2 = format_teststep_pin(get_pinname(RES_Pin2));
+      if (RES_Arc)
+      begin
+         Value = ' ';
+      end
+      else
+      begin
+         Value = get_resistance_value(RES_Prefix, RES_Value);
+      end;
+      Line = StrAdd(ResultText, Name);
+      Line = StrAdd(Line, Pin1);
+      Line = StrAdd(Line, Pin2);
+      Line = StrAdd(Line, Value);
+      if (RES_Result == TESTSTEP_Passed)
+      begin
+         UIWriteNormal(Line);
+      end
+      else
+      begin
+         UIWriteError(Line);
+      end;
+   end;
+end;

@@ -1,0 +1,299 @@
+//Output for the command ParamIDD
+template ParamIDD
+begin
+   Line = '';
+   if (RES_UseNoiseFilterChanged)
+   begin
+      if (RES_UseNoiseFilter)
+      begin
+         Value = LocalText('56#On');
+      end
+      else
+      begin
+         Value = LocalText('57#Off');
+      end;
+      Line = StrAdd(Line, LocalText('197#Use noise filter'));
+      Line = StrAdd(Line, '=');
+      Line = StrAdd(Line, Value);
+      Line = StrAdd(Line, '; ');
+   end;
+   if (RES_UseBandWidthFilterChanged)
+   begin
+      if (RES_UseBandWidthFilter)
+      begin
+         Value = LocalText('56#On');
+      end
+      else
+      begin
+         Value = LocalText('57#Off');
+      end;
+      Line = StrAdd(Line, LocalText('279#Use band width filter'));
+      Line = StrAdd(Line, '=');
+      Line = StrAdd(Line, Value);
+      Line = StrAdd(Line, '; ');
+   end;
+   if (StrCompare(Line, '') <> 0)
+   begin
+      Pos = StrLength(Line) - 1;
+      Line = StrDelete(Line, Pos, 2);
+      WriteLn('<TABLE Border=0 Width=640 class=teststeppass>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD class=bold>');
+      Write(LocalText('198#IDD: General parameters'));
+      WriteLn('</TD></TR>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD>');
+      Write(Line);
+      WriteLn('</TD></TR>');
+      WriteLn('</TABLE>');
+   end;
+end;
+
+//Output for the command ParamIDDStaticContinuity
+template ParamIDDStaticContinuity
+begin
+   Line = '';
+   if (RES_LowerThresholdChanged)
+   begin
+      Line = StrAdd(Line, LocalText('182#Lower Threshold'));
+      Line = Line + '=' + RES_SC_LowerThreshold + '; ';
+   end;
+   if (RES_UpperThresholdChanged)
+   begin
+      Line = StrAdd(Line, LocalText('183#Upper Threshold'));
+      Line = Line + '=' + RES_SC_UpperThreshold + '; ';
+   end;
+   if (RES_TtestChanged)
+   begin
+      Value = FormatTime(RES_SC_Ttest);
+      Line = StrAdd(Line, LocalText('184#Duration'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_DelayChanged)
+   begin
+      Value = FormatTime(RES_SC_Delay);
+      Line = StrAdd(Line, LocalText('185#Delay'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_RxAmplificationChanged)
+   begin
+      Line = StrAdd(Line, LocalText('186#Rx-Amplification'));
+      Line = Line + '=' + RES_SC_RxAmplification + '; ';
+   end;
+   if (RES_CountingIntervalChanged)
+   begin
+      Value = FormatTime(RES_SC_CountingInterval);
+      Line = StrAdd(Line, LocalText('187#Counting Interval'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_GapWidthChanged)
+   begin
+      Value = FormatTime(RES_SC_GapWidth);
+      Line = StrAdd(Line, LocalText('188#Gap Width'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (StrCompare(Line, '') <> 0)
+   begin
+      Pos = StrLength(Line) - 1;
+      Line = StrDelete(Line, Pos, 2);
+      WriteLn('<TABLE Border=0 Width=640 class=teststeppass>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD class=bold>');
+      Write(LocalText('189#IDD: Parameters for the Static Continuity Tests'));
+      WriteLn('</TD></TR>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD>');
+      Write(Line);
+      WriteLn('</TD></TR>');
+      WriteLn('</TABLE>');
+   end;
+end;
+
+//Output for the command ParamIDDContinuityMonitoring
+template ParamIDDContinuityMonitoring
+begin
+   Line = '';
+   if (RES_RxThresholdChanged)
+   begin
+      Line = StrAdd(Line, LocalText('190#Rx Threshold'));
+      Line = Line + '=' + RES_CM_RxThreshold + '; ';
+   end;
+   if (RES_NWThresholdChanged)
+   begin
+      Line = StrAdd(Line, LocalText('191#NW Threshold'));
+      Line = Line + '=' + RES_CM_NWThreshold + '; ';
+   end;
+   if (RES_TxMonitoringChanged)
+   begin
+      if (RES_CM_TxMonitoring)
+      begin
+         Value = LocalText('56#On');
+      end
+      else
+      begin
+         Value = LocalText('57#Off');
+      end;
+      Line = StrAdd(Line, LocalText('192#Tx Monitoring'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_RxAmplificationChanged)
+   begin
+      Line = StrAdd(Line, LocalText('186#Rx-Amplification'));
+      Line = Line + '=' + RES_CM_RxAmplification + '; ';
+   end;
+   if (RES_StaticCountingChanged)
+   begin
+      if (RES_CM_StaticCounting)
+      begin
+         Value = LocalText('56#On');
+      end
+      else
+      begin
+         Value = LocalText('57#Off');
+      end;
+      Line = StrAdd(Line, LocalText('196#Static Counting'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_CountingIntervalChanged)
+   begin
+      Value = FormatTime(RES_CM_CountingInterval);
+      Line = StrAdd(Line, LocalText('187#Counting Interval'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_GapWidthChanged)
+   begin
+      Value = FormatTime(RES_CM_GapWidth);
+      Line = StrAdd(Line, LocalText('188#Gap Width'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (StrCompare(Line, '') <> 0)
+   begin
+      Pos = StrLength(Line) - 1;
+      Line = StrDelete(Line, Pos, 2);
+      WriteLn('<TABLE Border=0 Width=640 class=teststeppass>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD class=bold>');
+      Write(LocalText('193#IDD: Parameters for the Continuity Monitoring'));
+      WriteLn('</TD></TR>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD>');
+      Write(Line);
+      WriteLn('</TD></TR>');
+      WriteLn('</TABLE>');
+   end;
+end;
+
+//Output for the command ParamIDDIsolationMonitoring
+template ParamIDDIsolationMonitoring
+begin
+   Line = '';
+
+   if (RES_RxThresholdChanged)
+   begin
+      Line = StrAdd(Line, LocalText('190#Rx Threshold'));
+      Line = Line + '=' + RES_IM_RxThreshold + '; ';
+   end;
+   if (RES_NWThresholdChanged)
+   begin
+      Line = StrAdd(Line, LocalText('191#NW Threshold'));
+      Line = Line + '=' + RES_IM_NWThreshold + '; ';
+   end;
+
+   if (RES_RxAmplificationChanged)
+   begin
+      Line = StrAdd(Line, LocalText('186#Rx-Amplification'));
+      Line = Line + '=' + RES_IM_RxAmplification + '; ';
+   end;
+   if (RES_StaticCountingChanged)
+   begin
+      if (RES_IM_StaticCounting)
+      begin
+         Value = LocalText('56#On');
+      end
+      else
+      begin
+         Value = LocalText('57#Off');
+      end;
+      Line = StrAdd(Line, LocalText('196#Static Counting'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_CountingIntervalChanged)
+   begin
+      Value = FormatTime(RES_IM_CountingInterval);
+      Line = StrAdd(Line, LocalText('187#Counting Interval'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (RES_GapWidthChanged)
+   begin
+      Value = FormatTime(RES_IM_GapWidth);
+      Line = StrAdd(Line, LocalText('188#Gap Width'));
+      Line = Line + '=' + Value + '; ';
+   end;
+   if (StrCompare(Line, '') <> 0)
+   begin
+      Pos = StrLength(Line) - 1;
+      Line = StrDelete(Line, Pos, 2);
+      WriteLn('<TABLE Border=0 Width=640 class=teststeppass>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD class=bold>');
+      Write(LocalText('194#IDD: Parameters for the Isolation Monitoring'));
+      WriteLn('</TD></TR>');
+      WriteLn('<TR><TD Width=20 Align=CENTER VAlign=Middle>&nbsp;</TD>');
+      Write('<TD>');
+      Write(Line);
+      WriteLn('</TD></TR>');
+      WriteLn('</TABLE>');
+   end;
+end;
+
+//Output for the command IDDRun
+template IDDRun
+begin
+   Name = get_teststep_name(RES_Name, LocalText('267#IDD'));
+   Write('<TABLE Border=0 Width=640 class=');
+   File = get_teststepimage(RES_Result, RES_ManualTest);
+   if (RES_Result == TESTSTEP_Passed)
+   begin
+      WriteLn('teststeppass>');
+      ResultText = LocalText('5#Passed');
+      write_default_table_line(File, ResultText, Name);
+   end
+   else
+   begin
+      WriteLn('teststepfail>');
+
+      for Index = 1 to RES_TxCount do
+      begin
+         ResultText = '';
+         Passed = get_idd_tx_result(RES_TxResults[Index], ResultText);
+         if (NOT Passed)
+         begin
+            Pin1 = get_pinname(RES_TxPins[Index]);
+            Pin2 = '&nbsp;';
+            Value = '&nbsp;';
+            if (RES_TxValues[Index] <> 0)
+            begin
+               Value = RES_TxValues[Index];
+            end;
+            write_default_table_line(File, ResultText, Name, Pin1, Pin2, Value);
+         end;
+      end;
+      for Index = 1 to RES_FailedRxCount do
+      begin
+         ResultText = get_idd_rx_fail_text(RES_RxResults[Index]);
+         Pin1 = get_pinname(RES_TxFailPins[Index]);
+         Pin2 = get_pinname(RES_RxFailPins[Index]);
+         if (RES_RxValues[Index] == 0)
+         begin
+            Value = '';
+         end
+         else
+         begin
+            Value = RES_RxValues[Index];
+         end;
+         write_default_table_line(File, ResultText, Name, Pin1, Pin2, Value);
+      end;
+   end;
+   display_teststepcomment(RES_Comment, '', RES_DeclaredAsPassed, RES_DeclaredAsPassedByUser);
+   WriteLn('</TABLE>');
+end;
