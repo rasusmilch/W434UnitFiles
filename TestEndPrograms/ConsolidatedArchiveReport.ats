@@ -59,6 +59,22 @@
 *   Description: Switch from python.exe to pythonw.exe to suppress console.
 *   By: PB
 *
+* - Test Rev: 3.8
+*   Date: 2025-10-01
+*   Description: Updated test sentinals to not check if user aborted.
+*   By: RS
+*
+* - Test Rev: 3.9
+*   Date: 2025-10-10
+*   Description: Add cases for 'TRIUMPH' and 'KLUNE' to skip PDF archiving in favor of
+*                Robert's custom report processing scripts.
+*   By: PB
+*
+* - Test Rev: 3.10
+*   Date: 2025-10-10
+*   Description: Robert added a global check to skip REX launching.
+*   By: PB
+*
 * - Rev: (next version)
 *   Cust Doc Rev: (next revision)
 *   Date: YYYY-MM-DD
@@ -367,6 +383,7 @@ end;
 {**
   @brief Check that all guard option sentinels are satisfied: continuity, low voltage, high voltage, and dielectric breakdown.
 
+  @param UserBreak Wehn TRUE, skips checking sentinals since the user aborted the test.
   @param Debug  When TRUE, enables verbose/interactive behavior in called verification routines.
 
   @return boolean  TRUE only if every required guard option is confirmed tested; FALSE if any required
@@ -386,42 +403,49 @@ end;
        any user interface error reporting.
   @post The called sentinel checks may emit user-facing errors or dialogs if requirements are unmet.
 **}
-function test_options_all_sentinals(Debug: boolean = FALSE): boolean;
+function test_options_all_sentinals(UserBreak: boolean; Debug: boolean = FALSE): boolean;
 begin
+
    // Start optimistic: assume all sentinels are satisfied until a check fails.
    Result = TRUE;
 
-   // Continuity sentinel: fail overall if continuity is required but not tested.
-   if (test_options_sentinal('CONTINUITY', Debug) == FALSE)
-   begin
-      Result = FALSE;
-   end;
+   if (UserBreak == FALSE)
+      begin
+      // Continuity sentinel: fail overall if continuity is required but not tested.
+      if (test_options_sentinal('CONTINUITY', Debug) == FALSE)
+      begin
+         Result = FALSE;
+      end;
 
-   // Low voltage sentinel: fail overall if low voltage is required but not tested.
-   if (test_options_sentinal('LV', Debug) == FALSE)
-   begin
-      Result = FALSE;
-   end;
+      // Low voltage sentinel: fail overall if low voltage is required but not tested.
+      if (test_options_sentinal('LV', Debug) == FALSE)
+      begin
+         Result = FALSE;
+      end;
 
-   // High voltage sentinel: fail overall if high voltage is required but not tested.
-   if (test_options_sentinal('HV', Debug) == FALSE)
-   begin
-      Result = FALSE;
-   end;
+      // High voltage sentinel: fail overall if high voltage is required but not tested.
+      if (test_options_sentinal('HV', Debug) == FALSE)
+      begin
+         Result = FALSE;
+      end;
 
-   // Dielectric breakdown sentinel: fail overall if dielectric breakdown is required but not tested.
-   if (test_options_sentinal('DB', Debug) == FALSE)
-   begin
-      Result = FALSE;
+      // Dielectric breakdown sentinel: fail overall if dielectric breakdown is required but not tested.
+      if (test_options_sentinal('DB', Debug) == FALSE)
+      begin
+         Result = FALSE;
+      end;
    end;
-
 end;
 
 
 function main(): void;
 begin
+   // Get test result
+   UserBreak = FALSE;
+   Passed = FALSE;
+   TestEndGetTestResult(UserBreak, Passed);
 
-   Sentinal = test_options_all_sentinals();
+   Sentinal = test_options_all_sentinals(UserBreak);
 
    if (Sentinal == FALSE)
    begin
@@ -437,10 +461,6 @@ begin
          PrintAllReports();
       end;
 
-      // Get test result
-      UserBreak = FALSE;
-      Passed = FALSE;
-      TestEndGetTestResult(UserBreak, Passed);
       ArchiveTestResult();
 
       if (Passed)
@@ -490,6 +510,10 @@ begin
       //       i.e. match against COLLINS and then handle ATPs, but also handle non-ATP 'AS'
       //       assemblies. Base archive_protocol prior to switch/case block will ensure
       //       default reports are preserved.
+
+      // Check if we need to skip launching REX
+      Skip_REX = get_skip_rex();
+
       switch (Customer)
       begin
          case 'COLLINS':
@@ -510,11 +534,19 @@ begin
             end
             else
             begin
-               if (assembly_is_aerospace())
+               if (assembly_is_aerospace() AND NOT Skip_REX)
                begin
                   archive_default_aero_pdf(Customer);
                end;
             end;
+         end;
+         case 'TRIUMPH':
+         begin
+            // do nothing since these reports are handled 'custom'. thanks, rob.
+         end;
+         case 'KLUNE':
+         begin
+            // do nothing since these reports are handled 'custom'. thanks, rob.
          end;
          case 'TEST LAB':
          begin
@@ -525,7 +557,7 @@ begin
          begin
             // Default actions for tests not previously handled.
             // For all 'AS-' assemblies, post-process to include header on each page
-            if (assembly_is_aerospace())
+            if (assembly_is_aerospace() AND NOT Skip_REX)
             begin
                archive_default_aero_pdf(Customer);
             end;

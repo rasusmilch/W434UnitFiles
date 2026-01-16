@@ -66,7 +66,7 @@
   //  Run a dielectric-breakdown "no-connection" test on POPULATED and shorter duration on UNPOPULATED contacts (WIRES ONLY!).
 
   no_conn_lv_list(Description: string; PinList: tpinarray): void;
-  // Execute low-voltage “no-connection” guard checks across a list of pins.
+  // Execute low-voltage guard checks across a list of pins.
 
   isolation_test_lv_guard(Debug: boolean = FALSE): void;
   // Run low-voltage isolation guard across all fixture pins.
@@ -1578,7 +1578,7 @@ end;
  @see no_conn_hv, ParamIsolationHV, MiscListFromString, MiscSubtractLists,
       get_netlist_primary, get_named_pin_list_all, get_netlist_both
 }
-function no_conn_hv_populated(Description: string; Tmeas: ttime = 1s): void;
+function no_conn_hv_populated(Description: string = 'NCL HV'; Tmeas: ttime = 1s): void;
 begin
    blank_line(); // Visual spacer before the POPULATED contacts section
 

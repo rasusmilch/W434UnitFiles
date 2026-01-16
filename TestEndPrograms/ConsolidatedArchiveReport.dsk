@@ -4,9 +4,9 @@ Count=3
 [WindowPos 0]
 Id=1888
 L=0
-T=93
+T=137
 W=1920
-H=939
+H=895
 S=0
 
 [WindowPos 1]
@@ -126,8 +126,9 @@ W=30|150|150|150|90|70|70|90|90|70|70|90|70|90
 V=1|1|1|1|1|1|1|1|1|1|1|1|1|1
 
 [EditorLastOpenFiles]
-Count=1
+Count=2
 0=.\TestUnitFiles\rs232_functions.unit
+1=.\TestUnitFiles\NortechReportFunctions.unit
 
 [WindowPos 2]
 Id=2792

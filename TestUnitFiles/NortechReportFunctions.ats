@@ -50,3 +50,16 @@ begin
       end;
    end;
 end;
+
+function get_skip_rex(Debug: boolean = FALSE): boolean;
+begin
+   // Skip default is NO SKIP
+   Result = FALSE;
+
+   SkipRex = GlobalDataRead('SKIP_REX', 'NULL', 'ARCHIVE');
+
+   if (StrCompare(SkipRex, 'NULL') == 0)
+   begin
+      Result = TRUE;
+   end;
+end;

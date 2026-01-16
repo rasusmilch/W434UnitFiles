@@ -1,27 +1,36 @@
 {
+  function set_skip_rex(Debug: boolean = FALSE): void;
+  // Set global to skip REX post processing
+
+  function probe_test_4wire(Name: string; Pin1: tpin; Pin2: tpin; Debug: boolean = FALSE): integer;
+  // Use a 4-wire probe
+
+  check_required_options(Continuity: string; LV: string; HV: string; DB: string; GuardRequired: boolean = FALSE; Debug: boolean = FALSE): void
+  // Check for required tests
+
   read_test_duration(Debug: boolean = FALSE): string
   //   Retrieve the test duration for the current project from FILE_TIMER_DURATIONS, or return "NULL" if not found.
 
   check_job_whitelist(Debug: boolean = FALSE): string
-  //   Load the project�s job whitelist from FILE_JOB_WHITELIST, prompt and verify the operator�s job number, returning the raw whitelist or "NULL".
+  //   Load the project's job whitelist from FILE_JOB_WHITELIST, prompt and verify the operator's job number, returning the raw whitelist or "NULL".
 
-  test_cont_option(): void
+  test_cont_option(GuardRequired: boolean = FALSE): void
   // Ensure the continuity test option is supported and enabled.
 
-  test_db_option(): void
+  test_db_option(GuardRequired: boolean = FALSE): void
   //   Ensure the dielectric breakdown command group is supported and enabled, aborting the test if not.
 
-  test_lv_option(): void
+  test_lv_option(GuardRequired: boolean = FALSE): void
   //   Ensure the low-voltage isolation option is supported and enabled.
 
-  test_hv_option(): void
+  test_hv_option(GuardRequired: boolean = FALSE): void
   //   Ensure the high-voltage isolation option is supported and enabled.
 
-  test_as_options(): void
+  test_as_options(GuardRequired: boolean = FALSE): void
   //   Validate that all required test options are supported and enabled.
 
   fail_count_other_increase(): void
-  //   Increment the �Others� failure counter.
+  //   Increment the 'Others' failure counter.
 
   ui_report_error(Line: string): void
   //   Write an error message to both the UI and the test report.
@@ -90,7 +99,7 @@
   //   Verify the electrical components group is active, optionally report tolerances, and execute an RLC capacitance test.
 
   operator_name_from_id(): string
-  //   Lookup and return the operator�s name based on the current operator ID from FILE_OPERATOR_ID_MAP, aborting on error.
+  //   Lookup and return the operator's name based on the current operator ID from FILE_OPERATOR_ID_MAP, aborting on error.
 
   ui_print_helper(Str: string; Report: boolean = FALSE; Warning: boolean = FALSE; Error: boolean = FALSE; Debug: boolean = FALSE): void;
   // Route a message to UI or report with severity flags and guard against invalid combinations.
@@ -108,6 +117,28 @@ begin
    FILE_TIMER_DURATIONS = 'O:\Test Eng\Support_Files\W434\test_durations.ini';
    FILE_JOB_WHITELIST = 'O:\Test Eng\Support_Files\W434\job_numbers_whitelist.ini';
    FILE_OPERATOR_ID_MAP = 'O:\Test Eng\Support_Files\W434\operator_id_mapping.ini';
+end;
+
+// Set global to skip REX post processing
+function set_skip_rex(Debug: boolean = FALSE): void;
+begin
+   GlobalDataWrite('SKIP_REX', 'TRUE', 'ARCHIVE');
+end;
+
+function probe_test_4wire(Name: string; Pin1: tpin; Pin2: tpin; Debug: boolean = FALSE): integer;
+begin
+   // Make sure to use "Autostart" in Continuity Parameters to let operators "fix" poor connections.
+   ParamAutostart(COMMANDS_Continuity, ON);
+
+   Str = StrAdd('Place 4-wire probe on:<BR>', Name);
+
+   Button = UIMessageDialogOkCancel(Str);
+   if (Button == DIALOGRESULT_Cancel )
+   begin
+     MiscAbortTest();
+   end;
+
+   ConnectionTest(Name, Pin1, Pin2);
 end;
 
 {**
@@ -323,10 +354,13 @@ end;
     If either check fails, an error dialog is shown and the test is aborted.
   @return  void
 **}
-function test_cont_option(): void;
+function test_cont_option(GuardRequired: boolean = FALSE): void;
 begin
-   GlobalDataWrite('REQUIRE_CONTINUITY', 'TRUE', 'GUARDS');
-   GlobalDataWrite('TESTED_CONTINUITY', 'FALSE', 'GUARDS');
+   if (GuardRequired)
+   begin
+      GlobalDataWrite('REQUIRE_CONTINUITY', 'TRUE', 'GUARDS');
+      GlobalDataWrite('TESTED_CONTINUITY', 'FALSE', 'GUARDS');
+   end;
 
    // Check if the command group is available
    if (ParamIsCommandGroupAvailable(CMDGRP_Continuity) == FALSE)
@@ -355,7 +389,7 @@ end;
     If either check fails, an error dialog is shown and the test is aborted.
   @return  void
 **}
-function test_db_option(): void;
+function test_db_option(GuardRequired: boolean = FALSE): void;
 begin
    // Check if the dielectric breakdown command group is available
    if (ParamIsCommandGroupAvailable(CMDGRP_DielectricBreakdown) == FALSE)
@@ -383,7 +417,7 @@ end;
     If the command group is not supported or not enabled, displays an error dialog and aborts the test.
   @return  void
 **}
-function test_lv_option(): void;
+function test_lv_option(GuardRequired: boolean = FALSE): void;
 begin
    // Check if LV isolation command group is available
    if (ParamIsCommandGroupAvailable(CMDGRP_IsolationLV) == FALSE)
@@ -412,7 +446,7 @@ end;
     the test is aborted.
   @return  void
 **}
-function test_hv_option(): void;
+function test_hv_option(GuardRequired: boolean = FALSE): void;
 begin
    // Verify HV isolation command group is available
    if (ParamIsCommandGroupAvailable(CMDGRP_IsolationHV) == FALSE)
@@ -440,34 +474,34 @@ end;
     high-voltage isolation, and dielectric breakdown command groups are available and active.
   @return  void
 **}
-function test_as_options(): void;
+function test_as_options(GuardRequired: boolean = FALSE): void;
 begin
-   test_cont_option(); // Verify continuity support and activation
-   test_lv_option();   // Verify low-voltage isolation support and activation
-   test_hv_option();   // Verify high-voltage isolation support and activation
-   test_db_option();   // Verify dielectric breakdown support and activation
+   test_cont_option(GuardRequired); // Verify continuity support and activation
+   test_lv_option(GuardRequired);   // Verify low-voltage isolation support and activation
+   test_hv_option(GuardRequired);   // Verify high-voltage isolation support and activation
+   test_db_option(GuardRequired);   // Verify dielectric breakdown support and activation
 end;
 
-function check_required_options(Continuity: string; LV: string; HV: string; DB: string; Debug: boolean = FALSE): void;
+function check_required_options(Continuity: string; LV: string; HV: string; DB: string; GuardRequired: boolean = FALSE; Debug: boolean = FALSE): void;
 begin
    if (StrCompare(Continuity, 'FALSE') <> 0)
    begin
-      test_cont_option();
+      test_cont_option(GuardRequired);
    end;
 
    if (StrCompare(LV, 'FALSE') <> 0)
    begin
-      test_lv_option();
+      test_lv_option(GuardRequired);
    end;
 
    if (StrCompare(HV, 'FALSE') <> 0)
    begin
-      test_hv_option();
+      test_hv_option(GuardRequired);
    end;
 
    if (StrCompare(DB, 'FALSE') <> 0)
    begin
-      test_db_option();
+      test_db_option(GuardRequired);
    end;
 end;
 
@@ -717,6 +751,7 @@ begin
    if (ValueEntered > MaxValue)
    begin
       ErrorLine = StrAdd('Value entered above maximum value: ', MaxValue);
+      ErrorLine = StrAdd(ErrorLine, ' ');
       ErrorLine = StrAdd(ErrorLine, Units);
       ui_report_error(ErrorLine);
       Error = TRUE;
@@ -727,6 +762,7 @@ begin
    if (ValueEntered < MinValue)
    begin
       ErrorLine = StrAdd('Value entered below minimum value: ', MinValue);
+      ErrorLine = StrAdd(ErrorLine, ' ');
       ErrorLine = StrAdd(ErrorLine, Units);
       ui_report_error(ErrorLine);
       Error = TRUE;
