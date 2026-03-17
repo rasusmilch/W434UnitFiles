@@ -702,23 +702,10 @@ end;
 **}
 function set_guard_tested(OptionStr: string; Debug: boolean = FALSE): void;
 begin
-   // Read existing requirement state for this guard option from "GUARDS".
-   Required = GlobalDataRead(StrAdd('REQUIRE_', OptionStr), 'NULL', 'GUARDS');
 
-   // Read prior tested state (may be 'NULL' if unset); retained for possible external use.
-   Tested = GlobalDataRead(StrAdd('TESTED_', OptionStr), 'NULL', 'GUARDS');
+   GlobalDataWrite(StrAdd('TESTED_', OptionStr), 'TRUE', 'GUARDS');
+   GlobalDataWrite(StrAdd('REQUIRE_', OptionStr), 'TRUE', 'GUARDS');
 
-   // Branch on explicit requirement: only mark as tested when requirement is affirmed.
-   if (StrCompare(Required, 'TRUE') == 0)
-   begin
-      // Requirement is TRUE; record that this guard option has been tested.
-      GlobalDataWrite(StrAdd('TESTED_', OptionStr), 'TRUE', 'GUARDS');
-   end
-   else
-   begin
-      // Not required yet; implicitly declare the requirement to ensure future enforcement.
-      GlobalDataWrite(StrAdd('REQUIRE_', OptionStr), 'TRUE', 'GUARDS');
-   end;
 end;
 
 function no_conn_all_lv_guard(Name: string; Pin1: tpin; Debug: boolean = FALSE): integer;
