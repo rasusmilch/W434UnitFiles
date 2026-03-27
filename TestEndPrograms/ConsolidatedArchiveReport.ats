@@ -73,6 +73,17 @@
 * - Test Rev: 3.10
 *   Date: 2025-10-10
 *   Description: Robert added a global check to skip REX launching.
+*   By: RS
+*
+* - Test Rev: 3.11
+*   Date: 2025-12-20
+*   Description: Correct get_skip_rex() logic so default_as reports are generated.
+*                Set No_TSX to '1' since TSX appears dead (at least for now).
+*   By: PB
+*
+* - Test Rev: 3.12
+*   Date: 2026-03-25
+*   Description: Add TestResult & SerialNumber to record_duration output
 *   By: PB
 *
 * - Rev: (next version)
@@ -167,6 +178,34 @@ begin
       Minutes = DTMinute(StartTime);
       Seconds = DTSecond(StartTime);
 
+
+      // Get test result
+      UserBreak = FALSE;
+      Passed = FALSE;
+      TestEndGetTestResult(UserBreak, Passed);
+
+      if (UserBreak)
+      begin
+         TestResult = 'ABORT';
+      end
+      else
+      begin
+         if (Passed)
+         begin
+            TestResult = 'PASS';
+         end
+         else
+         begin
+            TestResult = 'FAIL';
+         end;
+      end;
+
+      SerialNumber = GlobalDataGetSerialNumber();
+      if (StrCompare(SerialNumber, '') == 0)
+      begin
+         SerialNumber = 'NULL';
+      end;
+
       Line = StrAdd(Assembly, '|');
       Line = StrAdd(Line, TotalSeconds);
       Line = StrAdd(Line, '|');
@@ -181,6 +220,10 @@ begin
       Line = StrAdd(Line, Minutes);
       Line = StrAdd(Line, ':');
       Line = StrAdd(Line, Seconds);
+      Line = StrAdd(Line, '|');
+      Line = StrAdd(Line, TestResult);
+      Line = StrAdd(Line, '|');
+      Line = StrAdd(Line, SerialNumber);
 
       FileAddText(Handle, Line);
       FileSaveText(Handle);
@@ -463,9 +506,11 @@ begin
 
       ArchiveTestResult();
 
+      record_duration();
+
       if (Passed)
       begin
-         record_duration();
+         // moved record_duration() so ABORT & FAIL would also be recorded.
       end
       else
       begin
@@ -565,7 +610,8 @@ begin
       end;
 
       // LASTLY ARCHIVE FOR TSX IF THIS IS A NON-TEST LAB TEST RESULT
-      No_TSX = GlobalDataRead('Nortech.NOTSX', '0');
+      // No_TSX = GlobalDataRead('Nortech.NOTSX', '0');
+      No_TSX = '1'; // TSX appears to be dead, so stop archiving additional reports for now.
       if (StrCompare(No_TSX, '1') <> 0)
       begin
          archive_protocol(FILE_REPORT_TXT_TSX, TMPL_ARCHIVE_TXT_TSX, TRUE, TRUE, FALSE);

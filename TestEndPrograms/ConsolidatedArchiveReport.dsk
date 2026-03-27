@@ -5,16 +5,16 @@ Count=3
 Id=1888
 L=0
 T=137
-W=1920
-H=895
+W=3840
+H=1951
 S=0
 
 [WindowPos 1]
 Id=1889
 L=0
 T=0
-W=1920
-H=93
+W=3840
+H=137
 S=0
 
 [GridSet]
