@@ -58,8 +58,16 @@ begin
 
    SkipRex = GlobalDataRead('SKIP_REX', 'NULL', 'ARCHIVE');
 
-   if (StrCompare(SkipRex, 'NULL') == 0)
+   if (StrCompare(SkipRex, 'NULL') <> 0)
    begin
       Result = TRUE;
    end;
+
+   if (Debug)
+   begin
+      UIWriteWarning(StrAdd('SKIP_REX Global: ', SkipRex));
+      UIWriteWarning(StrAdd('SKIP_REX Result: ', Result));
+   end;
+
+
 end;

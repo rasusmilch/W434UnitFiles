@@ -79,7 +79,9 @@ begin
          MiscAbortTest();
       end;
 
+      UIWriteNormal('MADE IT HERE');
       StationID = MiscGetTestStationIdentifier();
+      UIWriteNormal(StationID);
       Serial = FileGetIni(Handle, StationID, 'Serial', 'NULL');
       GlobalDataWrite('TestStation.Serial', Serial);
       CalDue = FileGetIni(Handle, StationID, 'CalDue', 'NULL');

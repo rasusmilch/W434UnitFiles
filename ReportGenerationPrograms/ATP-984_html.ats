@@ -1,0 +1,259 @@
+//Achtung!
+//�nderungen an den Programmen f�r die Protokollerzeugung, die an den
+//Original-Dateien durchgef�hrt werden, werden bei der Installation eines
+//Softwareupdates �berschrieben.
+//Falls Sie Anpassungen am Protokoll ben�tigen, �ndern Sie nicht die
+//Script-Dateien, die mit CEETIS ausgeliefert werden.
+//Erstellen Sie Kopien der Scripte ("Datei->Programm speichern unter" oder
+//"Datei->Speichern unter") und f�hren Sie die �nderungen in den Kopien durch.
+//Um die ge�nderten Programme immer automatisch in Ihre Projekte einzubinden
+//k�nnen Sie Projektvorlagen erstellen.
+
+//Attention!
+//Changes in the programs for report generation, which are made in the original
+//files will be overwritten when installing a software-update.
+//If you need to cusomize the report do not change the script-files that are
+//distributed with CEETIS.
+//Make a copy of these files ("File->Save Program as" or "File->Save as") and
+//customize the copies.
+//If you want to bind the customized programs automatically to your projects,
+//you can create project templates.
+
+
+//Output for the report header
+template Header
+begin
+   //HTML Header
+   write_html_header('');
+   //Caption
+   WriteLn('<TABLE Width=640 class=title>');
+   WriteLn('<TR><TD Width=280 ALIGN="left">Nortech Systems, Inc.</TD>');
+   WriteLn('<TD ALIGN="right"><IMG SRC="..\..\images\Nortech.jpg" width="150" height="31">&nbsp;</TD></TR>');
+   WriteLn('</TABLE><BR>');
+
+   //General information
+   WriteLn('<TABLE Width=640 class=header>');
+
+   Write('<TR><TD Width=300>');
+   Write('W434 Test Station ID');
+   Write('</TD><TD>');
+   Write(MiscGetTestStationIdentifier());
+   WriteLn('</TD></TR>');
+
+   Write('<TR><TD Width=300>');
+   Write('Calibration Due Date');
+   Write('</TD><TD>');
+   Write(get_system_calibration_due_date());
+   WriteLn('</TD></TR>');
+
+   Write('<TR><TD Width=300>');
+   Write(LocalText('18#Software version'));
+   Write('</TD><TD>');
+   Write(RES_SoftwareVersion);
+   WriteLn('</TD></TR>');
+
+   Write('<TR><TD Width=300>');
+   Write(LocalText('20#Filename'));
+   Write('</TD><TD>');
+   Write(FileExtractName(ProjectGetFilename()));
+   WriteLn('</TD></TR>');
+
+   Write('<TR><TD Width=300>');
+   Write('Test Revision');
+   Write('</TD><TD>');
+   Write(get_collins_testrev());
+   WriteLn('</TD></TR>');
+
+   Write('<TR><TD Width=300>');
+   Write(LocalText('19#Unit under test'));
+   Write('</TD><TD>');
+   Write(get_collins_partnum());
+   WriteLn('</TD></TR>');
+
+   //Serial number
+   display_serialnumber();
+
+   Write('<TR><TD Width=300>');
+   Write(LocalText('CAGE Code'));
+   Write('</TD><TD>');
+   Write(CAGE_CODE);
+   WriteLn('</TD></TR>');
+
+   DateTime = DTGetTestDateTime();
+   DateTime = DTDateTimeString(DateTime);
+   Write('<TR><TD Width=300>');
+   Write(LocalText('21#Date/Time'));
+   Write('</TD><TD>');
+   Write(DateTime);
+   WriteLn('</TD></TR>');
+
+   //Additional input data from the test start program
+   display_teststart_inputdata();
+
+   //Order number
+   display_ordernumber();
+
+   //User name
+   // display_username();
+
+   //Full user name
+   // display_fullusername();
+
+   //Group name
+   // display_usergroupname();
+
+   //Rangetest
+   display_rangetest();
+
+   WriteLn('</TABLE>');
+   WriteLn('<BR>');
+
+   //Sections
+   display_sections();
+
+   //Test result
+   switch (RES_Result)
+   begin
+      case TEST_Passed:
+      begin
+         ResultText = LocalText('22#PASSED');
+         Style = 'testpass';
+         DetailedResult = TRUE;
+      end;
+      case TEST_Failed:
+      begin
+         ResultText = LocalText('23#FAILED');
+         Style = 'testfail';
+         DetailedResult = TRUE;
+      end;
+      case TEST_Aborted:
+      begin
+         ResultText = LocalText('24#ABORTED');
+         Style = 'testfail';
+         DetailedResult = FALSE;
+      end;
+      default:
+      begin
+         ResultText = LocalText('25#INVALID');
+         Style = 'testfail';
+         DetailedResult = FALSE;
+      end;
+   end;
+   if (DetailedResult)
+   begin
+      //Passed + Failed
+      WriteLn('<TABLE Width=640 class=result>');
+      Write('<TR>');
+      Write('<TD COLSPAN=2 ALIGN=CENTER class=');
+      Write(Style);
+      Write('>');
+      Write(LocalText('26#Test result'));
+      WriteLn('</TD></TR>');
+
+      write_command_group_results();
+
+      Write('<TR>');
+      Write('<TD Colspan=2 Align=CENTER class=');
+      Write(Style);
+      Write('>');
+      Write(ResultText);
+      WriteLn('</TD></TR>');
+      WriteLn('</TABLE>');
+   end
+   else
+   begin
+      //Aborted + Invalid
+      WriteLn('<TABLE Width=640 class=result>');
+      Write('<TR>');
+      Write('<TD Align=CENTER class=');
+      Write(Style);
+      Write('>');
+      Write(ResultText);
+      WriteLn('</TD></TR>');
+      WriteLn('</TABLE>');
+   end;
+
+   //Remove "//" from the next line to write the measurement parameters into the report
+   //write_parameters();
+
+   //Adaptercables
+   check_adaptercables();
+   show_lastisolationtestcable();
+
+   WriteLn('<BR><BR>');
+end;
+
+//Output for the report footer
+template Footer
+begin
+   ProjectFilename = ProjectGetFilename();
+   IsPretest = StrPosition('PRETEST', ProjectFilename);
+
+   if (IsPretest > 0)
+   begin
+      WriteLn('<BR>');
+      WriteLn('<TABLE Width=640 class=result>');
+      WriteLn('<TR><TD><B>NO ADDITIONAL STEPS FOR PRETEST</B></TD></TR>');
+      WriteLn('</TABLE>');
+   end
+   else
+   begin
+      print_html_examination_info();
+
+      print_html_scale_info();
+
+      print_html_lcr_info();
+   end;
+
+   write_html_footer();
+end;
+
+template ManualTestProbe
+begin
+   if (StrCompare('', RES_Name) == 0)
+   begin
+      Name = LocalText('82#Probe in manual test:');
+   end
+   else
+   begin
+      Name = RES_Name;
+   end;
+   if (RES_PinCount > 0)
+   begin
+      PinCount = 0;
+      PinsPerLine = 4;
+
+      WriteLn('<TABLE Border=0 Width=640 class=teststeppass>');
+      Write('<TR>');
+      Write('<TH Width=640 Align=Left VAlign=Middle>');
+      Write(Name);
+      Write('</TH>');
+      WriteLn('</TR>');
+      WriteLn('</Table>');
+
+      WriteLn('<Table Border=0 Width=640 class=teststeppass>');
+      WriteLn('<TR>');
+      for Count = 1 to RES_PinCount do
+      begin
+         PinCount = PinCount + 1;
+         Write('<TD Width=160 Align=Left VAlign=Middle>');
+         Write(get_pinname(RES_Pins[Count]));
+         WriteLn('</TD>');
+         if (PinCount == PinsPerLine)
+         begin
+            PinCount = 0;
+            WriteLn('</TR>');
+            if (Count < RES_PinCount)
+            begin
+               WriteLn('<TR>');
+            end;
+         end;
+      end;
+      if (PinCount <> 0)
+      begin
+         WriteLn('</TR>');
+      end;
+      WriteLn('</TABLE>');
+      WriteLn('<BR>');
+   end;
+end;

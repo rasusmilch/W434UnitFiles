@@ -24,11 +24,11 @@ B9PosY=-1
 Count=0
 
 [Header]
-Name=NortechReportFunctions
-CreateName=Test_Admin
-CreateDate=45881.2998664352
-ModifyName=Admin
-ModifyDate=46146.2939650231
+Name=Default HTML report - Hauptprogramm
+CreateName=Admin
+CreateDate=38651.6929363773
+ModifyName=Test_Admin
+ModifyDate=45743.4724543866
 MajorVersion=1
 MinorVersion=0
 Revision=0

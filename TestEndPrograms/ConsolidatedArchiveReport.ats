@@ -91,6 +91,12 @@
 *   Description: Launch REX only on passed test results for default_as
 *   By: RS
 *
+* - Rev: 3.14.15
+*   Date: 2026-05-04
+*   Description: Update to handle Default_txt report and Nortech_txt report.
+*                Deletes temp report file at the end of program.
+*   By: RS
+*
 * - Rev: (next version)
 *   Cust Doc Rev: (next revision)
 *   Date: YYYY-MM-DD
@@ -119,6 +125,7 @@ begin
    TMPL_DURATION = 'O:\Test Eng\Support_Files\W434\durations\$STATION$.txt';
 
    FILE_REPORT_TXT_BJI = 'C:\Users\Public\Documents\CEETIS\Temp\Reports\DefaultReport_txt.txt';
+   FILE_REPORT_NORTECH_TXT_BJI = 'C:\Users\Public\Documents\CEETIS\Temp\Reports\Nortech_Default_TXT.txt';
    TMPL_ARCHIVE_TXT_BJI = 'O:\Test Eng\DATA\W434\<Year>\$CUST$\<ProjectName>\<ProjectName>-<SerialNumber>-<Year><Month><Day>-<Hour><Minute><Second>.txt';
 
    TMPL_REPORT_HTML_COLLINS = 'C:\Users\Public\Documents\CEETIS\Temp\Reports\ATP-$ATPNUM$_html.html';
@@ -129,8 +136,10 @@ begin
    FILE_REPORT_PDF_AERO_DEFAULT = 'C:\REX\output\AS-DEFAULT.pdf';
    TMPL_ARCHIVE_PDF_AERO_DEFAULT = 'O:\Test Eng\DATA\W434\<Year>\$CUST$_PDF\<ProjectName>\<ProjectName>-<SerialNumber>-<Year><Month><Day>-<Hour><Minute><Second>.pdf';
 
-   PYTHON_EXE = 'C:\Python\pythonw.exe';
+//   PYTHON_EXE = 'C:\Python\pythonw.exe';
+   PYTHON_EXE = 'D:\Scoop\apps\python\3.14.4\python.exe';
    REX_PARAMS_DEFAULT_AERO = 'C:\REX\rex.py -m default_as -r default_txt -o AS-DEFAULT.pdf';
+   REX_PARAMS_NORTECH_AERO = 'C:\REX\rex.py -m default_as -r C:\Users\Public\Documents\CEETIS\Temp\Reports\Nortech_Default_TXT.txt -o AS-DEFAULT.pdf';
    TMPL_REX_PARAMS_COLLINS_ATP = 'C:\REX\rex.py -m atp$ATPNUM$ -r ATP-$ATPNUM$_html.html -o ATP-$ATPNUM$.pdf';
 
    // TSX report is the same as FILE_REPORT_TXT_BJI until a custom TSX format is final.
@@ -342,7 +351,7 @@ begin
 end;
 
 
-function archive_default_aero_pdf(Customer: string): void;
+function archive_default_aero_pdf(Customer: string; Debug: boolean = FALSE): void;
 begin
 {
    Use CEETIS CUP to run Python for report generation.
@@ -359,8 +368,63 @@ begin
    if (IsPretest == 0)
    begin
       // Execute external util for processing of report & forced print.
+
       UIWriteNormal('LAUNCHING REX FOR REPORT PROCESSING...');
-      CUPExecuteCommand('CEETIS_CUP_001', 'run program', [PYTHON_EXE, REX_PARAMS_DEFAULT_AERO], 30s, ResultData);
+
+      CommandResult = CUP_Result_ProgramNotStarted;
+
+      if (FileExists(FILE_REPORT_NORTECH_TXT_BJI))
+      begin
+         CommandResult = CUPExecuteCommand('CEETIS_CUP_001', 'run program', [PYTHON_EXE, REX_PARAMS_NORTECH_AERO], 30s, ResultData);
+      end
+      else
+      begin
+         if (FileExists(FILE_REPORT_TXT_BJI))
+         begin
+            CommandResult = CUPExecuteCommand('CEETIS_CUP_001', 'run program', [PYTHON_EXE, REX_PARAMS_DEFAULT_AERO], 30s, ResultData);
+         end
+         else
+         begin
+            UIWriteError('COULD NOT FIND TEST REPORT FOR REX! CONTACT TEST DEPARMENT!');
+         end;
+      end;
+
+   if (Debug)
+   begin
+   if (CommandResult > 0)
+   begin
+      for Zaehl = 1 to CommandResult do
+      begin
+         UIWriteWarning(StrAdd(StrAdd(Zaehl, ': '), ResultData[Zaehl]));
+      end;
+   end
+   else
+   begin
+
+      switch (CommandResult)
+      begin
+         case CUP_Result_ProgramNotFound: begin
+            UIWriteError('Program not found');
+         end;
+         case CUP_Result_ProgramNotStarted: begin
+            UIWriteError('Program could not be started');
+         end;
+         case CUP_Result_CommandSendError: begin
+            UIWriteError('Command could not be sent');
+         end;
+         case CUP_Result_CommandTimeout: begin
+            UIWriteError('Command timed out');
+         end;
+         case CUP_Result_NotACUP: begin
+            UIWriteError('Not a CUP');
+         end;
+         default: begin
+            UIWriteError('Unknown error');
+         end;
+      end;
+   end;
+   end;
+
 
       ReportDest = StrReplace(TMPL_ARCHIVE_PDF_AERO_DEFAULT, '$CUST$', Customer, FALSE);
 
@@ -550,7 +614,24 @@ begin
 
       // ARCHIVE FOR BJI IN ALL PASS/FAIL CIRCUMSTANCES
       BJIArchive = StrReplace(TMPL_ARCHIVE_TXT_BJI, '$CUST$', Customer, FALSE);
-      archive_protocol(FILE_REPORT_TXT_BJI, BJIArchive, TRUE, TRUE, FALSE);
+
+      if (FileExists(FILE_REPORT_NORTECH_TXT_BJI))
+      begin
+         archive_protocol(FILE_REPORT_NORTECH_TXT_BJI, BJIArchive, TRUE, TRUE, FALSE);
+      end
+      else
+      begin
+         if (FileExists(FILE_REPORT_TXT_BJI))
+         begin
+            archive_protocol(FILE_REPORT_TXT_BJI, BJIArchive, TRUE, TRUE, FALSE);
+         end
+         else
+         begin
+            UIWriteError('ERROR: COULD NOT FIND TEST REPORT FILE! CONTACT TEST DEPARTMENT!');
+         end;
+      end;
+
+
 
       // ARCHIVE & PROCESSING RULES FOR SPECIFIC CUSTOMERS
       // NOTE: If matched against a customer, ensure all possible sub-cases are handled!
@@ -647,6 +728,24 @@ begin
       // If global data is not cleared, Operator ID will be preserved between
       // unrelated tests. Last verified in CEETIS 4.13-08.
       GlobalDataClear();
+
+      // Two files may be created by the tests now until we consolidate all testers.
+      // Once we archive, we need to delete so we don't process previous test results
+      if (FileExists(FILE_REPORT_NORTECH_TXT_BJI))
+      begin
+         FileDelete(FILE_REPORT_NORTECH_TXT_BJI);
+      end
+      else
+      begin
+         if (FileExists(FILE_REPORT_TXT_BJI))
+         begin
+            FileDelete(FILE_REPORT_TXT_BJI);
+         end
+         else
+         begin
+            UIWriteError('COULD NOT DELETE TEMP TEST RESULT! CONTACT TEST DEPARTMENT!');
+         end;
+      end;
    end;
 end;
 

@@ -139,10 +139,10 @@ end;
 template Header
 begin
    //Caption
-   CompanyName = '';
-   CompanyLogo = '';
-   CompanyLogoWidth = 0;
-   CompanyLogoHeight = 0;
+   CompanyName = 'Nortech Systems, Inc.';
+   CompanyLogo = '2025-Logo-Arrow_200x200.jpg';
+   CompanyLogoWidth = 100;
+   CompanyLogoHeight = 100;
    MiscGetCompanyInfo(CompanyName, CompanyLogo, CompanyLogoWidth, CompanyLogoHeight);
    if (StrCompare(CompanyName, '') <> 0)
    begin

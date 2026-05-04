@@ -4,17 +4,17 @@ Count=3
 [WindowPos 0]
 Id=1888
 L=0
-T=137
-W=3840
-H=1951
+T=93
+W=1920
+H=939
 S=0
 
 [WindowPos 1]
 Id=1889
 L=0
 T=0
-W=3840
-H=137
+W=1920
+H=93
 S=0
 
 [GridSet]
