@@ -1,13 +1,13 @@
 //Achtung!
-//ƒnderungen an den Programmen f¸r die Protokollerzeugung, die an den
-//Original-Dateien durchgef¸hrt werden, werden bei der Installation eines
-//Softwareupdates ¸berschrieben.
-//Falls Sie Anpassungen am Protokoll benˆtigen, ‰ndern Sie nicht die
+//√Ñnderungen an den Programmen f√ºr die Protokollerzeugung, die an den
+//Original-Dateien durchgef√ºhrt werden, werden bei der Installation eines
+//Softwareupdates √ºberschrieben.
+//Falls Sie Anpassungen am Protokoll ben√∂tigen, √§ndern Sie nicht die
 //Script-Dateien, die mit CEETIS ausgeliefert werden.
 //Erstellen Sie Kopien der Scripte ("Datei->Programm speichern unter" oder
-//"Datei->Speichern unter") und f¸hren Sie die ƒnderungen in den Kopien durch.
-//Um die ge‰nderten Programme immer automatisch in Ihre Projekte einzubinden
-//kˆnnen Sie Projektvorlagen erstellen.
+//"Datei->Speichern unter") und f√ºhren Sie die √Ñnderungen in den Kopien durch.
+//Um die ge√§nderten Programme immer automatisch in Ihre Projekte einzubinden
+//k√∂nnen Sie Projektvorlagen erstellen.
 
 //Attention!
 //Changes in the programs for report generation, which are made in the original
@@ -20,7 +20,7 @@
 //you can create project templates.
 
 {**
-  @brief   Retrieve the operatorís name from the operator ID mapping file.
+  @brief   Retrieve the operator‚Äôs name from the operator ID mapping file.
   @details
     1. Attempts to open the INI file defined by `FILE_OPERATOR_ID_MAP`.
     2. Reads the current operator ID from global data key `"Value1"` in `"TestStart InputData"`.
@@ -86,6 +86,55 @@ begin
    end;
 end;
 
+function get_report_hostname(): string;
+begin
+   Result = MiscGetTestStationIdentifier();
+
+   if (StrCompare(Result, '') == 0)
+   begin
+      Result = 'NULL';
+   end;
+end;
+
+function get_report_test_duration(): string;
+begin
+   StartTime = DTGetTestDateTime();
+   EndTime = DTNow();
+   Duration = EndTime - StartTime;
+
+   Hours = DTHour(Duration);
+   Minutes = DTMinute(Duration);
+   Seconds = DTSecond(Duration);
+
+   HoursText = FormatAlignRight(Hours, 2, '0');
+   MinutesText = FormatAlignRight(Minutes, 2, '0');
+   SecondsText = FormatAlignRight(Seconds, 2, '0');
+
+   Result = HoursText;
+   Result = StrAdd(Result, ':');
+   Result = StrAdd(Result, MinutesText);
+   Result = StrAdd(Result, ':');
+   Result = StrAdd(Result, SecondsText);
+end;
+
+function display_report_hostname(Length: integer): void;
+begin
+   Hostname = get_report_hostname();
+   Line = FormatAlignLeft('Hostname', Length, ' ');
+   Line = StrAdd(Line, ': ');
+   Line = StrAdd(Line, Hostname);
+   WriteLn(Line);
+end;
+
+function display_report_test_duration(Length: integer): void;
+begin
+   TestDuration = get_report_test_duration();
+   Line = FormatAlignLeft('Test Duration', Length, ' ');
+   Line = StrAdd(Line, ': ');
+   Line = StrAdd(Line, TestDuration);
+   WriteLn(Line);
+end;
+
 //Output commands for the header
 template Header
 begin
@@ -123,6 +172,8 @@ begin
    Line = StrAdd(Line, ': ');
    Line = StrAdd(Line, DateTime);
    WriteLn(Line);
+   display_report_hostname(Length);
+   display_report_test_duration(Length);
 
    //Order number
    display_ordernumber(Length);
@@ -240,7 +291,6 @@ begin
       WriteLn(Line);
    end;
 end;
-
 
 
 
