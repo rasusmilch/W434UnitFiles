@@ -130,15 +130,9 @@ begin
    // Make sure to use "Autostart" in Continuity Parameters to let operators "fix" poor connections.
    ParamAutostart(COMMANDS_Continuity, ON);
 
-   Str = StrAdd('Place 4-wire probe on:<BR>', Name);
-
-   Button = UIMessageDialogOkCancel(Str);
-   if (Button == DIALOGRESULT_Cancel )
-   begin
-     MiscAbortTest();
-   end;
-
    ConnectionTest(Name, Pin1, Pin2);
+
+   UIBeep(2048Hz, 512ms);
 end;
 
 {**
