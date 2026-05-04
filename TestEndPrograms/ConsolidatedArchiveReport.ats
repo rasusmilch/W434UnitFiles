@@ -136,8 +136,8 @@ begin
    FILE_REPORT_PDF_AERO_DEFAULT = 'C:\REX\output\AS-DEFAULT.pdf';
    TMPL_ARCHIVE_PDF_AERO_DEFAULT = 'O:\Test Eng\DATA\W434\<Year>\$CUST$_PDF\<ProjectName>\<ProjectName>-<SerialNumber>-<Year><Month><Day>-<Hour><Minute><Second>.pdf';
 
-//   PYTHON_EXE = 'C:\Python\pythonw.exe';
-   PYTHON_EXE = 'D:\Scoop\apps\python\3.14.4\python.exe';
+   PYTHON_EXE = 'C:\Python\pythonw.exe';
+
    REX_PARAMS_DEFAULT_AERO = 'C:\REX\rex.py -m default_as -r default_txt -o AS-DEFAULT.pdf';
    REX_PARAMS_NORTECH_AERO = 'C:\REX\rex.py -m default_as -r C:\Users\Public\Documents\CEETIS\Temp\Reports\Nortech_Default_TXT.txt -o AS-DEFAULT.pdf';
    TMPL_REX_PARAMS_COLLINS_ATP = 'C:\REX\rex.py -m atp$ATPNUM$ -r ATP-$ATPNUM$_html.html -o ATP-$ATPNUM$.pdf';
