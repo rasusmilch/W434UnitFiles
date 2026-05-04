@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Find today's W434 reports that have parameters but appear to lack test rows.
+"""Find W434 reports that have parameters but appear to lack test rows.
 
 This walks a directory recursively, finds text reports from a selected date
 source, and flags files that contain parameter sections but no detailed
@@ -67,15 +67,36 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help=(
             "Output text file path. Defaults to "
-            "w434_missing_test_rows_YYYYMMDD.txt in the current directory."
+            "w434_missing_test_rows_YYYYMMDD.txt for single-day scans or "
+            "w434_missing_test_rows_YYYYMMDD_to_YYYYMMDD.txt for range scans "
+            "in the current directory."
         ),
     )
     parser.add_argument(
         "--date",
         type=str,
         default=None,
+        help="Date to scan in YYYY-MM-DD format.",
+    )
+    parser.add_argument(
+        "--start-date",
+        type=str,
+        default=None,
+        help="Start date for inclusive range in YYYY-MM-DD format.",
+    )
+    parser.add_argument(
+        "--end-date",
+        type=str,
+        default=None,
+        help="End date for inclusive range in YYYY-MM-DD format.",
+    )
+    parser.add_argument(
+        "--preset",
+        choices=("today", "previous-week", "previous-month"),
+        default=None,
         help=(
-            "Date to scan in YYYY-MM-DD format. Defaults to today's local date."
+            "Convenience date preset: today, previous-week "
+            "(complete Monday-Sunday), or previous-month."
         ),
     )
     parser.add_argument(
@@ -96,22 +117,71 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def parse_target_date(date_text: str | None) -> datetime_module.date:
-    """Parse the target date.
-
-    Args:
-        date_text: Optional date string in YYYY-MM-DD format.
-
-    Returns:
-        Target local date.
-
-    Raises:
-        ValueError: If date_text is not in YYYY-MM-DD format.
-    """
-    if date_text is None:
-        return datetime_module.date.today()
-
+def parse_iso_date(date_text: str) -> datetime_module.date:
+    """Parse an ISO date string in YYYY-MM-DD format."""
     return datetime_module.date.fromisoformat(date_text)
+
+
+def get_previous_week_range(
+    today: datetime_module.date,
+) -> tuple[datetime_module.date, datetime_module.date]:
+    """Return the previous complete Monday-through-Sunday calendar week."""
+    current_week_monday = today - datetime_module.timedelta(days=today.weekday())
+    previous_week_monday = current_week_monday - datetime_module.timedelta(days=7)
+    previous_week_sunday = previous_week_monday + datetime_module.timedelta(days=6)
+    return previous_week_monday, previous_week_sunday
+
+
+def get_previous_month_range(
+    today: datetime_module.date,
+) -> tuple[datetime_module.date, datetime_module.date]:
+    """Return the previous complete calendar month."""
+    first_day_this_month = today.replace(day=1)
+    last_day_previous_month = first_day_this_month - datetime_module.timedelta(days=1)
+    first_day_previous_month = last_day_previous_month.replace(day=1)
+    return first_day_previous_month, last_day_previous_month
+
+
+def resolve_date_range(
+    args: argparse.Namespace,
+) -> tuple[datetime_module.date, datetime_module.date]:
+    """Resolve command-line date options to an inclusive date range."""
+    has_single_date = args.date is not None
+    has_start_date = args.start_date is not None
+    has_end_date = args.end_date is not None
+    has_preset = args.preset is not None
+
+    selected_modes = int(has_single_date) + int(has_preset) + int(has_start_date or has_end_date)
+    if selected_modes > 1:
+        raise ValueError(
+            "Conflicting date options. Use only one mode: --date, "
+            "--start-date/--end-date, or --preset."
+        )
+
+    if has_start_date != has_end_date:
+        raise ValueError("Both --start-date and --end-date must be provided together.")
+
+    today = datetime_module.date.today()
+
+    if has_single_date:
+        target_date = parse_iso_date(args.date)
+        return target_date, target_date
+
+    if has_start_date and has_end_date:
+        start_date = parse_iso_date(args.start_date)
+        end_date = parse_iso_date(args.end_date)
+        if start_date > end_date:
+            raise ValueError("--start-date must be on or before --end-date.")
+        return start_date, end_date
+
+    if has_preset:
+        if args.preset == "today":
+            return today, today
+        if args.preset == "previous-week":
+            return get_previous_week_range(today)
+        return get_previous_month_range(today)
+
+    return today, today
 
 
 def get_local_file_datetime(
@@ -165,21 +235,13 @@ def get_datetime_from_filename(file_path: Path) -> datetime_module.datetime | No
         return None
 
 
-def is_from_target_date(
+def is_in_target_date_range(
     file_path: Path,
-    target_date: datetime_module.date,
+    start_date: datetime_module.date,
+    end_date: datetime_module.date,
     date_source: str,
 ) -> bool:
-    """Return whether the selected file date matches the target date.
-
-    Args:
-        file_path: File path to inspect.
-        target_date: Local date to compare against.
-        date_source: One of created, modified, or filename.
-
-    Returns:
-        True if the selected file date matches the target date.
-    """
+    """Return whether the selected file date is in the target inclusive range."""
     try:
         file_datetime = get_local_file_datetime(file_path, date_source)
     except OSError:
@@ -188,27 +250,19 @@ def is_from_target_date(
     if file_datetime is None:
         return False
 
-    return file_datetime.date() == target_date
+    file_date = file_datetime.date()
+    return start_date <= file_date <= end_date
 
 
-def collect_target_date_files(
+def collect_date_range_files(
     root_directory: Path,
-    target_date: datetime_module.date,
+    start_date: datetime_module.date,
+    end_date: datetime_module.date,
     all_extensions: bool,
     date_source: str,
 ) -> list[Path]:
-    """Collect candidate files from the target date.
-
-    Args:
-        root_directory: Directory to walk recursively.
-        target_date: Local date to match.
-        all_extensions: When true, scan all files instead of only .txt files.
-        date_source: One of created, modified, or filename.
-
-    Returns:
-        List of candidate file paths.
-    """
-    target_date_files: list[Path] = []
+    """Collect candidate files from the target date range."""
+    matching_files: list[Path] = []
 
     progress_bar = tqdm(
         desc="Walking files",
@@ -233,11 +287,11 @@ def collect_target_date_files(
             if not file_path.is_file():
                 continue
 
-            if is_from_target_date(file_path, target_date, date_source):
-                target_date_files.append(file_path)
+            if is_in_target_date_range(file_path, start_date, end_date, date_source):
+                matching_files.append(file_path)
 
     progress_bar.close()
-    return target_date_files
+    return matching_files
 
 
 def read_text_file(file_path: Path) -> str | None:
@@ -326,9 +380,9 @@ def main() -> int:
     args = parse_args()
 
     try:
-        target_date = parse_target_date(args.date)
-    except ValueError:
-        print("ERROR: --date must be in YYYY-MM-DD format.", file=sys.stderr)
+        start_date, end_date = resolve_date_range(args)
+    except ValueError as error:
+        print(f"ERROR: {error}", file=sys.stderr)
         return 2
 
     root_directory = args.directory
@@ -341,20 +395,26 @@ def main() -> int:
         return 2
 
     if args.output is None:
-        date_stamp = target_date.strftime("%Y%m%d")
-        output_path = Path.cwd() / f"w434_missing_test_rows_{date_stamp}.txt"
+        start_stamp = start_date.strftime("%Y%m%d")
+        end_stamp = end_date.strftime("%Y%m%d")
+        if start_date == end_date:
+            output_path = Path.cwd() / f"w434_missing_test_rows_{start_stamp}.txt"
+        else:
+            output_path = Path.cwd() / f"w434_missing_test_rows_{start_stamp}_to_{end_stamp}.txt"
     else:
         output_path = args.output
 
     print(f"Scanning root: {root_directory}")
-    print(f"Date filter: {target_date.isoformat()}")
     print(f"Date source: {args.date_source}")
+    print(f"Start date: {start_date.isoformat()}")
+    print(f"End date: {end_date.isoformat()}")
     print("File filter:", "all files" if args.all_extensions else ".txt files only")
     print()
 
-    candidate_files = collect_target_date_files(
+    candidate_files = collect_date_range_files(
         root_directory=root_directory,
-        target_date=target_date,
+        start_date=start_date,
+        end_date=end_date,
         all_extensions=args.all_extensions,
         date_source=args.date_source,
     )
