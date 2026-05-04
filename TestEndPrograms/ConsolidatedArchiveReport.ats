@@ -86,6 +86,11 @@
 *   Description: Add TestResult & SerialNumber to record_duration output
 *   By: PB
 *
+* - Rev: 3.13
+*   Date: 2026-05-01
+*   Description: Launch REX only on passed test results for default_as
+*   By: RS
+*
 * - Rev: (next version)
 *   Cust Doc Rev: (next revision)
 *   Date: YYYY-MM-DD
@@ -145,9 +150,6 @@ function record_duration(): void;
 begin
 {
    Write test durations out to a file unique to the test station.
-
-   It will generally make sense to ensure a test is passing before
-   calling this function, although the function does not care.
 }
    TestStationID = MiscGetTestStationIdentifier();
    DurationFile = StrReplace(TMPL_DURATION, '$STATION$', TestStationID, FALSE);
@@ -558,6 +560,10 @@ begin
 
       // Check if we need to skip launching REX
       Skip_REX = get_skip_rex();
+      if (Skip_REX)
+      begin
+         UIWriteNormal('REX HAS BEEN DISABLED FOR THIS TEST.');
+      end;
 
       switch (Customer)
       begin
@@ -602,7 +608,7 @@ begin
          begin
             // Default actions for tests not previously handled.
             // For all 'AS-' assemblies, post-process to include header on each page
-            if (assembly_is_aerospace() AND NOT Skip_REX)
+            if (assembly_is_aerospace() AND NOT Skip_REX AND Passed)
             begin
                archive_default_aero_pdf(Customer);
             end;
