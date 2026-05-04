@@ -3,10 +3,11 @@ Name=Default text report
 Program=.\ReportGenerationPrograms\DefaultReport_txt.repgen
 Label=0
 OutputFormat=1
+BackupCount=0
 
 [Content]
-SingleTestFunctions=1
-AutomaticIsolationTestFunctions=1
+SingleTestFunctions=2
+AutomaticIsolationTestFunctions=2
 ManualTest=1
 
 [Format]
@@ -24,6 +25,7 @@ FormFeedAtEnd=1
 Enabled=1
 PrinterName=
 WindowsDefaultPrinter=1
+PDFConverter=0
 MarginLeft=20
 MarginRight=20
 MarginTop=20
