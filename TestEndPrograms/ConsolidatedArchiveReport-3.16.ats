@@ -1,0 +1,930 @@
+{******************************************************************************
+* Script Name: ConsolidatedArchiveReport
+* Test Purpose:   Test End Program
+*
+* VERSION CONTROL
+* - Test Rev: 1.0
+*   Date: 2025-04-15
+*   Description: Let's make this official.
+*   By: PB
+*
+* - Test Rev: 2.0
+*   Date: 2025-04-16
+*   Description: Refactored. Added Customer switch/case block. Pulled templates
+                 out to constants block. Commented for clarity.
+*   By: PB
+*
+* - Test Rev: 3.0
+*   Date: 2025-04-24
+*   Description: Added timer_finish to end of test to clear timer
+*   By: RS
+*
+* - Test Rev: 3.1
+*   Date: 2025-04-28
+*   Description: Changed timer_finish to timer_stop and timer_disp PASS of FAIL
+*                and moved durations to a subfolder for ATS_scanner
+*   By: RS
+*
+* - Test Rev: 3.2
+*   Date: 2025-05-07
+*   Description: Added default case to switch/case handling of customers to
+*                ensure all 'AS-' tests are being processed with REX.
+*   By: PB
+*
+* - Test Rev: 3.3
+*   Date: 2025-08-27
+*   Description: Change resolve_customer_name() to use specific index following
+*                splitting of path.
+*   By: PB
+*
+* - Test Rev: 3.4
+*   Date: 2025-08-29
+*   Description: Have resolve_customer_name() check to ensure 'Test Eng/434'
+*                is in path.
+*   By: PB
+*
+* - Test Rev: 3.5
+*   Date: 2025-09-08
+*   Description: Change record_duration to include test time stamp to filter results in
+*                external ATS programs.
+*   By: RS
+*
+* - Test Rev: 3.6
+*   Date: 2025-09-09
+*   Description: Added guard sentinals for test options. Must use multipin_hv
+*   By: RS
+*
+* - Test Rev: 3.7 
+*   Date: 2025-09-10
+*   Description: Switch from python.exe to pythonw.exe to suppress console.
+*   By: PB
+*
+* - Test Rev: 3.8
+*   Date: 2025-10-01
+*   Description: Updated test sentinals to not check if user aborted.
+*   By: RS
+*
+* - Test Rev: 3.9
+*   Date: 2025-10-10
+*   Description: Add cases for 'TRIUMPH' and 'KLUNE' to skip PDF archiving in favor of
+*                Robert's custom report processing scripts.
+*   By: PB
+*
+* - Test Rev: 3.10
+*   Date: 2025-10-10
+*   Description: Robert added a global check to skip REX launching.
+*   By: RS
+*
+* - Test Rev: 3.11
+*   Date: 2025-12-20
+*   Description: Correct get_skip_rex() logic so default_as reports are generated.
+*                Set No_TSX to '1' since TSX appears dead (at least for now).
+*   By: PB
+*
+* - Test Rev: 3.12
+*   Date: 2026-03-25
+*   Description: Add TestResult & SerialNumber to record_duration output
+*   By: PB
+*
+* - Rev: 3.13
+*   Date: 2026-05-01
+*   Description: Launch REX only on passed test results for default_as
+*   By: RS
+*
+* - Rev: 3.14.15
+*   Date: 2026-05-04
+*   Description: Update to handle Default_txt report and Nortech_txt report.
+*                Deletes temp report file at the end of program.
+*   By: RS
+*
+* - Rev: 3.15
+*   Date: 2026-05-12
+*   Description: Added Klune REX processing
+*   By: RS
+*
+* - Rev: 3.16
+*   Date: 2026-05-29
+*   By: RS
+*   - Updated `ConsolidatedArchiveReport` ATP handling to verify the required 
+*     `ATP-$ATPNUM$_html.html` report exists before calling REX; if missing, 
+*     CEETIS now shows a clear operator error instead of launching REX with 
+*     an unsupported/missing input.
+*   - Corrected `CUPExecuteCommand()` result handling, added CUP error messages, 
+*     deleted stale ATP PDFs before REX runs, and only archives the ATP PDF after
+*     CUP succeeds and REX creates the expected output.
+*
+* - Rev: (next version)
+*   Cust Doc Rev: (next revision)
+*   Date: YYYY-MM-DD
+*   Description: (description of change)
+*   By: (author initials)
+*
+* DOCUMENT HISTORY
+* - Date: (next update)
+*   Description: (description of update)
+*   By: (author initials)
+*
+* ADDITIONAL NOTES
+* - [Additional references or notes]
+*
+******************************************************************************}
+
+
+constants
+begin
+{
+   For consistency, precise files begin with 'FILE_' whereas templates intended
+   to be transformed into another string by calling StrReplace(); or
+   archive_protocol(); begin with 'TMPL_'.
+}
+   FILE_CUSTOMERS = 'O:\Test Eng\Support_Files\W434\customers.ini';
+   TMPL_DURATION = 'O:\Test Eng\Support_Files\W434\durations\$STATION$.txt';
+
+   FILE_REPORT_TXT_BJI = 'C:\Users\Public\Documents\CEETIS\Temp\Reports\DefaultReport_txt.txt';
+   FILE_REPORT_NORTECH_TXT_BJI = 'C:\Users\Public\Documents\CEETIS\Temp\Reports\Nortech_Default_TXT.txt';
+   TMPL_ARCHIVE_TXT_BJI = 'O:\Test Eng\DATA\W434\<Year>\$CUST$\<ProjectName>\<ProjectName>-<SerialNumber>-<Year><Month><Day>-<Hour><Minute><Second>.txt';
+
+   TMPL_REPORT_HTML_COLLINS = 'C:\Users\Public\Documents\CEETIS\Temp\Reports\ATP-$ATPNUM$_html.html';
+   TMPL_REPORT_PDF_COLLINS = 'C:\REX\output\ATP-$ATPNUM$.pdf';
+   TMPL_ARCHIVE_HTML_COLLINS = 'O:\Test Eng\DATA\W434\<Year>\COLLINS_HTML\<ProjectName>\<ProjectName>-<SerialNumber>-<Year><Month><Day>-<Hour><Minute><Second>.html';
+   TMPL_ARCHIVE_PDF_COLLINS = 'O:\Test Eng\DATA\W434\<Year>\COLLINS_PDF\<ProjectName>\<ProjectName>-<SerialNumber>-<Year><Month><Day>-<Hour><Minute><Second>.pdf';
+
+   FILE_REPORT_PDF_AERO_DEFAULT = 'C:\REX\output\AS-DEFAULT.pdf';
+   FILE_REPORT_PDF_KLUNE_DEFAULT = 'C:\REX\output\KLUNE-DEFAULT.pdf';
+   TMPL_ARCHIVE_PDF_AERO_DEFAULT = 'O:\Test Eng\DATA\W434\<Year>\$CUST$_PDF\<ProjectName>\<ProjectName>-<SerialNumber>-<Year><Month><Day>-<Hour><Minute><Second>.pdf';
+
+   PYTHON_EXE = 'C:\Python\pythonw.exe';
+
+   REX_PARAMS_DEFAULT_AERO = 'C:\REX\rex.py -m default_as -r C:\Users\Public\Documents\CEETIS\Temp\Reports\DefaultReport_txt.txt -o AS-DEFAULT.pdf';
+   REX_PARAMS_NORTECH_AERO = 'C:\REX\rex.py -m default_as -r C:\Users\Public\Documents\CEETIS\Temp\Reports\Nortech_Default_TXT.txt -o AS-DEFAULT.pdf';
+
+   REX_PARAMS_DEFAULT_KLUNE = 'C:\REX\rex.py -m w434_klune -r C:\Users\Public\Documents\CEETIS\Temp\Reports\DefaultReport_txt.txt -o KLUNE-DEFAULT.pdf --force-invalid-output';
+   REX_PARAMS_NORTECH_KLUNE = 'C:\REX\rex.py -m w434_klune -r C:\Users\Public\Documents\CEETIS\Temp\Reports\Nortech_Default_TXT.txt -o KLUNE-DEFAULT.pdf --force-invalid-output';
+
+   TMPL_REX_PARAMS_COLLINS_ATP = 'C:\REX\rex.py -m atp$ATPNUM$ -r ATP-$ATPNUM$_html.html -o ATP-$ATPNUM$.pdf';
+
+   // TSX report is the same as FILE_REPORT_TXT_BJI until a custom TSX format is final.
+   FILE_REPORT_TXT_TSX = 'C:\Users\Public\Documents\CEETIS\Temp\Reports\DefaultReport_txt.txt';
+   TMPL_ARCHIVE_TXT_TSX = '\\az-fs1\chksmPBI\Weetech Reports\Bemidji\<ProjectName>-<SerialNumber>-<Year><Month><Day>-<Hour><Minute><Second>.txt';
+
+   // Path breaks down as follows:
+   // 1: "O:"
+   // 2: "Test Eng"
+   // 3: "434"
+   // 4: CUSTOMER_NAME or DIR_TO_MAP_TO_CUSTOMER_NAME
+   PARENT_INDEX = 4;
+end;
+
+
+function record_duration(): void;
+begin
+{
+   Write test durations out to a file unique to the test station.
+}
+   TestStationID = MiscGetTestStationIdentifier();
+   DurationFile = StrReplace(TMPL_DURATION, '$STATION$', TestStationID, FALSE);
+   Handle = FileOpenText(DurationFile);
+
+   if (Handle <> 0)
+   begin
+      Assembly = ProjectGetFilename();
+
+      StartTime = DTGetTestDateTime();
+      EndTime = DTNow();
+      Duration = EndTime - StartTime;
+
+      Hours = DTHour(Duration);
+      Minutes = DTMinute(Duration);
+      Seconds = DTSecond(Duration);
+
+      HoursInSeconds = Hours * 3600;
+      MinutesInSeconds = Minutes * 60;
+
+      TotalSeconds = HoursInSeconds + MinutesInSeconds + Seconds;
+      TotalSeconds = StrAdd(TotalSeconds, 's');
+
+      Years = DTYear(StartTime);
+      Months = DTMonth(StartTime);
+      Days = DTDay(StartTime);
+      Hours = DTHour(StartTime);
+      Minutes = DTMinute(StartTime);
+      Seconds = DTSecond(StartTime);
+
+
+      // Get test result
+      UserBreak = FALSE;
+      Passed = FALSE;
+      TestEndGetTestResult(UserBreak, Passed);
+
+      if (UserBreak)
+      begin
+         TestResult = 'ABORT';
+      end
+      else
+      begin
+         if (Passed)
+         begin
+            TestResult = 'PASS';
+         end
+         else
+         begin
+            TestResult = 'FAIL';
+         end;
+      end;
+
+      SerialNumber = GlobalDataGetSerialNumber();
+      if (StrCompare(SerialNumber, '') == 0)
+      begin
+         SerialNumber = 'NULL';
+      end;
+
+      Line = StrAdd(Assembly, '|');
+      Line = StrAdd(Line, TotalSeconds);
+      Line = StrAdd(Line, '|');
+      Line = StrAdd(Line, Years);
+      Line = StrAdd(Line, '-');
+      Line = StrAdd(Line, Months);
+      Line = StrAdd(Line, '-');
+      Line = StrAdd(Line, Days);
+      Line = StrAdd(Line, ' ');
+      Line = StrAdd(Line, Hours);
+      Line = StrAdd(Line, ':');
+      Line = StrAdd(Line, Minutes);
+      Line = StrAdd(Line, ':');
+      Line = StrAdd(Line, Seconds);
+      Line = StrAdd(Line, '|');
+      Line = StrAdd(Line, TestResult);
+      Line = StrAdd(Line, '|');
+      Line = StrAdd(Line, SerialNumber);
+
+      FileAddText(Handle, Line);
+      FileSaveText(Handle);
+   end;
+
+   FileCloseText(Handle);
+end;
+
+
+function resolve_customer_name(): string;
+begin
+{
+   Infer the customer name.
+
+   Start by checking global data, which could be set via
+   set_customer('CUST_NAME') in NortechUtil.unit, or could also have been set
+   directly. If no value is set in global data, use the parent directory in
+   conjunction with the mapping file. This allows us to map things like 'GE_C8'
+   to 'GEHC', or 'NORTHROP' to 'NORTHROP GRUMMAN'. If no customer mapping is
+   found, just use the parent directory.
+}
+   Customer = GlobalDataRead('Customer', 'DEFAULT');
+
+   // IF NOT SPECIFIED, USE PARENT DIRECTORY TO INFER CUSTOMER WHEN POSSIBLE
+   // ADD NEW CUSTOMER DEFINITIONS WITHIN THE CUSTOMERS FILE SPECIFIED AT THE
+   // TOP OF THIS SOURCE CODE FILE.
+   if (StrCompare(Customer, 'DEFAULT') == 0)
+   begin
+      ProjectFilename = ProjectGetFilename();
+
+      // IF THE TEST IS INSIDE THE TEST LAB FOLDER, SET CUSTOMER TO 'TEST LAB'.
+      IsTestLab = StrPosition('TEST LAB', ProjectFilename);
+
+      if (IsTestLab)
+      begin
+         Customer = 'TEST LAB';
+      end
+      else
+      begin
+         Handle = FileOpenIni(FILE_CUSTOMERS);
+
+         if (Handle == 0)
+         begin
+            UIErrorDialog('COULD NOT OPEN CUSTOMERS INDEX FILE.<BR><BR>CONTACT TEST LAB.');
+         end
+         else
+         begin
+            // USE THE PARENT DIR NAME TO REMAP TO CUSTOMER NAME
+            MiscListFromString(ProjectFilename, PathParts, '\');
+
+            if (StrCompare(PathParts[2], 'Test Eng') == 0 AND StrCompare(PathParts[3], '434') == 0)
+            begin
+               Customer = FileGetIni(Handle, 'DirectoryMap', PathParts[PARENT_INDEX], Customer);
+            end;
+         end;
+
+         FileCloseIni(Handle);
+      end;
+   end;
+
+   Result = Customer;
+end;
+
+
+function archive_collins_atp_pass(ATPNum: string): void;
+begin
+{
+   Use CEETIS CUP to run Python for Collins data sheet generation.
+
+   ATPNum: This value should map to a defined REX ATP module, so a value of
+           '2723' will map to the REX module 'atp2723.py'.
+
+   REX ATP report modules require the CEETIS HTML report, not the TXT report.
+   Verify the expected HTML file exists before launching REX so a missing or
+   misconfigured CEETIS report-generation step is obvious to the operator.
+
+   CUPExecuteCommand return convention:
+   - CommandResult > 0 means the CUP answered and ResultData contains that many lines.
+   - CommandResult <= 0 means a CUP launch/communication error constant.
+
+   The CUP result does not prove that REX produced a PDF. After a successful
+   CUP response, the expected PDF must still be verified before archiving.
+}
+   ProjectFilename = ProjectGetFilename();
+   IsPretest = StrContains('*PRE*', ProjectFilename, FALSE);
+
+   if (NOT IsPretest)
+   begin
+      CollinsHTMLReport = StrReplace(TMPL_REPORT_HTML_COLLINS, '$ATPNUM$', ATPNum, FALSE);
+      CollinsPDFReport = StrReplace(TMPL_REPORT_PDF_COLLINS, '$ATPNUM$', ATPNum, FALSE);
+
+      if (FileExists(CollinsHTMLReport))
+      begin
+         if (FileExists(CollinsPDFReport))
+         begin
+            UIWriteWarning('REMOVING STALE COLLINS ATP PDF BEFORE LAUNCHING REX:');
+            UIWriteWarning(CollinsPDFReport);
+            FileDelete(CollinsPDFReport);
+         end;
+
+         // Execute external util for processing of report & forced print.
+         UIWriteNormal('LAUNCHING REX FOR COLLINS ATP HTML REPORT PROCESSING...');
+         UIWriteNormal('USING COLLINS ATP HTML REPORT:');
+         UIWriteNormal(CollinsHTMLReport);
+
+         Params = StrReplace(TMPL_REX_PARAMS_COLLINS_ATP, '$ATPNUM$', ATPNum, TRUE);
+         CommandResult = CUPExecuteCommand('CEETIS_CUP_001', 'run program', [PYTHON_EXE, Params], 30s, ResultData);
+
+         if (CommandResult > 0)
+         begin
+            if (FileExists(CollinsPDFReport))
+            begin
+               archive_protocol(CollinsPDFReport, TMPL_ARCHIVE_PDF_COLLINS, TRUE, FALSE, FALSE);
+               FileDelete(CollinsPDFReport);
+            end
+            else
+            begin
+               UIWriteError('ERROR: REX DID NOT CREATE THE EXPECTED COLLINS ATP PDF REPORT! CONTACT TEST DEPARTMENT!');
+               UIWriteError('ATP REX MODULES REQUIRE HTML INPUT. VERIFY CEETIS GENERATED THE HTML REPORT AND REX COMPLETED SUCCESSFULLY.');
+               UIWriteError('EXPECTED HTML REPORT:');
+               UIWriteError(CollinsHTMLReport);
+               UIWriteError('EXPECTED PDF REPORT:');
+               UIWriteError(CollinsPDFReport);
+            end;
+         end
+         else
+         begin
+            UIWriteError('ERROR: CEETIS CUP COULD NOT LAUNCH OR COMMUNICATE WITH REX FOR COLLINS ATP REPORT GENERATION! CONTACT TEST DEPARTMENT!');
+            switch (CommandResult)
+            begin
+               case CUP_Result_ProgramNotFound: begin
+                  UIWriteError('Program not found');
+               end;
+               case CUP_Result_ProgramNotStarted: begin
+                  UIWriteError('Program could not be started');
+               end;
+               case CUP_Result_CommandSendError: begin
+                  UIWriteError('Command could not be sent');
+               end;
+               case CUP_Result_CommandTimeout: begin
+                  UIWriteError('Command timed out');
+               end;
+               case CUP_Result_NotACUP: begin
+                  UIWriteError('Not a CUP');
+               end;
+               default: begin
+                  UIWriteError('Unknown CUP error');
+               end;
+            end;
+         end;
+      end
+      else
+      begin
+         UIWriteError('ERROR: REQUIRED COLLINS ATP HTML REPORT NOT FOUND! CONTACT TEST DEPARTMENT!');
+         UIWriteError('REX ATP MODULES REQUIRE ATP HTML REPORTS. TXT REPORTS ARE NOT SUPPORTED FOR ATP MODULES.');
+         UIWriteError('EXPECTED HTML REPORT:');
+         UIWriteError(CollinsHTMLReport);
+      end;
+   end;
+end;
+
+
+function assembly_is_aerospace(): boolean;
+begin
+   ProjectPathAndFilename = ProjectGetFilename();
+   Count = MiscListFromString(ProjectPathAndFilename, PathParts, '\');
+
+   // Take the first three characters of the test name and make it uppercase
+   AssemblyType = StrUpperCase(StrCopy(PathParts[Count], 1, 3));
+
+   if (StrCompare(AssemblyType, 'AS-') == 0)
+   begin
+      Result = TRUE;
+   end
+   else
+   begin
+      Result = FALSE;
+   end;
+end;
+
+
+function archive_default_aero_pdf(Customer: string; Debug: boolean = FALSE): void;
+begin
+{
+   Use CEETIS CUP to run Python for report generation.
+
+   Call REX with parameters for default 'AS-' reporting.
+
+   Checks to ensure the test is not a PRETEST. Uses CUP to launch Python with
+   parameters matching the test. Cleans up after itself so we don't
+   accidentally reuse the generated PDF.
+}
+   ProjectFilename = ProjectGetFilename();
+   IsPretest = StrPosition('PRE', ProjectFilename);
+
+   if (IsPretest == 0)
+   begin
+      // Execute external util for processing of report & forced print.
+
+      UIWriteNormal('LAUNCHING REX FOR REPORT PROCESSING...');
+
+      CommandResult = CUP_Result_ProgramNotStarted;
+
+      if (FileExists(FILE_REPORT_NORTECH_TXT_BJI))
+      begin
+         CommandResult = CUPExecuteCommand('CEETIS_CUP_001', 'run program', [PYTHON_EXE, REX_PARAMS_NORTECH_AERO], 30s, ResultData);
+      end
+      else
+      begin
+         if (FileExists(FILE_REPORT_TXT_BJI))
+         begin
+            CommandResult = CUPExecuteCommand('CEETIS_CUP_001', 'run program', [PYTHON_EXE, REX_PARAMS_DEFAULT_AERO], 30s, ResultData);
+         end
+         else
+         begin
+            UIWriteError('COULD NOT FIND TEST REPORT FOR REX! CONTACT TEST DEPARMENT!');
+         end;
+      end;
+
+   if (Debug)
+   begin
+   if (CommandResult > 0)
+   begin
+      for Zaehl = 1 to CommandResult do
+      begin
+         UIWriteWarning(StrAdd(StrAdd(Zaehl, ': '), ResultData[Zaehl]));
+      end;
+   end
+   else
+   begin
+
+      switch (CommandResult)
+      begin
+         case CUP_Result_ProgramNotFound: begin
+            UIWriteError('Program not found');
+         end;
+         case CUP_Result_ProgramNotStarted: begin
+            UIWriteError('Program could not be started');
+         end;
+         case CUP_Result_CommandSendError: begin
+            UIWriteError('Command could not be sent');
+         end;
+         case CUP_Result_CommandTimeout: begin
+            UIWriteError('Command timed out');
+         end;
+         case CUP_Result_NotACUP: begin
+            UIWriteError('Not a CUP');
+         end;
+         default: begin
+            UIWriteError('Unknown error');
+         end;
+      end;
+   end;
+   end;
+
+
+      ReportDest = StrReplace(TMPL_ARCHIVE_PDF_AERO_DEFAULT, '$CUST$', Customer, FALSE);
+
+      if (FileExists(FILE_REPORT_PDF_AERO_DEFAULT))
+      begin
+         archive_protocol(FILE_REPORT_PDF_AERO_DEFAULT, ReportDest, TRUE, FALSE, FALSE);
+         FileDelete(FILE_REPORT_PDF_AERO_DEFAULT);
+      end;
+   end;
+end;
+
+function archive_nortech_klune_pdf(Customer: string; Debug: boolean = FALSE): void;
+begin
+{
+   Use CEETIS CUP to run Python for report generation.
+
+   Call REX with parameters for default 'AS-' reporting.
+
+   Checks to ensure the test is not a PRETEST. Uses CUP to launch Python with
+   parameters matching the test. Cleans up after itself so we don't
+   accidentally reuse the generated PDF.
+}
+   // Execute external util for processing of report & forced print.
+
+   UIWriteNormal('LAUNCHING REX FOR REPORT PROCESSING...');
+
+   CommandResult = CUP_Result_ProgramNotStarted;
+
+   if (FileExists(FILE_REPORT_NORTECH_TXT_BJI))
+   begin
+     CommandResult = CUPExecuteCommand('CEETIS_CUP_001', 'run program', [PYTHON_EXE, REX_PARAMS_NORTECH_KLUNE], 30s, ResultData);
+   end
+   else
+   begin
+     if (FileExists(FILE_REPORT_TXT_BJI))
+     begin
+        CommandResult = CUPExecuteCommand('CEETIS_CUP_001', 'run program', [PYTHON_EXE, REX_PARAMS_DEFAULT_KLUNE], 30s, ResultData);
+     end
+     else
+     begin
+       UIWriteError('COULD NOT FIND TEST REPORT FOR REX! CONTACT TEST DEPARMENT!');
+     end;
+   end;
+
+   if (Debug)
+   begin
+   if (CommandResult > 0)
+   begin
+      for Zaehl = 1 to CommandResult do
+      begin
+         UIWriteWarning(StrAdd(StrAdd(Zaehl, ': '), ResultData[Zaehl]));
+      end;
+   end
+   else
+   begin
+
+      switch (CommandResult)
+      begin
+         case CUP_Result_ProgramNotFound: begin
+            UIWriteError('Program not found');
+         end;
+         case CUP_Result_ProgramNotStarted: begin
+            UIWriteError('Program could not be started');
+         end;
+         case CUP_Result_CommandSendError: begin
+            UIWriteError('Command could not be sent');
+         end;
+         case CUP_Result_CommandTimeout: begin
+            UIWriteError('Command timed out');
+         end;
+         case CUP_Result_NotACUP: begin
+            UIWriteError('Not a CUP');
+         end;
+         default: begin
+            UIWriteError('Unknown error');
+         end;
+      end;
+   end;
+   end;
+
+
+   ReportDest = StrReplace(TMPL_ARCHIVE_PDF_AERO_DEFAULT, '$CUST$', Customer, FALSE);
+
+   if (FileExists(FILE_REPORT_PDF_KLUNE_DEFAULT))
+   begin
+      archive_protocol(FILE_REPORT_PDF_KLUNE_DEFAULT, ReportDest, TRUE, FALSE, FALSE);
+      FileDelete(FILE_REPORT_PDF_KLUNE_DEFAULT);
+   end;
+
+end;
+
+{**
+  @brief Verify a guard option's sentinel: if the option is required, it must have been tested.
+
+  @param OptionStr  Option key suffix used to form "REQUIRE_<OptionStr>" and "TESTED_<OptionStr>" entries.
+  @param Debug      Enables verbose/interactive behavior in user interface helpers.
+
+  @return boolean   TRUE if either (a) the option is not required, or (b) it is required and has been tested.
+                    FALSE if the option is required but has not been tested.
+
+  @details
+  Reads the requirement and tested state for a guard option from the "GUARDS" namespace.
+  If the option is marked required but not tested, an error string is constructed and both a
+  log entry and an error dialog are issued. Otherwise, the result is TRUE.
+
+  @pre GlobalDataRead, StrAdd, StrCompare, UIWriteError, and UIErrorDialog are available.
+  @post On required-but-untested, an error is logged and an error dialog is displayed.
+  @sideeffect Emits user interface feedback via UIWriteError and UIErrorDialog on failures.
+**}
+function test_options_sentinal(OptionStr: string; Debug: boolean = FALSE): boolean;
+begin
+   // Default pessimistically: assume sentinel not satisfied until checks pass.
+   Result = FALSE;
+
+   // Read required/tested flags for this option from the "GUARDS" namespace.
+   Required = GlobalDataRead(StrAdd('REQUIRE_', OptionStr), 'NULL', 'GUARDS');
+   Tested = GlobalDataRead(StrAdd('TESTED_', OptionStr), 'NULL', 'GUARDS');
+
+   // Branch: if this option is marked required, enforce that it was tested.
+   if (StrCompare(Required, 'TRUE') == 0)
+   begin
+      // Required: pass only if the tested flag is explicitly TRUE.
+      if (StrCompare(Tested, 'TRUE') <> 0)
+      begin
+         // Compose and report the failure condition to the operator/log.
+         OptionErrorStr = StrAdd(OptionStr, ' TEST REQUIRED BUT NOT TESTED!');
+         UIWriteError(OptionErrorStr);
+
+         // Present an interactive error dialog to ensure visibility.
+         UIErrorDialog(OptionErrorStr);
+      end
+      else
+      begin
+         // Required and tested: sentinel satisfied.
+         Result = TRUE;
+      end;
+   end
+   else
+   begin
+      // Not required: sentinel trivially satisfied.
+      Result = TRUE;
+   end;
+end;
+
+{**
+  @brief Check that all guard option sentinels are satisfied: continuity, low voltage, high voltage, and dielectric breakdown.
+
+  @param UserBreak Wehn TRUE, skips checking sentinals since the user aborted the test.
+  @param Debug  When TRUE, enables verbose/interactive behavior in called verification routines.
+
+  @return boolean  TRUE only if every required guard option is confirmed tested; FALSE if any required
+                   option (continuity, low voltage, high voltage, dielectric breakdown) is required
+                   but not tested.
+
+  @details
+  This routine delegates to test_options_sentinal for each guard category. It starts with an
+  optimistic TRUE and sets the overall result to FALSE upon any failing sentinel check. The four
+  categories validated are:
+   - Continuity
+   - Low voltage
+   - High voltage
+   - Dielectric breakdown
+
+  @pre test_options_sentinal is available and performs the required/tested verification, including
+       any user interface error reporting.
+  @post The called sentinel checks may emit user-facing errors or dialogs if requirements are unmet.
+**}
+function test_options_all_sentinals(UserBreak: boolean; Debug: boolean = FALSE): boolean;
+begin
+
+   // Start optimistic: assume all sentinels are satisfied until a check fails.
+   Result = TRUE;
+
+   if (UserBreak == FALSE)
+      begin
+      // Continuity sentinel: fail overall if continuity is required but not tested.
+      if (test_options_sentinal('CONTINUITY', Debug) == FALSE)
+      begin
+         Result = FALSE;
+      end;
+
+      // Low voltage sentinel: fail overall if low voltage is required but not tested.
+      if (test_options_sentinal('LV', Debug) == FALSE)
+      begin
+         Result = FALSE;
+      end;
+
+      // High voltage sentinel: fail overall if high voltage is required but not tested.
+      if (test_options_sentinal('HV', Debug) == FALSE)
+      begin
+         Result = FALSE;
+      end;
+
+      // Dielectric breakdown sentinel: fail overall if dielectric breakdown is required but not tested.
+      if (test_options_sentinal('DB', Debug) == FALSE)
+      begin
+         Result = FALSE;
+      end;
+   end;
+end;
+
+
+function main(): void;
+begin
+   // Get test result
+   UserBreak = FALSE;
+   Passed = FALSE;
+   TestEndGetTestResult(UserBreak, Passed);
+
+   Sentinal = test_options_all_sentinals(UserBreak);
+
+   if (Sentinal == FALSE)
+   begin
+      UIWriteError('*************************************************************');
+      UIWriteError('* ERROR! A REQUIRED SENTINAL WAS NOT SET! CONTACT TEST LAB! *');
+      UIWriteError('*************************************************************');
+   end
+   else
+   begin
+
+      if (print_allowed())
+      begin
+         PrintAllReports();
+      end;
+
+      ArchiveTestResult();
+
+      record_duration();
+
+      if (Passed)
+      begin
+         // moved record_duration() so ABORT & FAIL would also be recorded.
+      end
+      else
+      begin
+         // Brief message if aborted by user
+         if (UserBreak)
+         begin
+            UIWriteNormal('');
+            Text = '----- ';
+            Text = StrAdd(Text, LocalText('49#Aborted by user'));
+            Text = StrAdd(Text, ' -----');
+            UIWriteWarning(Text);
+         end
+         else
+         begin
+            unplug_check();
+         end;
+      end;
+
+
+      {******************************************************************************
+      *   ARCHIVING SECTION REFERENCE
+      *   archive_protocol(SOURCE, DEST, PASS, FAIL, ABORT);
+      *      SOURCE (String): Full path to source report.
+      *      DEST (String): Destination string as template.
+      *      PASS (Boolean): Archive passing test.
+      *      FAIL (Boolean): Archive failing test.
+      *      ABORT (Boolean): Archive aborted test.
+      *
+      *   First archive all BJI reports (passing & failing, no aborts).
+      *   Second, check for additional customer-specific requirements.
+      *   Third, archvie all TSX reports (passing & failing, no aborts).
+      ******************************************************************************}
+
+      Customer = resolve_customer_name();
+
+      // ARCHIVE FOR BJI IN ALL PASS/FAIL CIRCUMSTANCES
+      BJIArchive = StrReplace(TMPL_ARCHIVE_TXT_BJI, '$CUST$', Customer, FALSE);
+
+      if (FileExists(FILE_REPORT_NORTECH_TXT_BJI))
+      begin
+         archive_protocol(FILE_REPORT_NORTECH_TXT_BJI, BJIArchive, TRUE, TRUE, FALSE);
+      end
+      else
+      begin
+         if (FileExists(FILE_REPORT_TXT_BJI))
+         begin
+            archive_protocol(FILE_REPORT_TXT_BJI, BJIArchive, TRUE, TRUE, FALSE);
+         end
+         else
+         begin
+            UIWriteError('ERROR: COULD NOT FIND TEST REPORT FILE! CONTACT TEST DEPARTMENT!');
+         end;
+      end;
+
+
+
+      // ARCHIVE & PROCESSING RULES FOR SPECIFIC CUSTOMERS
+      // NOTE: If matched against a customer, ensure all possible sub-cases are handled!
+      //       i.e. match against COLLINS and then handle ATPs, but also handle non-ATP 'AS'
+      //       assemblies. Base archive_protocol prior to switch/case block will ensure
+      //       default reports are preserved.
+
+      // Check if we need to skip launching REX
+      Skip_REX = get_skip_rex();
+      if (Skip_REX)
+      begin
+         UIWriteNormal('REX HAS BEEN DISABLED FOR THIS TEST.');
+      end;
+
+      switch (Customer)
+      begin
+         case 'COLLINS':
+         begin
+            // Only do extra work if covered by an ATP.
+            ATPNum = GlobalDataRead('Collins.ATP', 'NULL');
+
+            if (StrCompare(ATPNum, 'NULL') <> 0)
+            begin
+               CollinsReport = StrReplace(TMPL_REPORT_HTML_COLLINS, '$ATPNUM$', ATPNum, FALSE);
+
+               if (FileExists(CollinsReport))
+               begin
+                  archive_protocol(CollinsReport, TMPL_ARCHIVE_HTML_COLLINS, TRUE, TRUE, FALSE);
+
+                  // When passing, create the Collins data sheet PDF. REX ATP modules
+                  // require the HTML report; do not launch REX if the HTML report
+                  // was not generated.
+                  if (Passed)
+                  begin
+                     archive_collins_atp_pass(ATPNum);
+                  end;
+               end
+               else
+               begin
+                  UIWriteError('ERROR: REQUIRED COLLINS ATP HTML REPORT NOT FOUND! CONTACT TEST DEPARTMENT!');
+                  UIWriteError('REX ATP MODULES REQUIRE ATP HTML REPORTS. TXT REPORTS ARE NOT SUPPORTED FOR ATP MODULES.');
+                  UIWriteError('EXPECTED HTML REPORT:');
+                  UIWriteError(CollinsReport);
+               end;
+            end
+            else
+            begin
+               if (assembly_is_aerospace() AND NOT Skip_REX)
+               begin
+                  archive_default_aero_pdf(Customer);
+               end;
+            end;
+         end;
+         case 'TRIUMPH':
+         begin
+            // do nothing since these reports are handled 'custom'. thanks, rob.
+         end;
+         case 'KLUNE':
+         begin
+            archive_nortech_klune_pdf(Customer);
+         end;
+         case 'TEST LAB':
+         begin
+            // Never write a TSX report for TEST LAB tests
+            GlobalDataWrite('Nortech.NOTSX', '1');
+         end;
+         default:
+         begin
+            // Default actions for tests not previously handled.
+            // For all 'AS-' assemblies, post-process to include header on each page
+            if (assembly_is_aerospace() AND NOT Skip_REX AND Passed)
+            begin
+               archive_default_aero_pdf(Customer);
+            end;
+         end;
+      end;
+
+      // LASTLY ARCHIVE FOR TSX IF THIS IS A NON-TEST LAB TEST RESULT
+      // No_TSX = GlobalDataRead('Nortech.NOTSX', '0');
+      No_TSX = '1'; // TSX appears to be dead, so stop archiving additional reports for now.
+      if (StrCompare(No_TSX, '1') <> 0)
+      begin
+         archive_protocol(FILE_REPORT_TXT_TSX, TMPL_ARCHIVE_TXT_TSX, TRUE, TRUE, FALSE);
+      end;
+
+      timer_stop(FALSE, TRUE);
+
+      if (UserBreak)
+      begin
+         timer_disp_str('ABORT', FALSE, FALSE);
+      end
+      else
+      begin
+         if (Passed)
+         begin
+            timer_disp_str('PASS', FALSE, FALSE);
+         end
+         else
+         begin
+            timer_disp_str('FAIL', FALSE, FALSE);
+         end;
+      end;
+
+      // Show the test result if the test passed or failed
+      UITestResult(Passed, UserBreak, TRUE, 600s);
+
+      // If global data is not cleared, Operator ID will be preserved between
+      // unrelated tests. Last verified in CEETIS 4.13-08.
+      GlobalDataClear();
+
+      // Two files may be created by the tests now until we consolidate all testers.
+      // Once we archive, we need to delete so we don't process previous test results
+      if (FileExists(FILE_REPORT_NORTECH_TXT_BJI))
+      begin
+         FileDelete(FILE_REPORT_NORTECH_TXT_BJI);
+      end
+      else
+      begin
+         if (FileExists(FILE_REPORT_TXT_BJI))
+         begin
+            FileDelete(FILE_REPORT_TXT_BJI);
+         end
+         else
+         begin
+            UIWriteError('COULD NOT DELETE TEMP TEST RESULT! CONTACT TEST DEPARTMENT!');
+         end;
+      end;
+   end;
+end;
+
