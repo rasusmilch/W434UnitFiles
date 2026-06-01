@@ -17,7 +17,7 @@ begin
 
    timer_disp_str('None', FALSE, FALSE);
 
-   AllowedJob = check_job_whitelist(TRUE);
+   AllowedJob = check_job_whitelist();
 
    UIClearScreen();
    CanStartTest = TRUE;
