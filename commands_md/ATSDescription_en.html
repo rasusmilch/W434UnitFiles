@@ -1,0 +1,1192 @@
+<HTML>
+<HEAD>
+<!-- Inserted by TRADOS: --><META HTTP-EQUIV="content-type" CONTENT="text/html; charset=UTF-8">
+
+<LINK REL="stylesheet" TYPE="text/css" HREF="../../images/ATSDescription.css">
+<TITLE>ATS Language Description</TITLE>
+</HEAD>
+<BODY BGCOLOR="#FFFFFF" FONTCOLOR="#000000">
+<TABLE width=800>
+   <TR class=standard>
+      <TD class=title1>ATS Language Description</TD>
+   </TR>
+</TABLE>
+<BR>
+<TABLE width=800>
+   <TR class=standard>
+      <TD width=400><A href="index_a.html">Alphabetical Index of ATS Functions</A></TD>
+      <TD><A href="index_c.html">Index of ATS Functions by Category</A></TD>
+   </TR>
+</TABLE>
+<HR>
+<BR> ATS (Advanced Test Script) is a script language. It is used in the CEETIS software package to control test sequences with WEETECH test systems. This is a description of the fundamental elements of ATS.<BR/>
+<P class=title2>Contents</P>
+<A href="#keywords"><SPAN class=bold>Keywords</SPAN></A><BR/> 
+<A href="#comments"><SPAN class=bold>Comments</SPAN></A><BR/> 
+<A href="#variables"><SPAN class=bold>Variables</SPAN></A><BR/> 
+<A href="#datatypes"><SPAN class=bold>Data types</SPAN></A><BR/> 
+<A href="#constants"><SPAN class=bold>Constants</SPAN></A><BR/> 
+<SPAN class=indent1><A href="#constants_internal">Internal constants</A></SPAN><BR/> 
+<SPAN class=indent1><A href="#constants_custom">Custom constants</A></SPAN><BR/> 
+<SPAN class=indent1><A href="#constants_result">Result constants</A></SPAN><BR/> 
+<A href="#identifiers"><SPAN class=bold>Identifiers</SPAN></A><BR/> 
+<A href="#expressions"><SPAN class=bold>Expressions</SPAN></A><BR/> 
+<A href="#operators"><SPAN class=bold>Operators</SPAN></A><BR/> 
+<SPAN class=indent1><A href="#operators_arithmetical">Arithmetical operators</A><BR/> 
+<SPAN class=indent1><A href="#operators_logical">Logical operators</A><BR/> 
+<SPAN class=indent1><A href="#operators_relational">Relational operators</A><BR/> 
+<A href="#statements"><SPAN class=bold>Statements</SPAN></A><BR/> 
+<SPAN class=indent1><A href="#statements_simple">Simple statements</A></SPAN><BR/> 
+<SPAN class=indent2><A href="#statements_simple_assignments">Assignments</A></SPAN><BR/> 
+<SPAN class=indent2><A href="#statements_simple_functioncalls">Function calls</A></SPAN><BR/> 
+<SPAN class=indent1><A href="#statements_structured">Structured statements</A></SPAN><BR/> 
+<SPAN class=indent2><A href="#statements_structured_combined">Combined statement</A></SPAN><BR/> 
+<SPAN class=indent2><A href="#statements_structured_if">if Statement</A></SPAN><BR/> 
+<SPAN class=indent2><A href="#statements_structured_switch">switch Statement</A></SPAN><BR/> 
+<SPAN class=indent2><A href="#statements_structured_loops">Loops</A></SPAN><BR/> 
+<SPAN class=indent3><A href="#statements_structured_loops_dowhile">do-while Loop</A></SPAN><BR/> 
+<SPAN class=indent3><A href="#statements_structured_loops_while">while Loop</A></SPAN><BR/> 
+<SPAN class=indent3><A href="#statements_structured_loops_for">for Loop</A></SPAN><BR/> 
+<A href="#functions"><SPAN class=bold>Functions</SPAN></A><BR/> 
+<SPAN class=indent1><A href="#functions_internal">Internal functions</A></SPAN><BR/> 
+<SPAN class=indent1><A href="#functions_custom">Custom functions</A></SPAN><BR/> 
+<SPAN class=indent2><A href="#functions_custom_names">Function names</A></SPAN><BR/> 
+<SPAN class=indent2><A href="#functions_custom_parameters">Parameters</A></SPAN><BR/> 
+<SPAN class=indent2><A href="#functions_custom_resulttype">Result type</A></SPAN><BR/> 
+<SPAN class=indent2><A href="#functions_custom_directives">Directives</A></SPAN><BR/> 
+<SPAN class=indent3><A href="#functions_custom_directives_manualtest">The directive manualtest</A></SPAN><BR/> 
+<SPAN class=indent3><A href="#functions_custom_directives_rangetest">The directive rangetest</A></SPAN><BR/> 
+<SPAN class=indent3><A href="#functions_custom_directives_tests">The tests directive</A></SPAN><BR/> 
+<SPAN class=indent3><A href="#functions_custom_directives_adds_to_net_list">The directive adds_to_net_list</A></SPAN><BR/>
+<SPAN class=indent3><A href="#functions_custom_directives_removes_from_net_list">The directive removes_from_net_list</A></SPAN><BR/>
+<SPAN class=indent2><A href="#functions_custom_main">The main function</A></SPAN><BR/> 
+<A href="#templates"><SPAN class=bold>Templates</SPAN></A><BR/> 
+<SPAN class=indent1><A href="#templates_general">General</A><BR/> 
+<SPAN class=indent1><A href="#templates_header">The header template</A></SPAN><BR/> 
+<SPAN class=indent1><A href="#templates_footer">The footer template</A></SPAN><BR/>
+      
+<P class=title2><a name="keywords">Keywords</a></P>
+Keywords are words that have a specific meaning in ATS. 
+They cannot be re-defined or be used as identifiers. 
+Keywords in ATS are: 
+<SPAN class=keyword>adds_to_net_list</SPAN>, 
+<SPAN class=keyword>affects</SPAN>, 
+<SPAN class=keyword>AND</SPAN>,
+<SPAN class=keyword>begin</SPAN>, 
+<SPAN class=keyword>case</SPAN>, 
+<SPAN class=keyword>constants</SPAN>, 
+<SPAN class=keyword>default</SPAN>, 
+<SPAN class=keyword>do</SPAN>, 
+<SPAN class=keyword>else</SPAN>, 
+<SPAN class=keyword>end</SPAN>, 
+<SPAN class=keyword>for</SPAN>, 
+<SPAN class=keyword>function</SPAN>, 
+<SPAN class=keyword>if</SPAN>, 
+<SPAN class=keyword>main</SPAN>, 
+<SPAN class=keyword>manualtest</SPAN>, 
+<SPAN class=keyword>NOT</SPAN>,
+<SPAN class=keyword>OR</SPAN>,
+<SPAN class=keyword>rangetest</SPAN>, 
+<SPAN class=keyword>removes_from_net_list</SPAN>, 
+<SPAN class=keyword>switch</SPAN>, 
+<SPAN class=keyword>template</SPAN>, 
+<SPAN class=keyword>tests</SPAN>, 
+<SPAN class=keyword>to</SPAN>, 
+<SPAN class=keyword>var</SPAN>, 
+<SPAN class=keyword>while</SPAN>
+
+<P class=title2><a name="comments">Comments</a></P>
+Comments are used to add explanatory words to the program code in a natural language. 
+They can also be used to deactivate program lines. Comments are ignored by the compiler.<BR/> 
+They can be identified in different ways:<BR/> 
+<BR/> 
+<TABLE class=exampletable>
+<TR><TD class=example>
+<BR/> 
+<SPAN class=comment>{ Text between an open and a close brace. }<BR/> 
+<BR/> 
+// Any text between a double forward slash and the end of a line.<BR/></SPAN> 
+<BR/>
+</TD></TR></TABLE>
+<P class=title2><a name="variables">Variables</a></P>
+A variable is a memory location in an ATS program that can assume different values. 
+This memory location is addressed with the name of the variable.<BR/> 
+In ATS, variable names must begin with an upper case letter (A..Z). 
+This can be followed by upper case letters (A..Z), lower case letters (a..z), 
+digits (0..9) and the underscore character (_).<BR/> 
+Each variable in ATS must be initialised by an 
+<A href="#statements_simple_assignments">assignment</A> before it is used for the first time.
+<P class=title2><a name="datatypes">Data types</a></P>
+By assigning a data type to a variable, it is possible to define the values which 
+the variable can assume. In ATS, data types need only be assigned to variables in 
+the parameters of functions. Otherwise ATS provides dynamic data type adaptation.<BR/> 
+Data types in CEETIS are:<BR/>
+<TABLE>
+   <TR class=title3>
+      <TD width=200>Data type</TD>
+      <TD>Description</TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><a name="datatypes_string">string</a></TD>
+      <TD>Strings are strings of characters. This data type expects texts that are delimited by single speech marks. 
+      Example: <SPAN class=example><SPAN class=string>&rsquo;Text&rsquo;</SPAN></SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><a name="datatypes_integer">integer</a></TD>
+      <TD>An integer is a whole-number value with an optional sign in front of it. 
+      Variables of the <span class=datatype>integer</span> type can assume values 
+      between <SPAN class=number>-2147483648</SPAN> and <SPAN class=number>2147483647</SPAN>.</TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><a name="datatypes_boolean">boolean</a></TD>
+      <TD>Variables of the <SPAN class=datatype>boolean</SPAN> type can only assume two values: 
+      TRUE and FALSE. They are used for logical expressions. 
+      FALSE is defined internally with &quot;0&quot; and TRUE with &quot;not equal 0&quot;. 
+      Consequently, constants such as ON (1) and OFF (0) can also be used for the function 
+      parameters of the <SPAN class=datatype>boolean</SPAN> data type.</TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_real">real</A></TD>
+      <TD>Real values are floating-point numbers within the range <SPAN class=number>5.0E-324</SPAN> 
+      to <SPAN class=number>1.7E308</SPAN> with both a plus and minus sign. 
+      The full-stop is always used as the decimal separator in ATS. Thousand separators are not permitted.</TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><a name="datatypes_tnetlistrow">tnetlistrow</a></TD>
+      <TD><SPAN class=datatype>tnetlistrow</SPAN> is the data type for the rows of the netlist.
+          Variables of the <span class=datatype>tnetlistrow</span> type can assume whole-number
+          values between <SPAN class=number>1</SPAN> and <SPAN class=number>2147483647</SPAN>. 
+          There are also the constants <SPAN class=example>NETLIST_FirstRow</SPAN> and
+          <SPAN class=example>NETLIST_LastRow</SPAN> available.</TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_void">void</A></TD>
+      <TD>The data type <SPAN class=datatype>void</SPAN> is only used for functions. 
+      If a function is of the <SPAN class=datatype>void</SPAN> type, it cannot and may not return 
+      a function value.</TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tcurrent">tcurrent</A></TD>
+      <TD><SPAN class=datatype>tcurrent</SPAN> is the data type for expressing electrical current. 
+      In ATS, current is expressed as a combination of a floating-point value and a unit. 
+      There must be no blanks between the value and the unit. The basic unit for electrical current 
+      is the ampere (A). 
+      Examples: <SPAN class=example><SPAN class=number>0.1</SPAN>A, <SPAN class=number>10</SPAN>mA</SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tvoltage">tvoltage</A></TD>
+      <TD><SPAN class=datatype>tvoltage</SPAN> is the data type for expressing voltage. 
+      In ATS, voltage is expressed as a combination of a floating-point value and a unit. 
+      There must be no blanks between the value and the unit. 
+      The basic unit for electrical voltage is the volt (V). 
+      Examples: <SPAN class=example><SPAN class=number>100</SPAN>mV, <SPAN class=number>12</SPAN>V, <SPAN class=number>1</SPAN>kV</SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tresistance">tresistance</A></TD>
+      <TD><SPAN class=datatype>tresistance</SPAN> is the data type for expressing electrical resistance. 
+      In ATS, resistance is expressed as a combination of a floating-point value and a unit. 
+      There must be no blanks between the value and the unit. 
+      The basic unit for electrical resistance is the ohm (Ohm). 
+      Examples: <SPAN class=example><SPAN class=number>100</SPAN>mOhm, <SPAN class=number>470</SPAN>Ohm, <SPAN class=number>1</SPAN>MOhm</SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tcapacitance">tcapacitance</A></TD>
+      <TD><SPAN class=datatype>tcapacitance</SPAN> is the data type for expressing capacitance. 
+      In ATS, capacitance is expressed as a combination of a floating-point value and a unit. 
+      There must be no blanks between the value and the unit. 
+      The basic unit for electrical capacitance is the farad (F). 
+      Examples: <SPAN class=example><SPAN class=number>100</SPAN>nF, <SPAN class=number>10</SPAN>uF, <SPAN class=number>1</SPAN>mF</SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tpower">tpower</A></TD>
+      <TD><SPAN class=datatype>tpower</SPAN> is the data type for expressing power. 
+      In ATS, power is expressed as a combination of a floating-point value and a unit. 
+      There must be no blanks between the value and the unit. 
+      The basic unit for electrical power is the watt (W). 
+      Examples: <SPAN class=example><SPAN class=number>1</SPAN>mW, <SPAN class=number>0.1</SPAN>W, <SPAN class=number>10</SPAN>W</SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tinductance">tinductance</A></TD>
+      <TD><SPAN class=datatype>tinductance</SPAN> is the data type for expressing inductance. 
+      In ATS, inductance is expressed as a combination of a floating-point value and a unit. 
+      There must be no blanks between the value and the unit. 
+      The basic unit for inductance is the henry (H). 
+      Examples: <SPAN class=example><SPAN class=number>100</SPAN>uH, <SPAN class=number>10</SPAN>mH, <SPAN class=number>1</SPAN>H</SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tfrequency">tfrequency</A></TD>
+      <TD><SPAN class=datatype>tfrequency</SPAN> is the data type for expressing frequency. 
+      In ATS, frequency is expressed as a combination of a floating-point value and a unit. 
+      There must be no blanks between the value and the unit. 
+      The basic unit for frequency is the hertz (Hz). 
+      Examples: <SPAN class=example><SPAN class=number>50</SPAN>Hz, <SPAN class=number>1</SPAN>kHz, <SPAN class=number>1</SPAN>MHz</SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_ttime">ttime</A></TD>
+      <TD><SPAN class=datatype>ttime</SPAN> is the data type for expressing time. 
+      In ATS, time is expressed as a combination of a floating-point value and a unit. 
+      There must be no blanks between the value and the unit. 
+      The basic unit for time is the second (s). 
+      Examples: <SPAN class=example><SPAN class=number>10</SPAN>ms, <SPAN class=number>1</SPAN>s</SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tlength">tlength</A></TD>
+      <TD><SPAN class=datatype>tlength</SPAN> is the data type for expressing length. 
+      In ATS, length is expressed as a combination of a floating-point value and a unit. 
+      There must be no blanks between the value and the unit. 
+      The basic unit for length is the meter (m). 
+      Examples: <SPAN class=example><SPAN class=number>10</SPAN>mm, <SPAN class=number>1</SPAN>m</SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tvoltageramp">tvoltageramp</A></TD>
+      <TD><SPAN class=datatype>tvoltageramp</SPAN> is the data type for expressing voltage ramps. 
+      In ATS, voltage ramps are expressed as a combination of a floating-point value and a unit. 
+      There must be no blanks between the value and the unit. 
+      The basic unit for a voltage ramp is volt per second (Vps). 
+      Examples: <SPAN class=example><SPAN class=number>500</SPAN>Vps, <SPAN class=number>2</SPAN>kVpms</SPAN></TD>
+   </TR>
+
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tattenuation">tattenuation</A></TD>
+      <TD><SPAN class=datatype>tattenuation</SPAN> is the data type for expressing attenuation.
+          In ATS, attenuation is expressed as a combination of a floating-point value and a unit. 
+          There must be no blanks between the value and the unit. 
+          The unit for attenuation is the decibel (dB). 
+          Example: <SPAN class=example><SPAN class=number>10</SPAN>dB</SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tpowerlevel">tpowerlevel</A></TD>
+      <TD><SPAN class=datatype>tpowerlevel</SPAN> is the data type for expressing a powerlevel.
+          In ATS, a powerlevel is expressed as a combination of a floating-point value and a unit. 
+          There must be no blanks between the value and the unit. 
+          The unit for powerlevels is the decibel milliwatt (dBm). 
+          Example: <SPAN class=example><SPAN class=number>-10</SPAN>dBm</SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tpin">tpin</A></TD>
+      <TD><SPAN class=datatype>tpin</SPAN> is the data type for test pins. 
+      Pins are indicated by their name in double speech marks. 
+      Examples: <SPAN class=example><SPAN class=pinname>&quot;Pin1&quot;</SPAN>, <SPAN class=pinname>&quot;1&quot;</SPAN></SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tpowerupin">tpowerupin</A></TD>
+      <TD><SPAN class=datatype>tpowerupin</SPAN> is the data type for power U-pins. 
+      Power U-pins are indicated by their name in double speech marks. 
+      Examples: <SPAN class=example><SPAN class=pinname>&quot;PowerUPin1&quot;</SPAN>, <SPAN class=pinname>&quot;1&quot;</SPAN></SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tpoweripin">tpoweripin</A></TD>
+      <TD><SPAN class=datatype>tpoweripin</SPAN> is the data type for power I-pins. 
+      Power I-pins are indicated by their name in double speech marks. 
+      Examples: <SPAN class=example><SPAN class=pinname>&quot;PowerIPin1&quot;</SPAN>, <SPAN class=pinname>&quot;1&quot;</SPAN></SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tpowermpin">tpowermpin</A></TD>
+      <TD><SPAN class=datatype>tpowermpin</SPAN> is the data type for power M-pins. 
+      Power M-pins are indicated by their name in double speech marks. 
+      Examples: <SPAN class=example><SPAN class=pinname>&quot;PowerMPin1&quot;</SPAN>, <SPAN class=pinname>&quot;1&quot;</SPAN></SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tled">tled</A></TD>
+      <TD><SPAN class=datatype>tled</SPAN> is the data type for LEDs. 
+      LEDs are indicated by their name in double speech marks. 
+      Examples: <SPAN class=example><SPAN class=pinname>&quot;LED1&quot;</SPAN>, <SPAN class=pinname>&quot;1&quot;</SPAN></SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tcontact">tcontact</A></TD>
+      <TD><SPAN class=datatype>tcontact</SPAN> is the data type for contacts. 
+      Contacts are indicated by their name in double speech marks. 
+      Examples: <SPAN class=example><SPAN class=pinname>&quot;Contact1&quot;</SPAN>, <SPAN class=pinname>&quot;1&quot;</SPAN></SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_topticalpin">topticalpin</A></TD>
+      <TD><SPAN class=datatype>topticalpin</SPAN> is the data type for pins of the optical matrix. 
+      Contacts are indicated by their name in double speech marks. 
+      Examples: <SPAN class=example><SPAN class=pinname>&quot;OpticalPin1&quot;</SPAN>, <SPAN class=pinname>&quot;1&quot;</SPAN></SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tpowerupinabs">tpowerupinabs</A></TD>
+      <TD><SPAN class=datatype>tpowerupinabs</SPAN> is the data type for the absolute addressing of power U-pins. 
+      Absolute addresses of power U-pins are the connector number and pin, 
+      separated by a full-stop and enclosed in double speech marks. 
+      Examples: <SPAN class=pinname>&quot;1.a1&quot;</SPAN>, <SPAN class=pinname>&quot;1.2&quot;</SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tpoweripinabs">tpoweripinabs</A></TD>
+      <TD><SPAN class=datatype>tpoweripinabs</SPAN> is the data type for the absolute addressing of power I-pins. 
+      Absolute addresses of power I-pins are the connector number and pin, 
+      separated by a full-stop and enclosed in double speech marks. 
+      Examples: <SPAN class=example><SPAN class=pinname>&quot;2.a1&quot;</SPAN>, <SPAN class=pinname>&quot;2.2&quot;</SPAN></SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tpowermpinabs">tpowermpinabs</A></TD>
+      <TD><SPAN class=datatype>tpowermpinabs</SPAN> is the data type for the absolute addressing of power M-pins. 
+      Absolute addresses of power M-pins are the connector number and pin, 
+      separated by a full-stop and enclosed in double speech marks. 
+      Examples: <SPAN class=example><SPAN class=pinname>&quot;3.a1&quot;</SPAN>, <SPAN class=pinname>&quot;3.2&quot;</SPAN></SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tledabs">tledabs</A></TD>
+      <TD><SPAN class=datatype>tledabs</SPAN> is the data type for the absolute addressing of LEDs. 
+      Absolute addresses of LEDs are the connector number and pin, 
+      separated by a full-stop and enclosed in double speech marks. 
+      Examples: <SPAN class=example><SPAN class=pinname>&quot;4.a1&quot;</SPAN>, <SPAN class=pinname>&quot;4.2&quot;</SPAN></SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tcontactabs">tcontactabs</A></TD>
+      <TD><SPAN class=datatype>tcontactabs</SPAN> is the data type for the absolute addressing of contacts. 
+      Absolute addresses of contacts are the connector number and pin, 
+      separated by a full-stop and enclosed in double speech marks. 
+      Examples: <SPAN class=example><SPAN class=pinname>&quot;5.a1&quot;</SPAN>, <SPAN class=pinname>&quot;5.2&quot;</SPAN></SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tlvpin">tlvpin</A></TD>
+      <TD><SPAN class=datatype>tlvpin</SPAN> is the data type for pins of the W484-PLUS-Matrix.
+      You must pass pins which are tagged as "Test" in the pin table at places where the type tlvled is required. 
+      PLUS pins are indicated by their name in double speech marks. 
+      Examples: <SPAN class=example><SPAN class=pinname>&quot;PLUS Pin1&quot;</SPAN>, <SPAN class=pinname>&quot;1&quot;</SPAN></SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tlvled">tlvled</A></TD>
+      <TD><SPAN class=datatype>tlvled</SPAN> is the data type for LEDs of the W484-PLUS-Matrix.
+      You must pass pins which are tagged as "LED" in the pin table at places where the type tlvled is required. 
+      PLUS pins are indicated by their name in double speech marks. 
+      Examples: <SPAN class=example><SPAN class=pinname>&quot;PLUS LED1&quot;</SPAN>, <SPAN class=pinname>&quot;2&quot;</SPAN></SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tlvconnectordetectionpin">tlvconnectordetectionpin</A></TD>
+      <TD><SPAN class=datatype>tlvconnectordetectionpin</SPAN> is the data type for connector detections of the W484-PLUS-Matrix.
+      You must pass pins which are tagged as "Connector detection" in the pin table at places where the type tlvconnectordetectionpin is required. 
+      PLUS pins are indicated by their name in double speech marks. 
+      Examples: <SPAN class=example><SPAN class=pinname>&quot;PLUS CD1&quot;</SPAN>, <SPAN class=pinname>&quot;3&quot;</SPAN></SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tlvpoweru1pin">tlvpoweru1pin</A></TD>
+      <TD><SPAN class=datatype>tlvpoweru1pin</SPAN> is the data type for power u1 pins of the W484-PLUS-Matrix.
+      You must pass pins which are tagged as "Power U1" in the pin table at places where the type tlvpoweru1pin is required. 
+      PLUS pins are indicated by their name in double speech marks. 
+      Examples: <SPAN class=example><SPAN class=pinname>&quot;PLUS Power U1 1&quot;</SPAN>, <SPAN class=pinname>&quot;4&quot;</SPAN></SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tlvpowerpin">tlvpowerpin</A></TD>
+      <TD><SPAN class=datatype>tlvpowerpin</SPAN> is the data type for power pins of the W484-PLUS-Matrix.
+      You must pass pins which are tagged as "Power" in the pin table at places where the type tlvpowerpin is required. 
+      PLUS pins are indicated by their name in double speech marks. 
+      Examples: <SPAN class=example><SPAN class=pinname>&quot;PLUS Power1&quot;</SPAN>, <SPAN class=pinname>&quot;5&quot;</SPAN></SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tarray">tarray</A></TD>
+      <TD><SPAN class=datatype>tarray</SPAN> is a list (one-dimensional field) of values. 
+      The values in a list are of the same data type in most cases. (List of strings, list of pins etc.) 
+      A list can be passed to a function either as a variable or as an enumeration. 
+      In the case of an enumeration, the complete list of values must be enclosed in square brackets and the individual values separated by commas.</TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tpinarray">tpinarray</A></TD>
+      <TD><SPAN class=datatype>tpinarray</SPAN> is a list (one-dimensional field) of pins. 
+      A pin list can be passed to a function either as a variable or as an enumeration. 
+      In the case of an enumeration, the complete list must be enclosed in square brackets and the individual pins separated by commas. 
+      Example: <SPAN class=example>[<SPAN class=pinname>&quot;Pin1&quot;</SPAN>, <SPAN class=pinname>&quot;Pin2&quot;</SPAN>, <SPAN class=pinname>&quot;Pin3&quot;</SPAN>]</SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tstringarray">tstringarray</A></TD>
+      <TD><SPAN class=datatype>tstringarray</SPAN> is a list (one-dimensional field) of strings. 
+      A string list can be passed to a function either as a variable or as an enumeration. 
+      In the case of an enumeration, the complete list must be enclosed in square brackets and the individual strings separated by commas. 
+      Example: <SPAN class=example>[<SPAN class=string>&rsquo;Text1&rsquo;</SPAN>, <SPAN class=string>&rsquo;Text2&rsquo;</SPAN>, <SPAN class=string>&rsquo;Text3&rsquo;</SPAN>]</SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tintegerarray">tintegerarray</A></TD>
+      <TD><SPAN class=datatype>tintegerarray</SPAN> is a list (one-dimensional field) of whole-number values. 
+      An integer list can be passed to a function either as a variable or as an enumeration. 
+      In the case of an enumeration, the complete list must be enclosed in square brackets and the individual values separated by commas. 
+      Example: <SPAN class=example>[2, 4, 8, 16]</SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tcontactarray">tcontactarray</A></TD>
+      <TD><SPAN class=datatype>tcontactarray</SPAN> is a list (one-dimensional field) of contacts. 
+      A contact list can be passed to a function either as a variable or as an enumeration. 
+      In the case of an enumeration, the complete list must be enclosed in square brackets and the individual contacts separated by commas. 
+      Example: <SPAN class=example>[<SPAN class=pinname>&quot;Contact1&quot;</SPAN>, <SPAN class=pinname>&quot;Contact2&quot;</SPAN>, <SPAN class=pinname>&quot;Contact3&quot;</SPAN>]</SPAN></TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tcreatearray">tcreatearray</A></TD>
+      <TD><SPAN class=datatype>tcreatearray</SPAN> is used for internal functions only. 
+      A variable name must be passed at this point. While it is executed, 
+      the function generates a list from the variable name and fills it with values.</TD>
+   </TR>
+   <TR class=standard>
+      <TD class=datatype><A name="datatypes_tfunction">tfunction</A></TD>
+      <TD><SPAN class=datatype>tfunction</SPAN> is the data type for a function. 
+      A function name must be passed at this point. Depending on the use case, the passed function 
+      must have a certain list and a certain type.</TD>
+   </TR>
+</TABLE>
+
+<P class=title2><A name="constants">Constants</A></P>
+<P class=title3><A name="constants_internal">Internal constants</A></P>
+Internal constants are identifiers to which fixed values are assigned. 
+Examples of internal constants: <SPAN class=example>TRUE, CLOSED, RLC_Rpar</SPAN>
+<P class=title3><A name="constants_custom">Custom constants</A></P>
+Constants can also be defined within an ATS program. 
+They are then available from this point on in all subsequent functions. 
+The name of constants must begin with an upper case letter (A..Z). 
+This can be followed by upper case (A..Z), lower case (a..z), 
+digits (0..9) and the underscore character (_).<BR/> 
+A block in which constants are defined must be identified by the keyword 
+<SPAN class=keyword>constants</SPAN>.<BR/> 
+<BR/>
+<TABLE class=exampletable>
+<TR><TD class=example>
+<SPAN class=keyword>constants<BR/> 
+begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;MyConstantValue1 = 10;<BR/> 
+&nbsp;&nbsp;&nbsp;My100 = 100;<BR/> 
+<SPAN class=keyword>end</SPAN>;
+</TD></TR></TABLE>
+<P class=title3><A name="constants_result">Result constants</A></P>
+Result constants are only used in the templates of the programs for creating reports. 
+These constants can be used to access the data of a test step and convert them to 
+output texts for screens or reports. All result constants begin with the string 
+&quot;RES_&quot;.<BR/> 
+The result constants that are available for the individual test steps can be found in the 
+reference of the ATS functions for the particular test step.<BR/> 
+Examples: RES_Pin1, RES_Result
+<P class=title2><A name="identifiers">Identifiers</A></P>
+Identifier is a generic term for <A href="#variables">variable</A>, 
+<A href="#constants">constant</A> and <A href="#functions">function names</A>.
+<P class=title2><A name="expressions">Expressions</A></P>
+An expression is a construct that delivers a value. 
+Arithmetical (<SPAN class=example>2 + 3</SPAN>), 
+logical (<SPAN class=example>Success <SPAN class=keyword>AND</SPAN> Valid</SPAN>) and 
+relational expressions (<SPAN class=example>Value &lt;= 100</SPAN>) are available in ATS.
+<P class=title2><A name="operators">Operators</A></P>
+Operators are characters or words which control command sequences.<BR/> In ATS, a difference is made between arithmetical, logical and relational operators.
+<P class=title3><A name="operators_arithmetical">Arithmetical operators</A></P>
+Please consider that CEETIS does not meet the order of operations 'multiplication/division precedes addition/subtraction'. CEETIS processes arithmetical expressions from left to right. Please use parantheses to observe this rule.
+Notice: If an arithmetical addition can't be executed with the two specified operands, the values are concatenated and assigned to the result.
+<TABLE>
+   <TR class=title4>
+      <TD width=100>Operator</TD>
+      <TD width=150>Operation</TD>
+      <TD width=170>Operand type</TD>
+      <TD width=150>Result type</TD>
+      <TD>Example:</TD>
+   </TR>
+   <TR class=standard>
+      <TD class=example>+</TD>
+      <TD>Addition</TD>
+      <TD class=datatype>integer, real</TD>
+      <TD class=datatype>integer, real</TD>
+      <TD class=example>Var1 + 3</TD>
+   </TR>
+   <TR class=standard>
+      <TD class=example>-</TD>
+      <TD>Subtraction</TD>
+      <TD class=datatype>integer, real</TD>
+      <TD class=datatype>integer, real</TD>
+      <TD class=example>Value - 1</TD>
+   </TR>
+   <TR class=standard>
+      <TD class=example>*</TD>
+      <TD>Multiplication</TD>
+      <TD class=datatype>integer, real</TD>
+      <TD class=datatype>integer, real</TD>
+      <TD class=example>Length * 3</TD>
+   </TR>
+   <TR class=standard>
+      <TD class=example>/</TD>
+      <TD>Floating-point division</TD>
+      <TD class=datatype>integer, real</TD>
+      <TD class=datatype>real</TD>
+      <TD class=example>Voltage / Current</TD>
+   </TR>
+</TABLE>   
+<P class=title3><A name="operators_logical">Logical operators</A></P>
+These operators obey the standard rules of boolean logic. 
+For example, an expression in the form 
+<SPAN class=example>ValueX <SPAN class=keyword>AND</SPAN> ValueY</SPAN> only 
+delivers the value TRUE when ValueX and ValueY have the value TRUE.
+<BR>
+Please consider that CEETIS does not meet the order of operations '<SPAN class=keyword>NOT</SPAN> precedes <SPAN class=keyword>AND</SPAN>' and '<SPAN class=keyword>AND</SPAN> precedes <SPAN class=keyword>OR</SPAN>'. CEETIS processes logical expressions from left to right. Please use parantheses to observe this rule.
+<TABLE>
+   <TR class=title4>
+      <TD width=100>Operator</TD>
+      <TD width=150>Operation</TD>
+      <TD width=170>Operand type</TD>
+      <TD width=150>Result type</TD>
+      <TD>Example</TD>
+   </TR>
+   <TR class=standard>
+      <TD class=keyword>AND</TD>
+      <TD width=150>Logical AND (conjunction)</TD>
+      <TD class=datatype>boolean</TD>
+      <TD class=datatype>boolean</TD>
+      <TD class=example>Success <SPAN class=keyword>AND</SPAN> Valid</TD>
+   </TR>
+   <TR class=standard>
+      <TD class=keyword>OR</TD>
+      <TD width=150>Logical OR (disjunction)</TD>
+      <TD class=datatype>boolean</TD>
+      <TD class=datatype>boolean</TD>
+      <TD class=example>Less <SPAN class=keyword>OR</SPAN> Equal</TD>
+   </TR>
+   <TR class=standard>
+      <TD class=keyword>NOT</TD>
+      <TD width=150>Logical NOT (negation)</TD>
+      <TD class=datatype>boolean</TD>
+      <TD class=datatype>boolean</TD>
+      <TD class=example><SPAN class=keyword>NOT</SPAN> Valid</TD>
+   </TR>
+</TABLE>   
+<P class=title3><A name="operators_relational">Relational operators</A></P>
+Relational operators are used to compare two operands. 
+<TABLE>
+   <TR class=title4>
+      <TD width=100>Operator</TD>
+      <TD width=150>Operation</TD>
+      <TD width=170>Operand type</TD>
+      <TD width=150>Result type</TD>
+      <TD>Example</TD>
+   </TR>
+   <TR class=standard>
+      <TD class=example>==</TD>
+      <TD>Equal to</TD>
+      <TD width=170 class=datatype>real, integer, boolean</TD>
+      <TD class=datatype>boolean</TD>
+      <TD class=example>Value == 100</TD>
+   </TR>
+   <TR class=standard>
+      <TD class=example>&lt;&gt;</TD>
+      <TD>Not equal</TD>
+      <TD width=170 class=datatype>real, integer, boolean</TD>
+      <TD class=datatype>boolean</TD>
+      <TD class=example>Result <> 0</TD>
+   </TR>
+   <TR class=standard>
+      <TD class=example>&lt;</TD>
+      <TD>Less than</TD>
+      <TD width=170 class=datatype>real, integer, boolean</TD>
+      <TD class=datatype>boolean</TD>
+      <TD class=example>Count &lt; 10</TD>
+   </TR>
+   <TR class=standard>
+      <TD class=example>&gt;</TD>
+      <TD>Greater than</TD>
+      <TD width=170 class=datatype>real, integer, boolean</TD>
+      <TD class=datatype>boolean</TD>
+      <TD class=example>Number &gt; 100</TD>
+   </TR>
+   <TR class=standard>
+      <TD class=example>&lt;=</TD>
+      <TD>Less than or equal to</TD>
+      <TD width=170 class=datatype>real, integer, boolean</TD>
+      <TD class=datatype>boolean</TD>
+      <TD class=example>Counter &lt;= 1000</TD>
+   </TR>
+   <TR class=standard>
+      <TD class=example>&gt;=</TD>
+      <TD>Greater than or equal to</TD>
+      <TD width=170 class=datatype>real, integer, boolean</TD>
+      <TD class=datatype>boolean</TD>
+      <TD class=example>Value &gt;= 20</TD>
+   </TR>
+</TABLE>   
+<P class=title2><A name="statements">Statements</A></P>
+Statements define the actions in a program. 
+Simple statements (e.g. assignments and procedure calls) can be combined. 
+Loops, conditional statements and other structured statements can be generated in this way.<BR/> 
+Multiple statements in a block are separated from semicolons.
+<P class=title3><A name="statements_simple">Simple statements</A></P>
+<P class=title4><A name="statements_simple_assignments">Assignments</A></P>
+An assignment is a type of statement that assigns a new value to a variable. 
+If &lt;Var&gt; is a variable and &lt;Expr&gt; an expression, then in ATS<BR/> 
+<BR/>
+<TABLE class=syntaxtable><TR>
+<TD class=example>
+&lt;Var&gt; = &lt;Expr&gt;;
+</TD></TR></TABLE>
+<BR/> 
+assigns the value of the expression &lt;Expr&gt; to the variable &lt;Var&gt;.<BR/> 
+<BR/>
+<TABLE class=exampletable><TR>
+<TD class=example>
+Value = <SPAN class=number>10.3</SPAN>;<BR/> 
+Text = <SPAN class=string>'Hello world!'</SPAN>;<BR/> 
+Current = <SPAN class=number>10</SPAN>mA;<BR/>
+</TD></TR></TABLE>
+<BR/> If &ndash; as in the last example &ndash; a value with a unit is assigned to a variable, 
+the value is converted to its basic unit. In this example, 
+after the assignment the variable &quot;Current&quot; contains the value 0.01 (and not 10).
+<P class=title4><A name="statements_simple_functioncalls">Function calls</A></P>
+A function call consists of the name of a function and (if necessary) the parameters.<BR/> 
+Functions that return a value can also be used in an assignment. 
+If a function which returns a value is not called in an assignment, the return value is discarded.<BR/> 
+Here are some examples of function calls:<BR/> 
+<BR/>
+<TABLE class=exampletable><TR>
+<TD class=example>
+Sum = add_values(<SPAN class=number>1</SPAN>, <SPAN class=number>3</SPAN>);<BR/> 
+<SPAN class=internalfunction>UIWriteNormal</SPAN>(<SPAN class=string>'Hello world!'</SPAN>);<BR/> 
+do_something();</TD></TR></TABLE>
+<P class=title3><A name="statements_structured">Structured statements</A></P>
+Structured statements are built up from other statements. 
+They are used when other statements are to be executed sequentially, 
+repeatedly or dependent on a condition.
+<P class=title4><A name="statements_structured_combined">Combined statement</A></P>
+A combined statement is made up of a sequence of other (simple or structured) statements 
+that are executed in the order indicated. The sub-statements contained in a combined statement 
+are enclosed between the keywords <SPAN class=keyword>begin</SPAN> and <SPAN class=keyword>end</SPAN> 
+and separated by semicolons.<BR/> 
+<BR/>
+<TABLE class=exampletable><TR>
+<TD class=example>
+<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;Exchange = Value1;<BR/> 
+&nbsp;&nbsp;&nbsp;Value1 = Value2;<BR/> 
+&nbsp;&nbsp;&nbsp;Value2 = Exchange;<BR/> 
+<SPAN class=keyword>end</SPAN>;<BR/>
+</TD></TR></TABLE>
+<P class=title4><A name="statements_structured_if">if statement</A></P>
+There are two kinds of if statement: <SPAN class=example><SPAN class=keyword>if</SPAN>...</SPAN> and 
+<SPAN class=example><SPAN class=keyword>if</SPAN>... <SPAN class=keyword>else</SPAN>...</SPAN>.<BR/> 
+The syntax for an <SPAN class=example><SPAN class=keyword>if</SPAN>...</SPAN> statement is<BR/> 
+<BR/>
+<TABLE class=syntaxtable><TR>
+<TD class=example>
+<SPAN class=keyword>if</SPAN> (&lt;expression&gt;)<BR/> 
+<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&lt;statements&gt;<BR/> 
+<SPAN class=keyword>end</SPAN>;<BR/>
+</TD></TR></TABLE>
+<BR/> 
+The result of &lt;expression&gt; is a value of the <SPAN class=datatype>boolean</SPAN> type. 
+&lt;Statements&gt; is only executed when the expression gives the value TRUE.<BR/> 
+<BR/>
+<TABLE class=exampletable><TR>
+<TD class=example>
+<SPAN class=keyword>if</SPAN> (Value2 <> <SPAN class=number>0</SPAN>)<BR/> 
+<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;Result = Value1 / Value2;<BR/> 
+<SPAN class=keyword>end</SPAN>;<BR/>
+</TD></TR></TABLE>
+<BR/> 
+The syntax for an <SPAN class=example><SPAN class=keyword>if</SPAN>... <SPAN class=keyword>else</SPAN>...</SPAN> 
+statement is<BR/> 
+<BR/>
+<TABLE class=syntaxtable><TR>
+<TD class=example>
+<SPAN class=keyword>if</SPAN> (&lt;expression&gt;)<BR/> 
+<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&lt;startements1&gt;<BR/> 
+<SPAN class=keyword>end</SPAN><BR/> 
+<SPAN class=keyword>else</SPAN><BR/> 
+<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&lt;statements2&gt;<BR/> 
+<SPAN class=keyword>end</SPAN>;<BR/>
+</TD></TR></TABLE>
+<BR/> 
+The result of &lt;expression&gt; is a value of the <SPAN class=datatype>boolean</SPAN> type. 
+If the expression gives the value TRUE, &lt;statements1&gt; is executed, 
+otherwise &lt;statements2&gt;.<BR/> 
+<BR/>
+<TABLE class=exampletable><TR>
+<TD class=example>
+<SPAN class=keyword>if</SPAN> (Value2 <> <SPAN class=number>0</SPAN>)<BR/> 
+<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;Result = Value1 / Value2;<BR/> 
+<SPAN class=keyword>end</SPAN><BR/> 
+<SPAN class=keyword>else</SPAN><BR/> 
+<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;Result = <SPAN class=number>0</SPAN>;<BR/> 
+<SPAN class=keyword>end</SPAN>;<BR/>
+</TD></TR></TABLE>
+<P class=title4><A name="statements_structured_switch">switch statement</A></P>
+The <span class=keyword>switch</span> statement is an alternative to the <span class=keyword>if</span> 
+statement that should be used with complex nestings because of its superior legibility.<BR/> 
+The syntax of a <span class=keyword>switch</span> statement is<BR/> 
+<BR/>
+<TABLE class=syntaxtable><TR>
+<TD class=example>
+<SPAN class=keyword>switch</SPAN> (&lt;SelectorExpression&gt;)<BR/> 
+<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>case</SPAN> &lt;Case&gt;:<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;Statements1&gt;<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>end</SPAN>;<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>case</SPAN> &lt;Case2&gt;:<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;Statements2&gt;<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>end</SPAN>;<BR/> 
+&nbsp;&nbsp;&nbsp;...<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>case</SPAN> &lt;CaseN&gt;:<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;StatementsN&gt;<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>end</SPAN>;<BR/> 
+<SPAN class=keyword>end</SPAN>;<BR/>
+</TD></TR></TABLE>
+<BR/> 
+Here, &lt;SelectorExpression&gt; is any random expression of the type 
+<SPAN class=datatype>integer</SPAN>, <SPAN class=datatype>string</SPAN>, 
+<SPAN class=datatype>real</SPAN> or <SPAN class=datatype>boolean</SPAN>.<BR/> 
+Constants or fixed values of the type <SPAN class=datatype>integer</SPAN>, 
+<SPAN class=datatype>string</SPAN>, <SPAN class=datatype>real</SPAN> or 
+<SPAN class=datatype>boolean</SPAN> can be used for &lt;Case1&gt; to &lt;CaseN&gt;. 
+Variables are not allowed. Each of the values &lt;Case1&gt; to &lt;CaseN&gt; 
+must be unique within the list.<BR/> 
+The corresponding statement list is processed depending on the value of &lt;SelectorExpression&gt;. 
+If &lt;SelectorExpression&gt; has a value that does not occur in the list, 
+the complete <span class=keyword>switch</span> statement is skipped.<BR/> 
+A <span class=keyword>switch</span> statement can have a terminating 
+<SPAN class=keyword>default</SPAN> section.<BR/> 
+<BR/>
+<TABLE class=syntaxtable><TR>
+<TD class=example>
+<SPAN class=keyword>switch</SPAN> (&lt;SelectorExpression&gt;)<BR/> 
+<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>case</SPAN> &lt;Case1&gt;:<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;Statements1&gt;<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>end</SPAN>;<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>case</SPAN> &lt;Case2&gt;:<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;Statements2&gt;<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>end</SPAN>;<BR/> 
+&nbsp;&nbsp;&nbsp;...<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>case</SPAN> &lt;CaseN&gt;:<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;StatementsN&gt;<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>end</SPAN>;<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>default</SPAN>:<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;StatementsOther&gt;<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>end</SPAN>;<BR/> 
+<SPAN class=keyword>end</SPAN>;<BR/>
+</TD></TR></TABLE>
+<BR/> 
+If a <SPAN class=keyword>default</SPAN> section is present, &lt;StatementsOther&gt; 
+is executed if the value of &lt;SelectorExpression&gt; is not any value in the list.<BR/> 
+<BR/> 
+The <span class=keyword>switch</span> statement<BR/> 
+<BR/>
+<TABLE class=exampletable><TR>
+<TD class=example>
+<SPAN class=keyword>switch</SPAN> (Button) <BR/>
+<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>case</SPAN> DIALOGRESULT_Button1:<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=internalfunction>UIWriteNormal</SPAN>(<SPAN class=string>'Button 1'</SPAN>);<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>end</SPAN>;<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>case</SPAN> DIALOGRESULT_Button2:<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=internalfunction>UIWriteNormal</SPAN>(<SPAN class=string>'Button 2'</SPAN>);<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>end</SPAN>;<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>case</SPAN> DIALOGRESULT_Button3:<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=internalfunction>UIWriteNormal</SPAN>(<SPAN class=string>'Button 3'</SPAN>);<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>end</SPAN>;<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>default</SPAN>:<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=internalfunction>UIWriteNormal</SPAN>(<SPAN class=string>'Other button'</SPAN>);<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>end</SPAN>;<BR/> <SPAN class=keyword>end</SPAN>;<BR/>
+</TD></TR></TABLE>
+<BR/> 
+is identical with the following nested <span class=keyword>if</span> statement:<BR/> 
+<BR/>
+<TABLE class=exampletable><TR>
+<TD class=example>
+<SPAN class=keyword>if</SPAN> (Button == DIALOGRESULT_Button1)<BR/> 
+<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=internalfunction>UIWriteNormal</SPAN>(<SPAN class=string>'Button 1'</SPAN>);<BR/> 
+<SPAN class=keyword>end</SPAN><BR/> 
+<SPAN class=keyword>else</SPAN><BR/> 
+<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>if</SPAN> (Button == DIALOGRESULT_Button2)<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=internalfunction>UIWriteNormal</SPAN>(<SPAN class=string>'Button 2'</SPAN>);<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>end</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>else</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword>if</SPAN> (Button == DIALOGRESULT_Button3)<BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=internalfunction>UIWriteNormal</SPAN>(<SPAN class=string>'Button 3'</SPAN>);<BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword>end</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword>else</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=internalfunction>UIWriteNormal</SPAN>(<SPAN class=string>'Other button'</SPAN>);<BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=keyword>end</SPAN>;<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>end</SPAN>;<BR/> 
+<SPAN class=keyword>end</SPAN>;<BR/>
+</TD></TR></TABLE>
+
+<P class=title4><A name="statements_structured_loops">Loops</A></P>
+Loops allow the repeated execution of a sequence of statements. A condition or a variable determines when the execution is stopped. ATS supports three types of loop: <span class=keyword>do</span>-<span class=keyword>while</span>, <span class=keyword>while</span> and <span class=keyword>for</span> loops. 
+<P class=title5><A name="statements_structured_loops_dowhile">do-while loop</A></P>
+The syntax for a <span class=keyword>do</span>-<span class=keyword>while</span> loop is:<BR/> 
+<BR/>
+<TABLE class=syntaxtable><TR>
+<TD class=example>
+<SPAN class=keyword>do</SPAN><BR/> <SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&lt;statements&gt;<BR/> 
+<SPAN class=keyword>end</SPAN><BR/> 
+<SPAN class=keyword>while</SPAN> (&lt;expression&gt;);<BR/>
+</TD></TR></TABLE>
+<BR/> The result of &lt;expression&gt; is a value of the <SPAN class=datatype>boolean</SPAN> type. 
+All statements inside the loop are executed in sequence. 
+The specified expression is evaluated after each cycle. 
+If &lt;expression&gt; delivers the value FALSE, the 
+<span class=keyword>do</span>-<span class=keyword>while</span> loop is ended. 
+Because &lt;expression&gt; is only evaluated at the end of the first iteration, 
+the sequence of statements is run through at least once.<BR/> 
+<BR/>
+<TABLE class=exampletable><TR>
+<TD class=example>
+Value1 = <SPAN class=number>0</SPAN>;<BR/> 
+Value2 = <SPAN class=number>1</SPAN>;<BR/> 
+Fibonacci = Value1 + Value2;<BR/> 
+Maximum = <SPAN class=number>1000</SPAN>;<BR/> 
+<SPAN class=internalfunction>UIWriteWarning</SPAN>(<SPAN class=internalfunction>StrAdd</SPAN>(<SPAN class=string>'Fibonacci 1 - '</SPAN>, Maximum));<BR/> 
+<SPAN class=keyword>do</SPAN><BR/> <SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>if</SPAN> (Value1 &lt; Value2)<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Value1 = Fibonacci;<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>end</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>else</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Value2 = Fibonacci;<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>end</SPAN>;<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=internalfunction>UIWriteNormal</SPAN>(Fibonacci);<BR/> 
+&nbsp;&nbsp;&nbsp;Fibonacci = Value1 + Value2;<BR/> 
+<SPAN class=keyword>end</SPAN><BR/> 
+<SPAN class=keyword>while</SPAN> (Fibonacci &lt;= Maximum);<BR/>
+</TD></TR></TABLE>
+<P class=title5><A name="statements_structured_loops_while">while loop</A></P>
+A <span class=keyword>while</span> loop is similar to a 
+<span class=keyword>do</span>-<span class=keyword>while</span> loop in many respects, 
+except that the condition is evaluated before the first cycle of the sequence of statements. 
+If the result of the condition is FALSE, the sequence is not executed.<BR/> 
+The syntax for a <span class=keyword>while</span> loop is:<BR/> 
+<BR/>
+<TABLE class=syntaxtable><TR>
+<TD class=example>
+<SPAN class=keyword>while</SPAN> (&lt;expression&gt;)<BR/> <SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&lt;statements&gt;<BR/> 
+<SPAN class=keyword>end</SPAN>;<BR/>
+</TD></TR></TABLE>
+<BR/> 
+The result of &lt;expression&gt; is a value of the <SPAN class=datatype>boolean</SPAN> type. 
+The while loop executes &lt;statements&gt; repeatedly and evaluates the specified expression 
+before each new cycle. The sequence is repeated for as long as &lt;expression&gt; 
+gives the value TRUE.<BR/> 
+<BR/>
+<TABLE class=exampletable><TR>
+<TD class=example>
+Value1 = <SPAN class=number>0</SPAN>;<BR/> 
+Value2 = <SPAN class=number>1</SPAN>;<BR/> 
+Fibonacci = Value1 + Value2;<BR/> 
+Maximum = <SPAN class=number>1000</SPAN>;<BR/> 
+<SPAN class=internalfunction>UIWriteWarning</SPAN>(<SPAN class=internalfunction>StrAdd</SPAN>(<SPAN class=string>'Fibonacci 1 - '</SPAN>, Maximum));<BR/> 
+<SPAN class=keyword>while</SPAN>(Fibonacci &lt;= Maximum)<BR/> 
+<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>if</SPAN> (Value1 &lt; Value2)<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Value1 = Fibonacci;<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>end</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>else</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Value2 = Fibonacci;<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>end</SPAN>;<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=internalfunction>UIWriteNormal</SPAN>(Fibonacci);<BR/> 
+&nbsp;&nbsp;&nbsp;Fibonacci = Value1 + Value2;<BR/> 
+<SPAN class=keyword>end</SPAN>;<BR/>
+</TD></TR></TABLE>
+<P class=title5><A name="statements_structured_loops_for">for loop</A></P>
+Unlike the <span class=keyword>do</span>-<span class=keyword>while</span> and 
+<span class=keyword>while</span> loop, with a <span class=keyword>for</span> loop the number 
+of times which the loop should cycle is specified.<BR/> 
+The syntax for a <span class=keyword>for</span> loop is:<BR/> 
+<BR/>
+<TABLE class=syntaxtable><TR>
+<TD class=example>
+<SPAN class=keyword>for</SPAN> &lt;count&gt; = &lt;start value&gt; <SPAN class=keyword>to</SPAN> &lt;end value&gt; <SPAN class=keyword>do</SPAN><BR/> 
+<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&lt;statements&gt;<BR/> 
+<SPAN class=keyword>end</SPAN>;<BR/>
+</TD></TR></TABLE>
+<BR/> where &lt;start value&gt; and &lt;end value&gt; must be integers and &lt;statements&gt; 
+must not change the value of &lt;count&gt;.<BR/> 
+<BR/> 
+The 'for' loop assigns the specified start value to &lt;count&gt; and then executes 
+&lt;statements&gt; repeatedly. The value of &lt;count&gt; is incremented with each cycle. 
+As soon as the value of &lt;count&gt; is identical with the value of &lt;end value&gt;, 
+&lt;statements&gt; is run one more time and the <span class=keyword>for</span> loop is then ended. 
+&lt;Statements&gt; is therefore run once for each value that lies within the range 
+&lt;start value&gt; to &lt;end value&gt;. If &lt;start value&gt; and &lt;end value&gt; are 
+identical, &lt;statements&gt; is run precisely once. If &lt;start value&gt; in a 'for' loop is 
+greater than &lt;end value&gt;, &lt;statements&gt; is not run at all. 
+After the end of the 'for' loop, the value of &lt;count&gt; is not defined.<BR/> 
+<BR/>
+<TABLE class=exampletable><TR>
+<TD class=example>
+<SPAN class=keyword>for</SPAN> Count = <SPAN class=number>1</SPAN> <SPAN class=keyword>to</SPAN> <SPAN class=number>10</SPAN> <SPAN class=keyword>do</SPAN><BR/> 
+<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=internalfunction>UIWriteWarning</SPAN>(<SPAN class=internalfunction>StrAdd</SPAN>(Count, <SPAN class=string>': Hello world!'</SPAN>));<BR/> 
+<SPAN class=keyword>end</SPAN>;<BR/>
+</TD></TR></TABLE>
+<P class=title2><A name="functions">Functions</A></P>
+Functions are in ATS subroutines. A distinction is made between internal and custom functions.
+<P class=title3><A name="functions_internal">Internal functions</A></P>
+The internal functions in ATS are the functions that are permanently implemented in CEETIS 
+(e.g. WireTest). They can be called with parameters and their return values are evaluated. 
+A list and descriptions of all the internal functions will be found in the 
+<A href="index_c.html">Reference of ATS Functions</A>.
+<P class=title3><A name="functions_custom">Custom functions</A></P>
+ATS also allows you to write and call your own functions. Custom functions are optional. 
+The only function that must exist in all programs (except report generating) is the 
+&quot;main&quot; function.<BR/> Functions can have one or more call parameters and return a 
+<A href="#functions_custom_returnvalue">function value</A> after they end. 
+Functions are defined with the keyword <SPAN class=keyword>function</SPAN>. 
+This is followed by the <A href="#functions_custom_names">function name</A>, 
+the (optional) <A href="#functions_custom_parameters">parameter list</A>, 
+the <A href="#functions_custom_resulttype">result type</A> of the function and (optional) 
+<A href="#functions_custom_directives">directives</A>.<BR/> 
+Syntax:<BR/> 
+<BR/>
+<TABLE class=syntaxtable><TR>
+<TD class=example>
+<SPAN class=keyword>function</SPAN> &lt;function name&gt;(&lt;optional parameter list&gt;): <SPAN class=datatype>&lt;datatype&gt;</SPAN>; &lt;optional directives&gt;<BR/> 
+<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&lt;statements&gt;<BR/> 
+<SPAN class=keyword>end;</SPAN><BR/>
+</TD></TR></TABLE>
+<BR/> 
+Example of a function declaration:<BR/> 
+<BR/>
+<TABLE class=exampletable><TR>
+<TD class=example>
+<SPAN class=keyword>function</SPAN> add_values(Var1: <SPAN class=datatype>integer</SPAN>; Var2: <SPAN class=datatype>integer</SPAN>): <SPAN class=datatype>integer</SPAN>; <SPAN class=keyword>manualtest</SPAN>; <SPAN class=keyword>rangetest</SPAN>;<BR/> 
+<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;Result = Var1 + Var2;<BR/> 
+<SPAN class=keyword>end;</SPAN>
+</TD></TR></TABLE>
+<P class=title4><A name="functions_custom_names">Function names</A></P>
+The name of a function must begin with a lower case letter (a..z). 
+This can be followed by more lower case letters (a..z), digits (0..9) and the underscore character (_).
+<P class=title4><A name="functions_custom_parameters">Parameters</A></P>
+If you want to be able to pass parameters to a function, you must specify them by name and 
+<A href="#datatypes">data type</A>. Parameters are normally passed as a value ('by value'); 
+the value of a variable that is passed to a function as a parameter is not changed when the 
+function is executed (unless there is an explicit assignment outside the function).<BR/> 
+However it is also possible to define the pass 'by reference' using the keyword 
+<SPAN class=keyword>var</SPAN>, e.g. as with the function &quot;inc&quot;:<BR/> 
+<BR/>
+<TABLE class=exampletable><TR>
+<TD class=example>
+<SPAN class=keyword>function</SPAN> inc(var Value: <SPAN class=datatype>integer</SPAN>): <SPAN class=datatype>void</SPAN>;<BR/> 
+<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;Value = Value + 1;<BR/> 
+<SPAN class=keyword>end;</SPAN>
+</TD></TR></TABLE>
+<P class=title4><A name="functions_custom_resulttype">Result type</A></P>
+The result type of a function defines the type of the value that is returned by the function. 
+If you do not wish a function to return a value, you must specify <SPAN class=datatype>void</SPAN> 
+as the result type.
+<P class=title4><A name="functions_custom_returnvalue">Return value</A></P>
+The return value of a function must correspond to the defined result type. 
+A function returns the value that was last assigned to the variable Result within its statement list.<BR/> 
+<BR/>
+<TABLE class=exampletable><TR>
+<TD class=example>
+<SPAN class=keyword>function</SPAN> add_3_values(Var1: <SPAN class=datatype>integer</SPAN>; Var2: <SPAN class=datatype>integer</SPAN>; Var3: <SPAN class=datatype>integer</SPAN>): <SPAN class=datatype>integer</SPAN>;<BR/> 
+<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;Result = Var1 + Var2;<BR/> 
+&nbsp;&nbsp;&nbsp;Result = Result + Var3;<BR/> 
+<SPAN class=keyword>end;</SPAN>
+</TD></TR></TABLE>
+<P class=title4><A name="functions_custom_directives">Directives</A></P>
+Directives are words that are treated specially at certain places in the source text. 
+Possible directives for functions are <span class=keyword>manualtest</span>, 
+<span class=keyword>rangetest</span> and <span class=keyword>tests</span>. 
+It is also possible to specify several directives for a function. 
+No one directive may be duplicated however.
+<P class=title5><A name="functions_custom_directives_manualtest">The directive <SPAN class=keyword>manualtest</SPAN></A></P>
+If the directive <SPAN class=keyword>manualtest</SPAN> is specified for a function, 
+that function can be called from the manual test.<BR/> 
+<BR/>
+<TABLE class=exampletable><TR>
+<TD class=example>
+<SPAN class=keyword>function</SPAN> my_manualtest_comment(Comment: <SPAN class=datatype>string</SPAN>): <SPAN class=datatype>void</SPAN>; <SPAN class=keyword>manualtest</SPAN>;<BR/> <SPAN class=keyword>begin</SPAN><BR/> &nbsp;&nbsp;&nbsp;UIWriteNormal(Comment);<BR/> &nbsp;&nbsp;&nbsp;ReportWriteNormal(Comment);<BR/> <SPAN class=keyword>end;</SPAN>
+</TD></TR></TABLE>
+<P class=title5><A name="functions_custom_directives_rangetest">The directive <SPAN class=keyword>rangetest</SPAN></A></P>
+If the directive <SPAN class=keyword>rangetest</SPAN> is specified for a function, 
+that function can be called from the range test.<BR/> 
+<BR/>
+<TABLE class=exampletable><TR>
+<TD class=example>
+<SPAN class=keyword>function</SPAN> my_rangetest_comment(Comment: <SPAN class=datatype>string</SPAN>): <SPAN class=datatype>void</SPAN>; <SPAN class=keyword>rangetest</SPAN>;<BR/> 
+<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;UIWriteNormal(Comment);<BR/> 
+&nbsp;&nbsp;&nbsp;ReportWriteNormal(Comment);<BR/> 
+<SPAN class=keyword>end;</SPAN>
+</TD></TR></TABLE>
+<P class=title5><A name="functions_custom_directives_tests">The directive <SPAN class=keyword>tests</SPAN></A></P>
+The <SPAN class=keyword>tests</SPAN> directive can be used to define the type of components which 
+this function tests. As a result, an alignment is carried out with the network list when the 
+program is compiled. The compiler does not output the warning &quot;component may not be tested&quot; 
+for components that are tested with such a function.<BR/> 
+After the keyword <SPAN class=keyword>tests</SPAN> you must specify the type of components that you 
+wish to test with this function.<BR/> Permitted values are:<BR/> 
+wires, resistors, switches, capacitors, diodes, zdiodes, ctwists, rlccombinations, attenuators, customcomponents, variable_resistors, opticalfibers<BR/> 
+In the case of functions with the <SPAN class=keyword>tests</SPAN> directive, the first three 
+parameters are also mandatory and must be given. These parameters are Name, Pin1 and Pin2. 
+They can be followed by any other desired parameters.<BR/> 
+<BR/>
+<TABLE class=exampletable><TR>
+<TD class=example>
+<SPAN class=keyword>function</SPAN> my_wiretest(Name: <SPAN class=datatype>string</SPAN>; Pin1: <SPAN class=datatype>tpin</SPAN>; Pin2: <SPAN class=datatype>tpin</SPAN>; ErrorText: <SPAN class=datatype>string</SPAN>): <SPAN class=datatype>boolean</SPAN>; <SPAN class=keyword>tests</SPAN> wires;<BR/> 
+<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;Result = <SPAN class=internalfunction>WireTest</SPAN>(Name, Pin1, Pin2);<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>if</SPAN> (<SPAN class=keyword>NOT</SPAN> Result)<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=internalfunction>UIWriteError</SPAN>(ErrorText);<BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=internalfunction>ReportWriteError</SPAN>(ErrorText);<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>end</SPAN>;<BR/> 
+<SPAN class=keyword>end</SPAN>;<BR/>
+</TD></TR></TABLE>
+<P class=title5><A name="functions_custom_directives_adds_to_net_list">The directive <SPAN class=keyword>adds_to_net_list</SPAN></A></P>
+The directive <SPAN class=keyword>adds_to_net_list</SPAN> tells the compiler that a function adds a component of a certain kind to the netlist.
+This prevents the compiler from displaying a warning if components are tested which are added to the netlist during run time.<BR/>
+After the keyword <SPAN class=keyword>adds_to_net_list</SPAN> you must specify the type of components that you 
+wish to add with this function.<BR/> Permitted values are:<BR/> 
+wires, resistors, switches, capacitors, diodes, zdiodes, ctwists, rlccombinations, attenuators, opticalfibers<BR/> 
+In the case of functions with the <SPAN class=keyword>adds_to_net_list</SPAN> directive, the first three 
+parameters are mandatory and must be given. These parameters are Name, Pin1 and Pin2. 
+They can be followed by any other desired parameters.<BR/> 
+The function  <SPAN class=internalfunction>NWAddWire</SPAN> has got such a directive. Because of his the following example raises only one compiler warning.
+If the example is executed there will be an error massage during the test as soon as the first
+<SPAN class=internalfunction>WireTest</SPAN> is about to be executed. This happens because the wire is not yet known at this point.
+<BR/>
+<TABLE class=exampletable><TR>
+<TD class=example>
+<SPAN class=keyword>function</SPAN> main(): <SPAN class=datatype>void</SPAN>;<BR/>
+<SPAN class=keyword>begin</SPAN><BR/>
+&nbsp;&nbsp;&nbsp;<SPAN class=internalfunction>UIClearScreen</SPAN>();<BR/>
+&nbsp;&nbsp;&nbsp;<SPAN class=internalfunction>WireTest</SPAN>(<SPAN class=string>'New wire'</SPAN>, <SPAN class=pinname>"1"</SPAN>, <SPAN class=pinname>"2"</SPAN>);<BR/>
+&nbsp;&nbsp;&nbsp;<SPAN class=internalfunction>NWAddWire</SPAN>(<SPAN class=string>'New wire'</SPAN>, <SPAN class=pinname>"1"</SPAN>, <SPAN class=pinname>"2"</SPAN>, []);<BR/>
+&nbsp;&nbsp;&nbsp;<SPAN class=internalfunction>WireTest</SPAN>(<SPAN class=string>'New wire'</SPAN>, <SPAN class=pinname>"1"</SPAN>, <SPAN class=pinname>"2"</SPAN>);<BR/>
+<SPAN class=keyword>end</SPAN>;<BR/>
+</TD></TR></TABLE>
+
+<P class=title5><A name="functions_custom_directives_removes_from_net_list">The directive <SPAN class=keyword>removes_from_net_list</SPAN></A></P>
+The directive <SPAN class=keyword>removes_from_net_list</SPAN> tells the compiler that a function removes a component of a certain kind from the netlist.
+This makes the compiler to display a warning if components are tested which were removed from the netlist during run time.<BR/>
+After the keyword <SPAN class=keyword>removes_from_net_list</SPAN> you must specify the type of components that you 
+wish to remove with this function.<BR/> Permitted values are:<BR/> 
+wires, resistors, switches, capacitors, diodes, zdiodes, ctwists, rlccombinations, attenuators, opticalfibers<BR/> 
+In the case of functions with the <SPAN class=keyword>removes_from_net_list</SPAN> directive, the first three 
+parameters are mandatory and must be given. These parameters are Name, Pin1 and Pin2. 
+They can be followed by any other desired parameters.<BR/> 
+The function  <SPAN class=internalfunction>NWRemoveWire</SPAN> has got such a directive. Because of his the following example raises a compiler warning.
+If the example is executed there will be an error massage during the test as soon as the second 
+<SPAN class=internalfunction>WireTest</SPAN> is about to be executed. This happens because the wire is no longer known at this point.
+<BR/>
+<TABLE class=exampletable><TR>
+<TD class=example>
+<SPAN class=keyword>function</SPAN> main(): <SPAN class=datatype>void</SPAN>;<BR/>
+<SPAN class=keyword>begin</SPAN><BR/>
+&nbsp;&nbsp;&nbsp;<SPAN class=internalfunction>UIClearScreen</SPAN>();<BR/>
+&nbsp;&nbsp;&nbsp;<SPAN class=internalfunction>NWAddWire</SPAN>(<SPAN class=string>'New wire'</SPAN>, <SPAN class=pinname>"1"</SPAN>, <SPAN class=pinname>"2"</SPAN>, []);<BR/>
+&nbsp;&nbsp;&nbsp;<SPAN class=internalfunction>WireTest</SPAN>(<SPAN class=string>'New wire'</SPAN>, <SPAN class=pinname>"1"</SPAN>, <SPAN class=pinname>"2"</SPAN>);<BR/>
+&nbsp;&nbsp;&nbsp;<SPAN class=internalfunction>NWRemoveWire</SPAN>(<SPAN class=string>'New wire'</SPAN>, <SPAN class=pinname>"1"</SPAN>, <SPAN class=pinname>"2"</SPAN>);<BR/>
+&nbsp;&nbsp;&nbsp;<SPAN class=internalfunction>WireTest</SPAN>(<SPAN class=string>'New wire'</SPAN>, <SPAN class=pinname>"1"</SPAN>, <SPAN class=pinname>"2"</SPAN>);<BR/>
+<SPAN class=keyword>end</SPAN>;<BR/>
+</TD></TR></TABLE>
+<P class=title4><A name="functions_custom_main">The 'main' function</A></P>
+The 'main' function must be present in programs for project selection, 
+programs for test initialisation, programs for test end and in test programs (Projects). 
+(In report creation programs its task is performed by the templates.) 
+The function has no parameters and its result type is always <SPAN class=keyword>void</SPAN>.<BR/> 
+<BR/>
+<TABLE class=exampletable><TR>
+<TD class=example>
+<SPAN class=keyword>function</SPAN> main(): <SPAN class=datatype>void</SPAN>;<BR/> <SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;test_my_uut();<BR/> 
+<SPAN class=keyword>end</SPAN>;<BR/>
+</TD></TR></TABLE>
+<BR/> 
+A program always runs by the 'main' function being executed. Other functions are only executed 
+if they are called within 'main' or by one of these functions.<BR/> 
+In many cases the entire test sequence need only be written in the 'main' function, 
+so no other custom (user-defined) functions are necessary.
+<P class=title2><A name="templates">Templates</A></P>
+<P class=title3><A name="templates_general">General</A></P>
+Templates are used in report creation programs instead of the 'main' function.<BR/> 
+For each test step that can report its results (e.g. <SPAN class=internalfunction>WireTest</SPAN>, 
+<SPAN class=internalfunction>SwitchTest</SPAN>, <SPAN class=internalfunction>ResistorTest</SPAN>), 
+there is a maximum of one template in the programs for report creation. 
+If there is no template for a particular test step, the template from the standard programs 
+supplied with CEETIS is used.<BR/> 
+There are also special templates for the header and footer of a report. 
+Always run the appropriate template to output a test step on screen or in the report.<BR/> 
+Templates are defined with the keyword <SPAN class=keyword>template</SPAN>. 
+This is followed by the name which must be the name of a test step.<BR/> 
+<BR/>
+<TABLE class=exampletable><TR>
+<TD class=example>
+<SPAN class=keyword>template</SPAN> <SPAN class=internalfunction>WireTest</SPAN><BR/> 
+<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;...<BR/> 
+<SPAN class=keyword>end</SPAN>;<BR/>
+</TD></TR></TABLE>
+<BR/> 
+The text that will be output on screen or in the report is now generated within the template. 
+The functions <SPAN class=internalfunction>UIWriteNormal</SPAN>, 
+<SPAN class=internalfunction>UIWriteWarning</SPAN> or <SPAN class=internalfunction>UIWriteError</SPAN> 
+can be used to display text on screen. The functions <SPAN class=internalfunction>Write</SPAN> and 
+<SPAN class=internalfunction>WriteLn</SPAN> are available for writing to the report.<BR/> 
+Within a template, the data of the test step can be accessed via result constants.<BR/> 
+Here is an example of the output of <SPAN class=internalfunction>WireTest</SPAN> on screen:<BR/> 
+<BR/>
+<TABLE class=exampletable><TR>
+<TD class=example>
+<SPAN class=keyword>template</SPAN> <SPAN class=internalfunction>WireTest</SPAN><BR/> 
+<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=comment>//get name of Pin1</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;Pin1 = <SPAN class=internalfunction>PinGetData</SPAN>(RES_Pin1, PIN_AnyName);<BR/> 
+&nbsp;&nbsp;&nbsp;Pin1 = <SPAN class=internalfunction>FormatAlignLeft</SPAN>(Pin1, <SPAN class=number>15</SPAN>, <SPAN class=string>' '</SPAN>);<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=comment>//get name of Pin2</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;Pin2 = <SPAN class=internalfunction>PinGetData</SPAN>(RES_Pin1, PIN_AnyName);<BR/> 
+&nbsp;&nbsp;&nbsp;Pin2 = <SPAN class=internalfunction>FormatAlignLeft</SPAN>(Pin2, <SPAN class=number>15</SPAN>, <SPAN class=string>' '</SPAN>);<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=comment>//assemble pins</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;Pins = <SPAN class=internalfunction>StrAdd</SPAN>(Pin1, Pin2);<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>if</SPAN> (RES_Result == TESTSTEP_Passed)<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment>//define result text</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ResultText = <SPAN class=internalfunction>FormatAlignLeft</SPAN>(<SPAN class=string>'Passed'</SPAN>, <SPAN class=number>15</SPAN>, <SPAN class=string>' '</SPAN>);<BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment>//assemble the output line</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Line = <SPAN class=internalfunction>StrAdd</SPAN>(ResultText, Pins);<BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment>//output text</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=internalfunction>UIWriteNormal</SPAN>(Line);<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>end</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>else</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>begin</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment>//define result text</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ResultText = <SPAN class=internalfunction>FormatAlignLeft</SPAN>(<SPAN class=string>'Failed'</SPAN>, <SPAN class=number>15</SPAN>, <SPAN class=string>' '</SPAN>);<BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment>//assemble the output line</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Line = <SPAN class=internalfunction>StrAdd</SPAN>(ResultText, Pins);<BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=comment>//output text</SPAN><BR/> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<SPAN class=internalfunction>UIWriteError</SPAN>(Line);<BR/> 
+&nbsp;&nbsp;&nbsp;<SPAN class=keyword>end</SPAN>;<BR/> <SPAN class=keyword>end</SPAN>;<BR/>
+</TD></TR></TABLE>
+<P class=title3><A name="templates_header">The header template</A></P>
+The 'header' template can be used to define which text (or images) is always output at the start 
+of a report. In the standard reports supplied with CEETIS, the report headers always display 
+information about the unit under test and the test result.
+<P class=title3><A name="templates_footer">The footer template</A></P>
+The 'footer' template can be used to define which text (or images) is always output at the end 
+of a report. In the standard reports supplied with CEETIS, the footer template is only used for 
+the HTML version of the report. It ensures that the end tags needed for an HTML file are inserted 
+into the report file at the end.
+
+</BODY>
+</HTML>
