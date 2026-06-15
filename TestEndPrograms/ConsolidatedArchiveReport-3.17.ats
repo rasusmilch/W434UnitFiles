@@ -188,17 +188,17 @@ begin
 
    if (UserBreak)
    begin
-      result = 'ABORT';
+      Result = 'ABORT';
    end
    else
    begin
       if (Passed)
       begin
-         result = 'PASS';
+         Result = 'PASS';
       end
       else
       begin
-         result = 'FAIL';
+         Result = 'FAIL';
       end;
    end;
 end;
@@ -210,7 +210,7 @@ begin
    Replace the private raw archive result token before ArchiveFunctions sees the
    destination string. ArchiveFunctions only knows its fixed angle-bracket tokens.
 }
-   result = StrReplace(DestinationTemplate, '$RESULT$', get_archive_result_suffix(), FALSE);
+   Result = StrReplace(DestinationTemplate, '$RESULT$', get_archive_result_suffix(), FALSE);
 end;
 
 function record_duration(): void;
