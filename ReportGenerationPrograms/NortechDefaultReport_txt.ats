@@ -24,9 +24,10 @@
   @details
     1. Attempts to open the INI file defined by `FILE_OPERATOR_ID_MAP`.
     2. Reads the current operator ID from global data key `"Value1"` in `"TestStart InputData"`.
-    3. Looks up the corresponding name in the `[OperatorID]` section using that ID.
-    4. If the file cannot be opened or the lookup returns `"NULL"`, displays error dialogs, logs the error, and aborts the test.
-  @return  The operator name string on success; never returns if an error occurs (test is aborted).
+    3. If no operator ID input exists, treats the operator ID as optional and omits the operator-name line.
+    4. If an operator ID input exists, looks up the corresponding name in the `[OperatorID]` section using that ID.
+    5. If the file cannot be opened or the supplied operator ID lookup returns `"NULL"`, writes an error into the report.
+   @return  The operator name string on success, or `"NULL"` when no operator ID was supplied or lookup fails.
 **}
 
 constants
@@ -55,21 +56,30 @@ begin
    end
    else
    begin
-      // Retrieve the operator ID from global data
+      // Retrieve the operator ID from global data. NULL means no operator ID line was supplied.
       Operator = GlobalDataRead('Value1', 'NULL', 'TestStart InputData');
-      // Fetch the name corresponding to the operator ID
-      OperatorName = FileGetIni(Handle, 'OperatorID', Operator, 'NULL');
-      FileCloseIni(Handle);
 
-      if (StrCompare(OperatorName, 'NULL') == 0)
+      if (StrCompare(Operator, 'NULL') == 0)
       begin
-         // No matching name found => log error, report, and abort
-         WriteLn('OPERATOR ID NOT FOUND. CONTACT TEST LAB');
+         // No operator ID line exists for this report; omit the operator-name line without an error.
+         FileCloseIni(Handle);
       end
       else
       begin
-         // Valid name found => return it
-         Result = OperatorName;
+         // Fetch the name corresponding to the supplied operator ID
+         OperatorName = FileGetIni(Handle, 'OperatorID', Operator, 'NULL');
+         FileCloseIni(Handle);
+
+         if (StrCompare(OperatorName, 'NULL') == 0)
+         begin
+            // Operator ID was supplied but no matching name was found => write an error into the report
+            WriteLn('OPERATOR ID NOT FOUND. CONTACT TEST LAB');
+         end
+         else
+         begin
+            // Valid name found => return it
+            Result = OperatorName;
+         end;
       end;
    end;
 end;
@@ -78,7 +88,7 @@ function display_operator_id_name(Length: integer): void;
 begin
    OperatorName = operator_name_from_id();
    if (StrCompare(OperatorName, 'NULL') <> 0)
-   begin
+begin
       Line = FormatAlignLeft(LocalText('Operator Name'), Length, ' ');
       Line = StrAdd(Line, ': ');
       Line = StrAdd(Line, OperatorName);
@@ -291,8 +301,4 @@ begin
       WriteLn(Line);
    end;
 end;
-
-
-
-
 
