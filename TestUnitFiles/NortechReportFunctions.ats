@@ -13,13 +13,14 @@ end;
   @details
     1. Attempts to open the INI file defined by `FILE_OPERATOR_ID_MAP`.
     2. Reads the current operator ID from global data key `"Value1"` in `"TestStart InputData"`.
-    3. Looks up the corresponding name in the `[OperatorID]` section using that ID.
-    4. If the file cannot be opened or the lookup returns `"NULL"`, displays error dialogs, logs the error, and aborts the test.
-  @return  The operator name string on success; never returns if an error occurs (test is aborted).
+    3. If no operator ID input exists, treats the operator ID as optional and returns success.
+    4. If an operator ID input exists, looks up the corresponding name in the `[OperatorID]` section using that ID.
+    5. If the file cannot be opened or the lookup returns `"NULL"`, displays error dialogs.
+   @return  TRUE if no operator ID was supplied or if the supplied operator ID is valid; FALSE on invalid supplied ID.
 **}
 function is_operator_id_valid(): string;
 begin
-   // Default to "NULL" until a valid name is found
+   // Default to false until no operator ID is required or a valid name is found
    Result = FALSE;
 
    // Open the operator ID mapping INI file
@@ -32,21 +33,31 @@ begin
    end
    else
    begin
-      // Retrieve the operator ID from global data
-      Operator = GlobalDataRead('Value1', '', 'TestStart InputData');
-      // Fetch the name corresponding to the operator ID
-      OperatorName = FileGetIni(Handle, 'OperatorID', Operator, 'NULL');
-      FileCloseIni(Handle);
+      // Retrieve the operator ID from global data. NULL means no operator ID line was supplied.
+      Operator = GlobalDataRead('Value1', 'NULL', 'TestStart InputData');
 
-      if (StrCompare(OperatorName, 'NULL') == 0)
+      if (StrCompare(Operator, 'NULL') == 0)
       begin
-         // No matching name found => log error, report, and abort
-         UIErrorDialog('OPERATOR ID NOT FOUND. CONTACT TEST LAB');
+         // No operator ID line exists for this test; treat operator ID as optional.
+         FileCloseIni(Handle);
+         Result = TRUE;
       end
       else
       begin
-         // Valid name found => return it
-         Result = TRUE;
+         // Fetch the name corresponding to the supplied operator ID
+         OperatorName = FileGetIni(Handle, 'OperatorID', Operator, 'NULL');
+         FileCloseIni(Handle);
+
+         if (StrCompare(OperatorName, 'NULL') == 0)
+         begin
+            // Operator ID was supplied but no matching name was found => notify operator
+            UIErrorDialog('OPERATOR ID NOT FOUND. CONTACT TEST LAB');
+         end
+         else
+         begin
+            // Valid name found => return success
+            Result = TRUE;
+         end;
       end;
    end;
 end;
