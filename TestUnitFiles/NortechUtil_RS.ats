@@ -50,6 +50,15 @@
   report_manual_reading(Line: string; Units: string; MinValue: real; MaxValue: real; Debug: boolean = FALSE): void
   //   Prompt for and validate a manual measurement, then display it in a bordered report.
 
+  report_manual_table_begin(Title: string = ''; Debug: boolean = FALSE): void
+  //   Start a TXT manual-reading table; call report_manual_table_add for rows, then report_manual_table_finish.
+
+  report_manual_table_add(Reading: string; MinValue: real; MaxValue: real; Units: string = ''): void
+  //   Prompt for one numeric manual reading and append one completed PASS/FAIL row to the active table.
+
+  report_manual_table_finish(): void
+  //   Render the active manual-reading table and clear its internal state.
+
   ui_dialog_operator_true_false(Title: string; Message: string; SuccessFlag: boolean; Debug: boolean = FALSE): boolean
   //   Show a True/False dialog, compare the response to SuccessFlag, log the result, and return whether an error occurred.
 
@@ -117,6 +126,10 @@ begin
    FILE_TIMER_DURATIONS = 'O:\Test Eng\Support_Files\W434\test_durations.ini';
    FILE_JOB_WHITELIST = 'O:\Test Eng\Support_Files\W434\job_numbers_whitelist.ini';
    FILE_OPERATOR_ID_MAP = 'O:\Test Eng\Support_Files\W434\operator_id_mapping.ini';
+
+   // Dedicated Global Data section and TXT width contract for report_manual_table.
+   REPORT_MANUAL_TABLE_SECTION = '__Nortech_ReportManualTable_v1';
+   REPORT_MANUAL_TABLE_MAX_WIDTH = 86;
 end;
 
 // Set global to skip REX post processing
@@ -782,6 +795,659 @@ begin
 
    // Insert a blank line after reporting
    blank_line(TRUE);
+end;
+
+
+
+{**
+  @brief   Clear all internal state for the report_manual_table builder.
+  @details
+    The manual table builder keeps its active lifecycle and arbitrary row set in one
+    dedicated Global Data section so callers do not have to pass arrays, row counts,
+    or indexes between begin/add/finish calls. This helper owns only that private
+    section and never calls GlobalDataClear().
+**}
+function report_manual_table_reset_state(): void;
+begin
+   GlobalDataDeleteSection(REPORT_MANUAL_TABLE_SECTION);
+end;
+
+{**
+  @brief   Handle programming/configuration errors for the manual table builder.
+  @details
+    Misuse of the builder is an authoring/configuration defect, not a product
+    failure. The error is shown to the operator, written permanently to the report,
+    the builder state is cleared, and the test is aborted without incrementing the
+    Others failure counter.
+**}
+function report_manual_table_program_error(Message: string): void;
+begin
+   ErrorText = StrAdd('Manual reading table configuration error: ', Message);
+   UIErrorDialog(ErrorText);
+   ui_report_error(ErrorText);
+   report_manual_table_reset_state();
+   MiscAbortTest();
+end;
+
+{**
+  @brief   Return a string containing @p Character repeated @p Count times.
+  @param   Character  Character string to append for each repeat cycle.
+  @param   Count      Number of copies to append.
+**}
+function report_manual_table_repeat(Character: string; Count: integer): string;
+begin
+   Result = '';
+   RepeatIndex = 1;
+   while (RepeatIndex <= Count)
+   begin
+      Result = StrAdd(Result, Character);
+      RepeatIndex = RepeatIndex + 1;
+   end;
+end;
+
+{**
+  @brief   Build a column-aligned segmented table border.
+  @details Each segment is the column content width plus two hyphens for the
+           visible left and right cell padding spaces. The six plus signs align
+           with the six vertical separators in standard table rows.
+**}
+function report_manual_table_build_border(ReadingWidth: integer; MinWidth: integer; MaxWidth: integer; MeasuredWidth: integer; ResultWidth: integer): string;
+begin
+   // CEETIS 4.10-08 requires arithmetic to be evaluated before function arguments.
+   Result = '+';
+
+   BorderSegmentWidth = ReadingWidth + 2;
+   BorderSegment = report_manual_table_repeat('-', BorderSegmentWidth);
+   Result = StrAdd(Result, BorderSegment);
+   Result = StrAdd(Result, '+');
+
+   BorderSegmentWidth = MinWidth + 2;
+   BorderSegment = report_manual_table_repeat('-', BorderSegmentWidth);
+   Result = StrAdd(Result, BorderSegment);
+   Result = StrAdd(Result, '+');
+
+   BorderSegmentWidth = MaxWidth + 2;
+   BorderSegment = report_manual_table_repeat('-', BorderSegmentWidth);
+   Result = StrAdd(Result, BorderSegment);
+   Result = StrAdd(Result, '+');
+
+   BorderSegmentWidth = MeasuredWidth + 2;
+   BorderSegment = report_manual_table_repeat('-', BorderSegmentWidth);
+   Result = StrAdd(Result, BorderSegment);
+   Result = StrAdd(Result, '+');
+
+   BorderSegmentWidth = ResultWidth + 2;
+   BorderSegment = report_manual_table_repeat('-', BorderSegmentWidth);
+   Result = StrAdd(Result, BorderSegment);
+   Result = StrAdd(Result, '+');
+end;
+
+{**
+  @brief   Build the continuous outer border used above titled tables.
+  @details Titled tables span all five columns for the title row, so the top
+           border has only the two outer corner plus signs. Column-segmented
+           borders are still used below the title and for every structural
+           column separator line.
+**}
+function report_manual_table_build_outer_border(TableWidth: integer): string;
+begin
+   OuterHyphenCount = TableWidth - 2;
+   OuterHyphens = report_manual_table_repeat('-', OuterHyphenCount);
+   Result = '+';
+   Result = StrAdd(Result, OuterHyphens);
+   Result = StrAdd(Result, '+');
+end;
+
+{**
+  @brief   Choose the next wrapped segment length without splitting normal words.
+  @details The caller supplies nonempty, left-trimmed text. The helper returns
+           the full text length when it fits, otherwise the character count
+           before the last usable ASCII space. If no such space exists, it
+           returns MaxLength as the hard-split fallback for one oversized token.
+**}
+function report_manual_table_wrap_length(Text: string; MaxLength: integer): integer;
+begin
+   TextLength = StrLength(Text);
+   if ((MaxLength <= 0) OR (TextLength <= 0))
+   begin
+      report_manual_table_program_error('manual table wrapping received invalid text or width.');
+   end;
+
+   if (TextLength <= MaxLength)
+   begin
+      Result = TextLength;
+   end
+   else
+   begin
+      LastSpacePosition = 0;
+      ScanPosition = 1;
+      while (ScanPosition <= MaxLength)
+      begin
+         ScanCharacter = StrCopy(Text, ScanPosition, 1);
+         if (StrCompare(ScanCharacter, ' ') == 0)
+         begin
+            LastSpacePosition = ScanPosition;
+         end;
+         ScanPosition = ScanPosition + 1;
+      end;
+
+      if (LastSpacePosition > 1)
+      begin
+         SegmentEndPosition = LastSpacePosition - 1;
+         ScanCharacter = StrCopy(Text, SegmentEndPosition, 1);
+         while ((SegmentEndPosition > 1) AND (StrCompare(ScanCharacter, ' ') == 0))
+         begin
+            SegmentEndPosition = SegmentEndPosition - 1;
+            ScanCharacter = StrCopy(Text, SegmentEndPosition, 1);
+         end;
+         Result = SegmentEndPosition;
+      end
+      else
+      begin
+         Result = MaxLength;
+      end;
+   end;
+
+   if (Result <= 0)
+   begin
+      report_manual_table_program_error('manual table wrapping made no progress.');
+   end;
+end;
+
+{**
+  @brief   Build one aligned table row while preserving visible separators.
+  @details All cells must already be no wider than their target widths. Alignment
+           helpers are used only for padding, never for truncation.
+**}
+function report_manual_table_build_row(Reading: string; MinText: string; MaxText: string; MeasuredText: string; ResultText: string; ReadingWidth: integer; MinWidth: integer; MaxWidth: integer; MeasuredWidth: integer; ResultWidth: integer): string;
+begin
+   Result = '| ';
+   Result = StrAdd(Result, FormatAlignLeft(Reading, ReadingWidth, ' '));
+   Result = StrAdd(Result, ' | ');
+   Result = StrAdd(Result, FormatAlignRight(MinText, MinWidth, ' '));
+   Result = StrAdd(Result, ' | ');
+   Result = StrAdd(Result, FormatAlignRight(MaxText, MaxWidth, ' '));
+   Result = StrAdd(Result, ' | ');
+   Result = StrAdd(Result, FormatAlignRight(MeasuredText, MeasuredWidth, ' '));
+   Result = StrAdd(Result, ' | ');
+   Result = StrAdd(Result, FormatAlignCenter(ResultText, ResultWidth));
+   Result = StrAdd(Result, ' |');
+end;
+
+{**
+  @brief   Store one completed row in the dedicated Global Data section.
+  @details The row is stored as independent keys rather than as delimited text so
+           arbitrary descriptions and units cannot corrupt the table state.
+**}
+function report_manual_table_store_row(Reading: string; MinText: string; MaxText: string; Units: string; MeasuredText: string; RowResult: string): void;
+begin
+   RowCount = GlobalDataRead('row_count', '0', REPORT_MANUAL_TABLE_SECTION);
+   RowCount = RowCount + 1;
+   RowKey = StrAdd('row_', RowCount);
+
+   GlobalDataWrite('row_count', RowCount, REPORT_MANUAL_TABLE_SECTION);
+   GlobalDataWrite(StrAdd(RowKey, '_reading'), Reading, REPORT_MANUAL_TABLE_SECTION);
+   GlobalDataWrite(StrAdd(RowKey, '_min'), MinText, REPORT_MANUAL_TABLE_SECTION);
+   GlobalDataWrite(StrAdd(RowKey, '_max'), MaxText, REPORT_MANUAL_TABLE_SECTION);
+   GlobalDataWrite(StrAdd(RowKey, '_units'), Units, REPORT_MANUAL_TABLE_SECTION);
+   GlobalDataWrite(StrAdd(RowKey, '_measured'), MeasuredText, REPORT_MANUAL_TABLE_SECTION);
+   GlobalDataWrite(StrAdd(RowKey, '_result'), RowResult, REPORT_MANUAL_TABLE_SECTION);
+end;
+
+{**
+  @brief   Append units to a numeric display string when units were supplied.
+**}
+function report_manual_table_value_units(ValueText: string; Units: string): string;
+begin
+   Result = ValueText;
+   if (StrLength(Units) > 0)
+   begin
+      Result = StrAdd(Result, ' ');
+      Result = StrAdd(Result, Units);
+   end;
+end;
+
+{**
+  @brief   Render the active manual-reading table through the normal TXT report stream.
+  @details
+    The width formula is: sum(column widths) + 16 visible padding/separator
+    characters for five columns. Reading text and titles are emitted in continuation
+    lines when needed; long unbroken text is hard-split with StrCopy so content is
+    never truncated and each physical line remains within 86 characters.
+**}
+function report_manual_table_render(): void;
+begin
+   RowCount = GlobalDataRead('row_count', '0', REPORT_MANUAL_TABLE_SECTION);
+   Canceled = GlobalDataRead('canceled', 'FALSE', REPORT_MANUAL_TABLE_SECTION);
+   Failed = GlobalDataRead('failed', 'FALSE', REPORT_MANUAL_TABLE_SECTION);
+   Debug = GlobalDataRead('debug', 'FALSE', REPORT_MANUAL_TABLE_SECTION);
+
+   if (
+      ((StrCompare(Canceled, 'TRUE') <> 0) AND (StrCompare(Canceled, 'FALSE') <> 0)) OR
+      ((StrCompare(Failed, 'TRUE') <> 0) AND (StrCompare(Failed, 'FALSE') <> 0)) OR
+      ((StrCompare(Debug, 'TRUE') <> 0) AND (StrCompare(Debug, 'FALSE') <> 0))
+   )
+   begin
+      report_manual_table_program_error('manual table Boolean state is corrupt.');
+   end;
+
+   if ((RowCount == 0) AND (StrCompare(Canceled, 'FALSE') == 0))
+   begin
+      report_manual_table_program_error('finish called with no completed readings.');
+   end;
+
+   MinWidth = StrLength('Min');
+   MaxWidth = StrLength('Max');
+   MeasuredWidth = StrLength('Measured');
+   ResultWidth = StrLength('Result');
+   NaturalReadingWidth = StrLength('Reading');
+
+   RowIndex = 1;
+   while (RowIndex <= RowCount)
+   begin
+      RowKey = StrAdd('row_', RowIndex);
+      Units = GlobalDataRead(StrAdd(RowKey, '_units'), '', REPORT_MANUAL_TABLE_SECTION);
+      ReadingText = GlobalDataRead(StrAdd(RowKey, '_reading'), '', REPORT_MANUAL_TABLE_SECTION);
+      MinCell = report_manual_table_value_units(GlobalDataRead(StrAdd(RowKey, '_min'), '', REPORT_MANUAL_TABLE_SECTION), Units);
+      MaxCell = report_manual_table_value_units(GlobalDataRead(StrAdd(RowKey, '_max'), '', REPORT_MANUAL_TABLE_SECTION), Units);
+      MeasuredCell = report_manual_table_value_units(GlobalDataRead(StrAdd(RowKey, '_measured'), '', REPORT_MANUAL_TABLE_SECTION), Units);
+
+      if (StrLength(ReadingText) > NaturalReadingWidth)
+      begin
+         NaturalReadingWidth = StrLength(ReadingText);
+      end;
+      if (StrLength(MinCell) > MinWidth)
+      begin
+         MinWidth = StrLength(MinCell);
+      end;
+      if (StrLength(MaxCell) > MaxWidth)
+      begin
+         MaxWidth = StrLength(MaxCell);
+      end;
+      if (StrLength(MeasuredCell) > MeasuredWidth)
+      begin
+         MeasuredWidth = StrLength(MeasuredCell);
+      end;
+      RowIndex = RowIndex + 1;
+   end;
+
+   if (StrLength('PASS') > ResultWidth)
+   begin
+      ResultWidth = StrLength('PASS');
+   end;
+   if (StrLength('FAIL') > ResultWidth)
+   begin
+      ResultWidth = StrLength('FAIL');
+   end;
+
+   MaxReadingWidth = REPORT_MANUAL_TABLE_MAX_WIDTH - 16 - MinWidth - MaxWidth - MeasuredWidth - ResultWidth;
+   if (MaxReadingWidth < StrLength('Reading'))
+   begin
+      report_manual_table_program_error('fixed value columns leave no room for the Reading header within 86 characters.');
+   end;
+
+   ReadingWidth = NaturalReadingWidth;
+   if (ReadingWidth > MaxReadingWidth)
+   begin
+      ReadingWidth = MaxReadingWidth;
+   end;
+
+   TableWidth = ReadingWidth + MinWidth + MaxWidth + MeasuredWidth + ResultWidth + 16;
+   LongestGroupStatus = StrLength('GROUP RESULT: CANCELED (FAIL)');
+   if (StrLength('GROUP RESULT: FAIL + CANCELED') > LongestGroupStatus)
+   begin
+      LongestGroupStatus = StrLength('GROUP RESULT: FAIL + CANCELED');
+   end;
+   if ((TableWidth - 4) < LongestGroupStatus)
+   begin
+      ReadingWidth = ReadingWidth + (LongestGroupStatus - (TableWidth - 4));
+      if (ReadingWidth > MaxReadingWidth)
+      begin
+         report_manual_table_program_error('group result text cannot fit within the 86-character manual table limit.');
+      end;
+      TableWidth = ReadingWidth + MinWidth + MaxWidth + MeasuredWidth + ResultWidth + 16;
+   end;
+
+   if (TableWidth > REPORT_MANUAL_TABLE_MAX_WIDTH)
+   begin
+      report_manual_table_program_error('calculated table width exceeds 86 characters.');
+   end;
+
+   if (StrCompare(Debug, 'TRUE') == 0)
+   begin
+      UIWriteNormal(StrAdd('manual table rows: ', RowCount));
+      UIWriteNormal(StrAdd('manual table width: ', TableWidth));
+      UIWriteNormal(StrAdd('manual table reading width: ', ReadingWidth));
+   end;
+
+   Border = report_manual_table_build_border(ReadingWidth, MinWidth, MaxWidth, MeasuredWidth, ResultWidth);
+   if (StrLength(Border) > REPORT_MANUAL_TABLE_MAX_WIDTH)
+   begin
+      report_manual_table_program_error('border line exceeds 86 characters.');
+   end;
+
+   Title = StrTrim(GlobalDataRead('title', '', REPORT_MANUAL_TABLE_SECTION));
+   TitleWidth = TableWidth - 4;
+   if (StrLength(Title) > 0)
+   begin
+      OuterBorder = report_manual_table_build_outer_border(TableWidth);
+      if (StrLength(OuterBorder) > REPORT_MANUAL_TABLE_MAX_WIDTH)
+      begin
+         report_manual_table_program_error('outer title border line exceeds 86 characters.');
+      end;
+      ui_report_normal(OuterBorder);
+
+      TitlePart = Title;
+      while (StrLength(TitlePart) > 0)
+      begin
+         TitleSegmentLength = report_manual_table_wrap_length(TitlePart, TitleWidth);
+         TitleSegment = StrCopy(TitlePart, 1, TitleSegmentLength);
+         TitleNextPosition = TitleSegmentLength + 1;
+         TitleRemainingLength = StrLength(TitlePart);
+         TitlePart = StrCopy(TitlePart, TitleNextPosition, TitleRemainingLength);
+         TitlePart = StrTrimLeft(TitlePart);
+         Line = '| ';
+         Line = StrAdd(Line, FormatAlignCenter(TitleSegment, TitleWidth));
+         Line = StrAdd(Line, ' |');
+         if (StrLength(Line) > REPORT_MANUAL_TABLE_MAX_WIDTH)
+         begin
+            report_manual_table_program_error('title line exceeds 86 characters.');
+         end;
+         ui_report_normal(Line);
+      end;
+      ui_report_normal(Border);
+   end
+   else
+   begin
+      ui_report_normal(Border);
+   end;
+
+   Header = report_manual_table_build_row('Reading', 'Min', 'Max', 'Measured', 'Result', ReadingWidth, MinWidth, MaxWidth, MeasuredWidth, ResultWidth);
+   if (StrLength(Header) > REPORT_MANUAL_TABLE_MAX_WIDTH)
+   begin
+      report_manual_table_program_error('header line exceeds 86 characters.');
+   end;
+   ui_report_normal(Header);
+   ui_report_normal(Border);
+
+   RowIndex = 1;
+   while (RowIndex <= RowCount)
+   begin
+      RowKey = StrAdd('row_', RowIndex);
+      ReadingText = GlobalDataRead(StrAdd(RowKey, '_reading'), '', REPORT_MANUAL_TABLE_SECTION);
+      Units = GlobalDataRead(StrAdd(RowKey, '_units'), '', REPORT_MANUAL_TABLE_SECTION);
+      MinCell = report_manual_table_value_units(GlobalDataRead(StrAdd(RowKey, '_min'), '', REPORT_MANUAL_TABLE_SECTION), Units);
+      MaxCell = report_manual_table_value_units(GlobalDataRead(StrAdd(RowKey, '_max'), '', REPORT_MANUAL_TABLE_SECTION), Units);
+      MeasuredCell = report_manual_table_value_units(GlobalDataRead(StrAdd(RowKey, '_measured'), '', REPORT_MANUAL_TABLE_SECTION), Units);
+      RowResult = GlobalDataRead(StrAdd(RowKey, '_result'), '', REPORT_MANUAL_TABLE_SECTION);
+      FirstLine = TRUE;
+      ReadingPart = StrTrim(ReadingText);
+      while (StrLength(ReadingPart) > 0)
+      begin
+         ReadingSegmentLength = report_manual_table_wrap_length(ReadingPart, ReadingWidth);
+         ReadingSegment = StrCopy(ReadingPart, 1, ReadingSegmentLength);
+         ReadingNextPosition = ReadingSegmentLength + 1;
+         ReadingRemainingLength = StrLength(ReadingPart);
+         ReadingPart = StrCopy(ReadingPart, ReadingNextPosition, ReadingRemainingLength);
+         ReadingPart = StrTrimLeft(ReadingPart);
+
+         if (FirstLine)
+         begin
+            Line = report_manual_table_build_row(ReadingSegment, MinCell, MaxCell, MeasuredCell, RowResult, ReadingWidth, MinWidth, MaxWidth, MeasuredWidth, ResultWidth);
+            FirstLine = FALSE;
+         end
+         else
+         begin
+            Line = report_manual_table_build_row(ReadingSegment, '', '', '', '', ReadingWidth, MinWidth, MaxWidth, MeasuredWidth, ResultWidth);
+         end;
+
+         if (StrLength(Line) > REPORT_MANUAL_TABLE_MAX_WIDTH)
+         begin
+            report_manual_table_program_error('data line exceeds 86 characters.');
+         end;
+         ui_report_normal(Line);
+      end;
+
+      RowIndex = RowIndex + 1;
+   end;
+
+   ui_report_normal(Border);
+
+   if ((StrCompare(Failed, 'FALSE') == 0) AND (StrCompare(Canceled, 'FALSE') == 0))
+   begin
+      GroupStatus = 'GROUP RESULT: PASS';
+   end;
+   if ((StrCompare(Failed, 'TRUE') == 0) AND (StrCompare(Canceled, 'FALSE') == 0))
+   begin
+      GroupStatus = 'GROUP RESULT: FAIL';
+   end;
+   if ((StrCompare(Failed, 'FALSE') == 0) AND (StrCompare(Canceled, 'TRUE') == 0))
+   begin
+      GroupStatus = 'GROUP RESULT: CANCELED (FAIL)';
+   end;
+   if ((StrCompare(Failed, 'TRUE') == 0) AND (StrCompare(Canceled, 'TRUE') == 0))
+   begin
+      GroupStatus = 'GROUP RESULT: FAIL + CANCELED';
+   end;
+
+   StatusWidth = TableWidth - 4;
+   StatusNextPosition = TableWidth - 3;
+   while (StrLength(GroupStatus) > 0)
+   begin
+      StatusRemainingLength = StrLength(GroupStatus);
+      StatusPart = StrCopy(GroupStatus, 1, StatusWidth);
+      GroupStatus = StrCopy(GroupStatus, StatusNextPosition, StatusRemainingLength);
+      AlignedStatus = FormatAlignCenter(StatusPart, StatusWidth);
+      Line = '| ';
+      Line = StrAdd(Line, AlignedStatus);
+      Line = StrAdd(Line, ' |');
+      if (StrLength(Line) > REPORT_MANUAL_TABLE_MAX_WIDTH)
+      begin
+         report_manual_table_program_error('group status line exceeds 86 characters.');
+      end;
+      ui_report_normal(Line);
+   end;
+
+   ui_report_normal(Border);
+end;
+
+{**
+  @brief   Start a new manual-reading table.
+  @details
+    A table must be started before rows are added and must be finished exactly once.
+    Only one table may be active; nested/concurrent tables are programming errors.
+    The optional Debug setting is stored once here and controls operator-only
+    diagnostics for later add/finish calls. No prompts or report lines are produced
+    by a successful begin call.
+  @param   Title  Optional TXT table title. Empty or whitespace-only titles are omitted.
+  @param   Debug  When TRUE, write limited diagnostic details to the operator UI only.
+  @return  void
+**}
+function report_manual_table_begin(Title: string = ''; Debug: boolean = FALSE): void;
+begin
+   State = GlobalDataRead('state', 'IDLE', REPORT_MANUAL_TABLE_SECTION);
+   if (StrCompare(State, 'IDLE') <> 0)
+   begin
+      report_manual_table_program_error('begin called while a manual reading table is already active.');
+   end;
+
+   report_manual_table_reset_state();
+   GlobalDataWrite('state', 'ACTIVE', REPORT_MANUAL_TABLE_SECTION);
+   GlobalDataWrite('title', Title, REPORT_MANUAL_TABLE_SECTION);
+   if (Debug)
+   begin
+      GlobalDataWrite('debug', 'TRUE', REPORT_MANUAL_TABLE_SECTION);
+   end
+   else
+   begin
+      GlobalDataWrite('debug', 'FALSE', REPORT_MANUAL_TABLE_SECTION);
+   end;
+   GlobalDataWrite('row_count', '0', REPORT_MANUAL_TABLE_SECTION);
+   GlobalDataWrite('failed', 'FALSE', REPORT_MANUAL_TABLE_SECTION);
+   GlobalDataWrite('canceled', 'FALSE', REPORT_MANUAL_TABLE_SECTION);
+   GlobalDataWrite('cancel_counted', 'FALSE', REPORT_MANUAL_TABLE_SECTION);
+end;
+
+{**
+  @brief   Prompt for and append one numeric reading to the active manual table.
+  @details
+    The reading definition is atomic: description, limits, units, measured value,
+    and PASS/FAIL result are stored together under the builder's private Global Data
+    section. Nonnumeric input is trimmed for validation, reported only to the
+    operator with the raw invalid text, and reprompted without failure counting or
+    permanent report output. Accepted out-of-range values increment the Others
+    failure counter exactly once, store a FAIL row, and allow later rows to proceed.
+    Canceling marks the group canceled, increments the Others counter once total,
+    and makes later add calls silent no-ops until finish renders completed rows.
+  @param   Reading   Required reading description shown to the operator and report.
+  @param   MinValue  Inclusive minimum accepted numeric value.
+  @param   MaxValue  Inclusive maximum accepted numeric value; may equal MinValue.
+  @param   Units     Optional units displayed in Min, Max, and Measured cells.
+  @return  void
+**}
+function report_manual_table_add(Reading: string; MinValue: real; MaxValue: real; Units: string = ''): void;
+begin
+   State = GlobalDataRead('state', 'IDLE', REPORT_MANUAL_TABLE_SECTION);
+   if (StrCompare(State, 'IDLE') == 0)
+   begin
+      report_manual_table_program_error('add called before report_manual_table_begin.');
+   end;
+   if ((StrCompare(State, 'ACTIVE') <> 0) AND (StrCompare(State, 'CANCELED') <> 0))
+   begin
+      report_manual_table_program_error('manual table lifecycle state is corrupt.');
+   end;
+
+   if (StrCompare(State, 'CANCELED') == 0)
+   begin
+      // After cancellation, unanswered readings collectively count as one failure.
+      // Later add calls must not prompt, report, or increment any counter.
+   end
+   else
+   begin
+      if (StrLength(StrTrim(Reading)) == 0)
+      begin
+         report_manual_table_program_error('manual table row has an empty Reading description.');
+      end;
+
+      if (MinValue > MaxValue)
+      begin
+         report_manual_table_program_error('manual table row has MinValue greater than MaxValue.');
+      end;
+
+      Accepted = FALSE;
+      Canceled = FALSE;
+      do
+      begin
+         MsgText = StrAdd('Enter manual reading:<BR>', Reading);
+         if (StrLength(Units) > 0)
+         begin
+            MsgText = StrAdd(MsgText, ' (');
+            MsgText = StrAdd(MsgText, Units);
+            MsgText = StrAdd(MsgText, ')');
+         end;
+
+         InputResult = '0';
+         Button = UIEditDialog('Enter Value', MsgText, FALSE, TRUE, InputResult);
+
+         if (Button == DIALOGRESULT_Ok)
+         begin
+            RawInput = InputResult;
+            InputResult = StrTrim(InputResult);
+            if (FormatIsInteger(InputResult) OR FormatIsReal(InputResult))
+            begin
+               ValueEntered = InputResult;
+               Accepted = TRUE;
+            end
+            else
+            begin
+               ErrorLine = StrAdd('Invalid numeric input for manual reading:<BR>', Reading);
+               ErrorLine = StrAdd(ErrorLine, '<BR>Entered: ');
+               ErrorLine = StrAdd(ErrorLine, RawInput);
+               ErrorLine = StrAdd(ErrorLine, '<BR>Please enter a numeric value.');
+               UIErrorDialog(ErrorLine);
+            end;
+         end
+         else
+         begin
+            Canceled = TRUE;
+            Accepted = TRUE;
+         end;
+      end
+      while (Accepted == FALSE);
+
+      if (Canceled)
+      begin
+         CancelCounted = GlobalDataRead('cancel_counted', 'FALSE', REPORT_MANUAL_TABLE_SECTION);
+         if ((StrCompare(CancelCounted, 'TRUE') <> 0) AND (StrCompare(CancelCounted, 'FALSE') <> 0))
+         begin
+            report_manual_table_program_error('manual table cancellation count state is corrupt.');
+         end;
+         if (StrCompare(CancelCounted, 'FALSE') == 0)
+         begin
+            fail_count_other_increase();
+            GlobalDataWrite('cancel_counted', 'TRUE', REPORT_MANUAL_TABLE_SECTION);
+         end;
+         GlobalDataWrite('canceled', 'TRUE', REPORT_MANUAL_TABLE_SECTION);
+         GlobalDataWrite('state', 'CANCELED', REPORT_MANUAL_TABLE_SECTION);
+      end
+      else
+      begin
+         MinText = StrAdd('', MinValue);
+         MaxText = StrAdd('', MaxValue);
+         MeasuredText = StrAdd('', ValueEntered);
+
+         OutOfRange = FALSE;
+         if ((ValueEntered < MinValue) OR (ValueEntered > MaxValue))
+         begin
+            OutOfRange = TRUE;
+         end;
+
+         if (OutOfRange)
+         begin
+            ErrorLine = StrAdd('Manual reading out of range:<BR>', Reading);
+            ErrorLine = StrAdd(ErrorLine, '<BR>Entered: ');
+            ErrorLine = StrAdd(ErrorLine, report_manual_table_value_units(MeasuredText, Units));
+            ErrorLine = StrAdd(ErrorLine, '<BR>Minimum: ');
+            ErrorLine = StrAdd(ErrorLine, report_manual_table_value_units(MinText, Units));
+            ErrorLine = StrAdd(ErrorLine, '<BR>Maximum: ');
+            ErrorLine = StrAdd(ErrorLine, report_manual_table_value_units(MaxText, Units));
+            UIErrorDialog(ErrorLine);
+            fail_count_other_increase();
+            GlobalDataWrite('failed', 'TRUE', REPORT_MANUAL_TABLE_SECTION);
+            report_manual_table_store_row(Reading, MinText, MaxText, Units, MeasuredText, 'FAIL');
+         end
+         else
+         begin
+            report_manual_table_store_row(Reading, MinText, MaxText, Units, MeasuredText, 'PASS');
+         end;
+      end;
+   end;
+end;
+
+{**
+  @brief   Render and clear the active manual-reading table.
+  @details
+    finish writes one compact TXT-oriented ASCII table through ui_report_normal(),
+    including completed PASS/FAIL rows and an exact group status. It never increments
+    failure counters and never returns entered values to the caller. Programming
+    misuse, corrupt state, or impossible 86-character rendering is reported as a
+    configuration error and aborts the test without product-failure counting.
+  @return  void
+**}
+function report_manual_table_finish(): void;
+begin
+   State = GlobalDataRead('state', 'IDLE', REPORT_MANUAL_TABLE_SECTION);
+   if (StrCompare(State, 'IDLE') == 0)
+   begin
+      report_manual_table_program_error('finish called before report_manual_table_begin.');
+   end;
+   if ((StrCompare(State, 'ACTIVE') <> 0) AND (StrCompare(State, 'CANCELED') <> 0))
+   begin
+      report_manual_table_program_error('manual table lifecycle state is corrupt.');
+   end;
+
+   report_manual_table_render();
+   report_manual_table_reset_state();
 end;
 
 
