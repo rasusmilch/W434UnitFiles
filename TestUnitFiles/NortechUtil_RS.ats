@@ -853,16 +853,32 @@ end;
 **}
 function report_manual_table_build_border(ReadingWidth: integer; MinWidth: integer; MaxWidth: integer; MeasuredWidth: integer; ResultWidth: integer): string;
 begin
+   // CEETIS 4.10-08 requires arithmetic to be evaluated before function arguments.
    Result = '+';
-   Result = StrAdd(Result, report_manual_table_repeat('-', ReadingWidth + 2));
+
+   BorderSegmentWidth = ReadingWidth + 2;
+   BorderSegment = report_manual_table_repeat('-', BorderSegmentWidth);
+   Result = StrAdd(Result, BorderSegment);
    Result = StrAdd(Result, '+');
-   Result = StrAdd(Result, report_manual_table_repeat('-', MinWidth + 2));
+
+   BorderSegmentWidth = MinWidth + 2;
+   BorderSegment = report_manual_table_repeat('-', BorderSegmentWidth);
+   Result = StrAdd(Result, BorderSegment);
    Result = StrAdd(Result, '+');
-   Result = StrAdd(Result, report_manual_table_repeat('-', MaxWidth + 2));
+
+   BorderSegmentWidth = MaxWidth + 2;
+   BorderSegment = report_manual_table_repeat('-', BorderSegmentWidth);
+   Result = StrAdd(Result, BorderSegment);
    Result = StrAdd(Result, '+');
-   Result = StrAdd(Result, report_manual_table_repeat('-', MeasuredWidth + 2));
+
+   BorderSegmentWidth = MeasuredWidth + 2;
+   BorderSegment = report_manual_table_repeat('-', BorderSegmentWidth);
+   Result = StrAdd(Result, BorderSegment);
    Result = StrAdd(Result, '+');
-   Result = StrAdd(Result, report_manual_table_repeat('-', ResultWidth + 2));
+
+   BorderSegmentWidth = ResultWidth + 2;
+   BorderSegment = report_manual_table_repeat('-', BorderSegmentWidth);
+   Result = StrAdd(Result, BorderSegment);
    Result = StrAdd(Result, '+');
 end;
 
@@ -1052,7 +1068,9 @@ begin
          while (StrLength(TitlePart) > 0)
          begin
             TitleSegment = StrCopy(TitlePart, 1, TitleWidth);
-            TitlePart = StrCopy(TitlePart, TitleWidth + 1, StrLength(TitlePart));
+            TitleNextPosition = TitleWidth + 1;
+            TitleRemainingLength = StrLength(TitlePart);
+            TitlePart = StrCopy(TitlePart, TitleNextPosition, TitleRemainingLength);
             Line = '| ';
             Line = StrAdd(Line, FormatAlignCenter(TitleSegment, TitleWidth));
             Line = StrAdd(Line, ' |');
@@ -1094,7 +1112,9 @@ begin
          while (StrLength(ReadingPart) > 0)
          begin
             ReadingSegment = StrCopy(ReadingPart, 1, ReadingWidth);
-            ReadingPart = StrCopy(ReadingPart, ReadingWidth + 1, StrLength(ReadingPart));
+            ReadingNextPosition = ReadingWidth + 1;
+            ReadingRemainingLength = StrLength(ReadingPart);
+            ReadingPart = StrCopy(ReadingPart, ReadingNextPosition, ReadingRemainingLength);
 
             if (FirstLine)
             begin
@@ -1137,12 +1157,16 @@ begin
       GroupStatus = 'GROUP RESULT: FAIL + CANCELED';
    end;
 
+   StatusWidth = TableWidth - 4;
+   StatusNextPosition = TableWidth - 3;
    while (StrLength(GroupStatus) > 0)
    begin
-      StatusPart = StrCopy(GroupStatus, 1, TableWidth - 4);
-      GroupStatus = StrCopy(GroupStatus, TableWidth - 3, StrLength(GroupStatus));
+      StatusRemainingLength = StrLength(GroupStatus);
+      StatusPart = StrCopy(GroupStatus, 1, StatusWidth);
+      GroupStatus = StrCopy(GroupStatus, StatusNextPosition, StatusRemainingLength);
+      AlignedStatus = FormatAlignCenter(StatusPart, StatusWidth);
       Line = '| ';
-      Line = StrAdd(Line, FormatAlignCenter(StatusPart, TableWidth - 4));
+      Line = StrAdd(Line, AlignedStatus);
       Line = StrAdd(Line, ' |');
       if (StrLength(Line) > REPORT_MANUAL_TABLE_MAX_WIDTH)
       begin
