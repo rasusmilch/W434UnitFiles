@@ -883,6 +883,78 @@ begin
 end;
 
 {**
+  @brief   Build the continuous outer border used above titled tables.
+  @details Titled tables span all five columns for the title row, so the top
+           border has only the two outer corner plus signs. Column-segmented
+           borders are still used below the title and for every structural
+           column separator line.
+**}
+function report_manual_table_build_outer_border(TableWidth: integer): string;
+begin
+   OuterHyphenCount = TableWidth - 2;
+   OuterHyphens = report_manual_table_repeat('-', OuterHyphenCount);
+   Result = '+';
+   Result = StrAdd(Result, OuterHyphens);
+   Result = StrAdd(Result, '+');
+end;
+
+{**
+  @brief   Choose the next wrapped segment length without splitting normal words.
+  @details The caller supplies nonempty, left-trimmed text. The helper returns
+           the full text length when it fits, otherwise the character count
+           before the last usable ASCII space. If no such space exists, it
+           returns MaxLength as the hard-split fallback for one oversized token.
+**}
+function report_manual_table_wrap_length(Text: string; MaxLength: integer): integer;
+begin
+   TextLength = StrLength(Text);
+   if ((MaxLength <= 0) OR (TextLength <= 0))
+   begin
+      report_manual_table_program_error('manual table wrapping received invalid text or width.');
+   end;
+
+   if (TextLength <= MaxLength)
+   begin
+      Result = TextLength;
+   end
+   else
+   begin
+      LastSpacePosition = 0;
+      ScanPosition = 1;
+      while (ScanPosition <= MaxLength)
+      begin
+         ScanCharacter = StrCopy(Text, ScanPosition, 1);
+         if (StrCompare(ScanCharacter, ' ') == 0)
+         begin
+            LastSpacePosition = ScanPosition;
+         end;
+         ScanPosition = ScanPosition + 1;
+      end;
+
+      if (LastSpacePosition > 1)
+      begin
+         SegmentEndPosition = LastSpacePosition - 1;
+         ScanCharacter = StrCopy(Text, SegmentEndPosition, 1);
+         while ((SegmentEndPosition > 1) AND (StrCompare(ScanCharacter, ' ') == 0))
+         begin
+            SegmentEndPosition = SegmentEndPosition - 1;
+            ScanCharacter = StrCopy(Text, SegmentEndPosition, 1);
+         end;
+         Result = SegmentEndPosition;
+      end
+      else
+      begin
+         Result = MaxLength;
+      end;
+   end;
+
+   if (Result <= 0)
+   begin
+      report_manual_table_program_error('manual table wrapping made no progress.');
+   end;
+end;
+
+{**
   @brief   Build one aligned table row while preserving visible separators.
   @details All cells must already be no wider than their target widths. Alignment
            helpers are used only for padding, never for truncation.
@@ -1054,34 +1126,39 @@ begin
       report_manual_table_program_error('border line exceeds 86 characters.');
    end;
 
-   ui_report_normal(Border);
-
    Title = StrTrim(GlobalDataRead('title', '', REPORT_MANUAL_TABLE_SECTION));
    TitleWidth = TableWidth - 4;
    if (StrLength(Title) > 0)
    begin
-      WrappedCount = StrWordWrap(Title, TitleWidth, WrappedLines);
-      WrappedIndex = 1;
-      while (WrappedIndex <= WrappedCount)
+      OuterBorder = report_manual_table_build_outer_border(TableWidth);
+      if (StrLength(OuterBorder) > REPORT_MANUAL_TABLE_MAX_WIDTH)
       begin
-         TitlePart = StrTrim(WrappedLines[WrappedIndex]);
-         while (StrLength(TitlePart) > 0)
-         begin
-            TitleSegment = StrCopy(TitlePart, 1, TitleWidth);
-            TitleNextPosition = TitleWidth + 1;
-            TitleRemainingLength = StrLength(TitlePart);
-            TitlePart = StrCopy(TitlePart, TitleNextPosition, TitleRemainingLength);
-            Line = '| ';
-            Line = StrAdd(Line, FormatAlignCenter(TitleSegment, TitleWidth));
-            Line = StrAdd(Line, ' |');
-            if (StrLength(Line) > REPORT_MANUAL_TABLE_MAX_WIDTH)
-            begin
-               report_manual_table_program_error('title line exceeds 86 characters.');
-            end;
-            ui_report_normal(Line);
-         end;
-         WrappedIndex = WrappedIndex + 1;
+         report_manual_table_program_error('outer title border line exceeds 86 characters.');
       end;
+      ui_report_normal(OuterBorder);
+
+      TitlePart = Title;
+      while (StrLength(TitlePart) > 0)
+      begin
+         TitleSegmentLength = report_manual_table_wrap_length(TitlePart, TitleWidth);
+         TitleSegment = StrCopy(TitlePart, 1, TitleSegmentLength);
+         TitleNextPosition = TitleSegmentLength + 1;
+         TitleRemainingLength = StrLength(TitlePart);
+         TitlePart = StrCopy(TitlePart, TitleNextPosition, TitleRemainingLength);
+         TitlePart = StrTrimLeft(TitlePart);
+         Line = '| ';
+         Line = StrAdd(Line, FormatAlignCenter(TitleSegment, TitleWidth));
+         Line = StrAdd(Line, ' |');
+         if (StrLength(Line) > REPORT_MANUAL_TABLE_MAX_WIDTH)
+         begin
+            report_manual_table_program_error('title line exceeds 86 characters.');
+         end;
+         ui_report_normal(Line);
+      end;
+      ui_report_normal(Border);
+   end
+   else
+   begin
       ui_report_normal(Border);
    end;
 
@@ -1104,35 +1181,31 @@ begin
       MeasuredCell = report_manual_table_value_units(GlobalDataRead(StrAdd(RowKey, '_measured'), '', REPORT_MANUAL_TABLE_SECTION), Units);
       RowResult = GlobalDataRead(StrAdd(RowKey, '_result'), '', REPORT_MANUAL_TABLE_SECTION);
       FirstLine = TRUE;
-      WrappedCount = StrWordWrap(ReadingText, ReadingWidth, WrappedLines);
-      WrappedIndex = 1;
-      while (WrappedIndex <= WrappedCount)
+      ReadingPart = StrTrim(ReadingText);
+      while (StrLength(ReadingPart) > 0)
       begin
-         ReadingPart = StrTrim(WrappedLines[WrappedIndex]);
-         while (StrLength(ReadingPart) > 0)
+         ReadingSegmentLength = report_manual_table_wrap_length(ReadingPart, ReadingWidth);
+         ReadingSegment = StrCopy(ReadingPart, 1, ReadingSegmentLength);
+         ReadingNextPosition = ReadingSegmentLength + 1;
+         ReadingRemainingLength = StrLength(ReadingPart);
+         ReadingPart = StrCopy(ReadingPart, ReadingNextPosition, ReadingRemainingLength);
+         ReadingPart = StrTrimLeft(ReadingPart);
+
+         if (FirstLine)
          begin
-            ReadingSegment = StrCopy(ReadingPart, 1, ReadingWidth);
-            ReadingNextPosition = ReadingWidth + 1;
-            ReadingRemainingLength = StrLength(ReadingPart);
-            ReadingPart = StrCopy(ReadingPart, ReadingNextPosition, ReadingRemainingLength);
-
-            if (FirstLine)
-            begin
-               Line = report_manual_table_build_row(ReadingSegment, MinCell, MaxCell, MeasuredCell, RowResult, ReadingWidth, MinWidth, MaxWidth, MeasuredWidth, ResultWidth);
-               FirstLine = FALSE;
-            end
-            else
-            begin
-               Line = report_manual_table_build_row(ReadingSegment, '', '', '', '', ReadingWidth, MinWidth, MaxWidth, MeasuredWidth, ResultWidth);
-            end;
-
-            if (StrLength(Line) > REPORT_MANUAL_TABLE_MAX_WIDTH)
-            begin
-               report_manual_table_program_error('data line exceeds 86 characters.');
-            end;
-            ui_report_normal(Line);
+            Line = report_manual_table_build_row(ReadingSegment, MinCell, MaxCell, MeasuredCell, RowResult, ReadingWidth, MinWidth, MaxWidth, MeasuredWidth, ResultWidth);
+            FirstLine = FALSE;
+         end
+         else
+         begin
+            Line = report_manual_table_build_row(ReadingSegment, '', '', '', '', ReadingWidth, MinWidth, MaxWidth, MeasuredWidth, ResultWidth);
          end;
-         WrappedIndex = WrappedIndex + 1;
+
+         if (StrLength(Line) > REPORT_MANUAL_TABLE_MAX_WIDTH)
+         begin
+            report_manual_table_program_error('data line exceeds 86 characters.');
+         end;
+         ui_report_normal(Line);
       end;
 
       RowIndex = RowIndex + 1;

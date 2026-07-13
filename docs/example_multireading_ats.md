@@ -55,7 +55,7 @@ calls, then `finish`.
 The exact numeric formatting comes from CEETIS ATS real-to-string conversion.
 Units remain attached to the Min, Max, and Measured cells.
 
-    +------------------------------+---------+------+----------+--------+
+    +-------------------------------------------------------------------+
     |                      Insertion Loss Readings                      |
     +------------------------------+---------+------+----------+--------+
     | Reading                      |     Min |  Max | Measured | Result |
@@ -69,11 +69,14 @@ Units remain attached to the Min, Max, and Measured cells.
 
 Tables are content-sized and stay compact up to the 86-character maximum. The
 optional title does not force table expansion; long titles wrap inside the
-calculated table width. Reading descriptions expand the Reading column only up
-to the maximum permitted width and then wrap at word boundaries. Borders are
-segmented so each `+` aligns with the corresponding `|` in standard rows. Hard
-splitting is used only as a fallback for an unbroken sequence longer than the
-available width, and content is not truncated.
+calculated table width. A titled table uses a continuous outer top border with
+only the two corner `+` characters; the border below the title and all other
+column-structural borders remain segmented so each `+` aligns with the
+corresponding `|` in standard rows. Reading descriptions expand the Reading
+column only up to the maximum permitted width and then wrap at the last
+available ASCII space. Hard splitting is used only as a fallback for an
+unbroken sequence longer than the available width, and content is not
+truncated.
 
 ## Input behavior
 
@@ -145,10 +148,13 @@ test with `MiscAbortTest`, and do not increment the product failure counter.
 
 ## CEETIS compile and tester validation status
 
-This repository change has not been compiled in CEETIS during local Codex work.
-The next required checkpoint is CEETIS 4.10-08 compilation, `.cats` generation,
-representative script execution, and TXT report review under
-`Nortech_Default_TXT`.
+CEETIS 4.10-08 compilation has succeeded far enough to run runtime checkpoint
+cases, but the full runtime validation matrix is still incomplete. Runtime
+testing found the titled-table top-border and ordinary word-boundary wrapping
+issues addressed by this implementation. The next required checkpoint is to
+recompile, regenerate the `.cats` file, rerun the focused titled-table and
+wrapping cases, then continue representative script execution and TXT report
+review under `Nortech_Default_TXT`.
 
 ## Mandatory CEETIS checkpoint matrix
 
