@@ -952,16 +952,22 @@ begin
    MaxWidth = StrLength('Max');
    MeasuredWidth = StrLength('Measured');
    ResultWidth = StrLength('Result');
+   NaturalReadingWidth = StrLength('Reading');
 
    RowIndex = 1;
    while (RowIndex <= RowCount)
    begin
       RowKey = StrAdd('row_', RowIndex);
       Units = GlobalDataRead(StrAdd(RowKey, '_units'), '', REPORT_MANUAL_TABLE_SECTION);
+      ReadingText = GlobalDataRead(StrAdd(RowKey, '_reading'), '', REPORT_MANUAL_TABLE_SECTION);
       MinCell = report_manual_table_value_units(GlobalDataRead(StrAdd(RowKey, '_min'), '', REPORT_MANUAL_TABLE_SECTION), Units);
       MaxCell = report_manual_table_value_units(GlobalDataRead(StrAdd(RowKey, '_max'), '', REPORT_MANUAL_TABLE_SECTION), Units);
       MeasuredCell = report_manual_table_value_units(GlobalDataRead(StrAdd(RowKey, '_measured'), '', REPORT_MANUAL_TABLE_SECTION), Units);
 
+      if (StrLength(ReadingText) > NaturalReadingWidth)
+      begin
+         NaturalReadingWidth = StrLength(ReadingText);
+      end;
       if (StrLength(MinCell) > MinWidth)
       begin
          MinWidth = StrLength(MinCell);
@@ -986,13 +992,34 @@ begin
       ResultWidth = StrLength('FAIL');
    end;
 
-   ReadingWidth = REPORT_MANUAL_TABLE_MAX_WIDTH - 16 - MinWidth - MaxWidth - MeasuredWidth - ResultWidth;
-   if (ReadingWidth < StrLength('Reading'))
+   MaxReadingWidth = REPORT_MANUAL_TABLE_MAX_WIDTH - 16 - MinWidth - MaxWidth - MeasuredWidth - ResultWidth;
+   if (MaxReadingWidth < StrLength('Reading'))
    begin
       report_manual_table_program_error('fixed value columns leave no room for the Reading header within 86 characters.');
    end;
 
+   ReadingWidth = NaturalReadingWidth;
+   if (ReadingWidth > MaxReadingWidth)
+   begin
+      ReadingWidth = MaxReadingWidth;
+   end;
+
    TableWidth = ReadingWidth + MinWidth + MaxWidth + MeasuredWidth + ResultWidth + 16;
+   LongestGroupStatus = StrLength('GROUP RESULT: CANCELED (FAIL)');
+   if (StrLength('GROUP RESULT: FAIL + CANCELED') > LongestGroupStatus)
+   begin
+      LongestGroupStatus = StrLength('GROUP RESULT: FAIL + CANCELED');
+   end;
+   if ((TableWidth - 4) < LongestGroupStatus)
+   begin
+      ReadingWidth = ReadingWidth + (LongestGroupStatus - (TableWidth - 4));
+      if (ReadingWidth > MaxReadingWidth)
+      begin
+         report_manual_table_program_error('group result text cannot fit within the 86-character manual table limit.');
+      end;
+      TableWidth = ReadingWidth + MinWidth + MaxWidth + MeasuredWidth + ResultWidth + 16;
+   end;
+
    if (TableWidth > REPORT_MANUAL_TABLE_MAX_WIDTH)
    begin
       report_manual_table_program_error('calculated table width exceeds 86 characters.');
@@ -1253,7 +1280,12 @@ begin
 
       if (Canceled)
       begin
-         if (StrCompare(GlobalDataRead('cancel_counted', 'FALSE', REPORT_MANUAL_TABLE_SECTION), 'FALSE') == 0)
+         CancelCounted = GlobalDataRead('cancel_counted', 'FALSE', REPORT_MANUAL_TABLE_SECTION);
+         if ((StrCompare(CancelCounted, 'TRUE') <> 0) AND (StrCompare(CancelCounted, 'FALSE') <> 0))
+         begin
+            report_manual_table_program_error('manual table cancellation count state is corrupt.');
+         end;
+         if (StrCompare(CancelCounted, 'FALSE') == 0)
          begin
             fail_count_other_increase();
             GlobalDataWrite('cancel_counted', 'TRUE', REPORT_MANUAL_TABLE_SECTION);
