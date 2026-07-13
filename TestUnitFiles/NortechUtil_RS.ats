@@ -830,7 +830,9 @@ begin
 end;
 
 {**
-  @brief   Return @p Text with @p Count copies of @p Character appended.
+  @brief   Return a string containing @p Character repeated @p Count times.
+  @param   Character  Character string to append for each repeat cycle.
+  @param   Count      Number of copies to append.
 **}
 function report_manual_table_repeat(Character: string; Count: integer): string;
 begin
@@ -841,6 +843,27 @@ begin
       Result = StrAdd(Result, Character);
       RepeatIndex = RepeatIndex + 1;
    end;
+end;
+
+{**
+  @brief   Build a column-aligned segmented table border.
+  @details Each segment is the column content width plus two hyphens for the
+           visible left and right cell padding spaces. The six plus signs align
+           with the six vertical separators in standard table rows.
+**}
+function report_manual_table_build_border(ReadingWidth: integer; MinWidth: integer; MaxWidth: integer; MeasuredWidth: integer; ResultWidth: integer): string;
+begin
+   Result = '+';
+   Result = StrAdd(Result, report_manual_table_repeat('-', ReadingWidth + 2));
+   Result = StrAdd(Result, '+');
+   Result = StrAdd(Result, report_manual_table_repeat('-', MinWidth + 2));
+   Result = StrAdd(Result, '+');
+   Result = StrAdd(Result, report_manual_table_repeat('-', MaxWidth + 2));
+   Result = StrAdd(Result, '+');
+   Result = StrAdd(Result, report_manual_table_repeat('-', MeasuredWidth + 2));
+   Result = StrAdd(Result, '+');
+   Result = StrAdd(Result, report_manual_table_repeat('-', ResultWidth + 2));
+   Result = StrAdd(Result, '+');
 end;
 
 {**
@@ -911,7 +934,16 @@ begin
    Failed = GlobalDataRead('failed', 'FALSE', REPORT_MANUAL_TABLE_SECTION);
    Debug = GlobalDataRead('debug', 'FALSE', REPORT_MANUAL_TABLE_SECTION);
 
-   if ((RowCount == 0) AND (Canceled == 'FALSE'))
+   if (
+      ((StrCompare(Canceled, 'TRUE') <> 0) AND (StrCompare(Canceled, 'FALSE') <> 0)) OR
+      ((StrCompare(Failed, 'TRUE') <> 0) AND (StrCompare(Failed, 'FALSE') <> 0)) OR
+      ((StrCompare(Debug, 'TRUE') <> 0) AND (StrCompare(Debug, 'FALSE') <> 0))
+   )
+   begin
+      report_manual_table_program_error('manual table Boolean state is corrupt.');
+   end;
+
+   if ((RowCount == 0) AND (StrCompare(Canceled, 'FALSE') == 0))
    begin
       report_manual_table_program_error('finish called with no completed readings.');
    end;
@@ -966,14 +998,14 @@ begin
       report_manual_table_program_error('calculated table width exceeds 86 characters.');
    end;
 
-   if (Debug == 'TRUE')
+   if (StrCompare(Debug, 'TRUE') == 0)
    begin
       UIWriteNormal(StrAdd('manual table rows: ', RowCount));
       UIWriteNormal(StrAdd('manual table width: ', TableWidth));
       UIWriteNormal(StrAdd('manual table reading width: ', ReadingWidth));
    end;
 
-   Border = report_manual_table_repeat('-', TableWidth);
+   Border = report_manual_table_build_border(ReadingWidth, MinWidth, MaxWidth, MeasuredWidth, ResultWidth);
    if (StrLength(Border) > REPORT_MANUAL_TABLE_MAX_WIDTH)
    begin
       report_manual_table_program_error('border line exceeds 86 characters.');
@@ -983,18 +1015,29 @@ begin
 
    Title = StrTrim(GlobalDataRead('title', '', REPORT_MANUAL_TABLE_SECTION));
    TitleWidth = TableWidth - 4;
-   while (StrLength(Title) > 0)
+   if (StrLength(Title) > 0)
    begin
-      TitlePart = StrCopy(Title, 1, TitleWidth);
-      Title = StrCopy(Title, TitleWidth + 1, StrLength(Title));
-      Line = '| ';
-      Line = StrAdd(Line, FormatAlignCenter(TitlePart, TitleWidth));
-      Line = StrAdd(Line, ' |');
-      if (StrLength(Line) > REPORT_MANUAL_TABLE_MAX_WIDTH)
+      WrappedCount = StrWordWrap(Title, TitleWidth, WrappedLines);
+      WrappedIndex = 1;
+      while (WrappedIndex <= WrappedCount)
       begin
-         report_manual_table_program_error('title line exceeds 86 characters.');
+         TitlePart = StrTrim(WrappedLines[WrappedIndex]);
+         while (StrLength(TitlePart) > 0)
+         begin
+            TitleSegment = StrCopy(TitlePart, 1, TitleWidth);
+            TitlePart = StrCopy(TitlePart, TitleWidth + 1, StrLength(TitlePart));
+            Line = '| ';
+            Line = StrAdd(Line, FormatAlignCenter(TitleSegment, TitleWidth));
+            Line = StrAdd(Line, ' |');
+            if (StrLength(Line) > REPORT_MANUAL_TABLE_MAX_WIDTH)
+            begin
+               report_manual_table_program_error('title line exceeds 86 characters.');
+            end;
+            ui_report_normal(Line);
+         end;
+         WrappedIndex = WrappedIndex + 1;
       end;
-      ui_report_normal(Line);
+      ui_report_normal(Border);
    end;
 
    Header = report_manual_table_build_row('Reading', 'Min', 'Max', 'Measured', 'Result', ReadingWidth, MinWidth, MaxWidth, MeasuredWidth, ResultWidth);
@@ -1016,48 +1059,53 @@ begin
       MeasuredCell = report_manual_table_value_units(GlobalDataRead(StrAdd(RowKey, '_measured'), '', REPORT_MANUAL_TABLE_SECTION), Units);
       RowResult = GlobalDataRead(StrAdd(RowKey, '_result'), '', REPORT_MANUAL_TABLE_SECTION);
       FirstLine = TRUE;
-
-      do
+      WrappedCount = StrWordWrap(ReadingText, ReadingWidth, WrappedLines);
+      WrappedIndex = 1;
+      while (WrappedIndex <= WrappedCount)
       begin
-         ReadingPart = StrCopy(ReadingText, 1, ReadingWidth);
-         ReadingText = StrCopy(ReadingText, ReadingWidth + 1, StrLength(ReadingText));
+         ReadingPart = StrTrim(WrappedLines[WrappedIndex]);
+         while (StrLength(ReadingPart) > 0)
+         begin
+            ReadingSegment = StrCopy(ReadingPart, 1, ReadingWidth);
+            ReadingPart = StrCopy(ReadingPart, ReadingWidth + 1, StrLength(ReadingPart));
 
-         if (FirstLine)
-         begin
-            Line = report_manual_table_build_row(ReadingPart, MinCell, MaxCell, MeasuredCell, RowResult, ReadingWidth, MinWidth, MaxWidth, MeasuredWidth, ResultWidth);
-            FirstLine = FALSE;
-         end
-         else
-         begin
-            Line = report_manual_table_build_row(ReadingPart, '', '', '', '', ReadingWidth, MinWidth, MaxWidth, MeasuredWidth, ResultWidth);
-         end;
+            if (FirstLine)
+            begin
+               Line = report_manual_table_build_row(ReadingSegment, MinCell, MaxCell, MeasuredCell, RowResult, ReadingWidth, MinWidth, MaxWidth, MeasuredWidth, ResultWidth);
+               FirstLine = FALSE;
+            end
+            else
+            begin
+               Line = report_manual_table_build_row(ReadingSegment, '', '', '', '', ReadingWidth, MinWidth, MaxWidth, MeasuredWidth, ResultWidth);
+            end;
 
-         if (StrLength(Line) > REPORT_MANUAL_TABLE_MAX_WIDTH)
-         begin
-            report_manual_table_program_error('data line exceeds 86 characters.');
+            if (StrLength(Line) > REPORT_MANUAL_TABLE_MAX_WIDTH)
+            begin
+               report_manual_table_program_error('data line exceeds 86 characters.');
+            end;
+            ui_report_normal(Line);
          end;
-         ui_report_normal(Line);
-      end
-      while (StrLength(ReadingText) > 0);
+         WrappedIndex = WrappedIndex + 1;
+      end;
 
       RowIndex = RowIndex + 1;
    end;
 
    ui_report_normal(Border);
 
-   if ((Failed == 'FALSE') AND (Canceled == 'FALSE'))
+   if ((StrCompare(Failed, 'FALSE') == 0) AND (StrCompare(Canceled, 'FALSE') == 0))
    begin
       GroupStatus = 'GROUP RESULT: PASS';
    end;
-   if ((Failed == 'TRUE') AND (Canceled == 'FALSE'))
+   if ((StrCompare(Failed, 'TRUE') == 0) AND (StrCompare(Canceled, 'FALSE') == 0))
    begin
       GroupStatus = 'GROUP RESULT: FAIL';
    end;
-   if ((Failed == 'FALSE') AND (Canceled == 'TRUE'))
+   if ((StrCompare(Failed, 'FALSE') == 0) AND (StrCompare(Canceled, 'TRUE') == 0))
    begin
       GroupStatus = 'GROUP RESULT: CANCELED (FAIL)';
    end;
-   if ((Failed == 'TRUE') AND (Canceled == 'TRUE'))
+   if ((StrCompare(Failed, 'TRUE') == 0) AND (StrCompare(Canceled, 'TRUE') == 0))
    begin
       GroupStatus = 'GROUP RESULT: FAIL + CANCELED';
    end;
@@ -1094,7 +1142,7 @@ end;
 function report_manual_table_begin(Title: string = ''; Debug: boolean = FALSE): void;
 begin
    State = GlobalDataRead('state', 'IDLE', REPORT_MANUAL_TABLE_SECTION);
-   if (State != 'IDLE')
+   if (StrCompare(State, 'IDLE') <> 0)
    begin
       report_manual_table_program_error('begin called while a manual reading table is already active.');
    end;
@@ -1136,20 +1184,19 @@ end;
 function report_manual_table_add(Reading: string; MinValue: real; MaxValue: real; Units: string = ''): void;
 begin
    State = GlobalDataRead('state', 'IDLE', REPORT_MANUAL_TABLE_SECTION);
-   if (State == 'IDLE')
+   if (StrCompare(State, 'IDLE') == 0)
    begin
       report_manual_table_program_error('add called before report_manual_table_begin.');
    end;
-   if ((State != 'ACTIVE') AND (State != 'CANCELED'))
+   if ((StrCompare(State, 'ACTIVE') <> 0) AND (StrCompare(State, 'CANCELED') <> 0))
    begin
       report_manual_table_program_error('manual table lifecycle state is corrupt.');
    end;
 
-   if (State == 'CANCELED')
+   if (StrCompare(State, 'CANCELED') == 0)
    begin
       // After cancellation, unanswered readings collectively count as one failure.
       // Later add calls must not prompt, report, or increment any counter.
-      Result = '';
    end
    else
    begin
@@ -1206,7 +1253,7 @@ begin
 
       if (Canceled)
       begin
-         if (GlobalDataRead('cancel_counted', 'FALSE', REPORT_MANUAL_TABLE_SECTION) == 'FALSE')
+         if (StrCompare(GlobalDataRead('cancel_counted', 'FALSE', REPORT_MANUAL_TABLE_SECTION), 'FALSE') == 0)
          begin
             fail_count_other_increase();
             GlobalDataWrite('cancel_counted', 'TRUE', REPORT_MANUAL_TABLE_SECTION);
@@ -1261,11 +1308,11 @@ end;
 function report_manual_table_finish(): void;
 begin
    State = GlobalDataRead('state', 'IDLE', REPORT_MANUAL_TABLE_SECTION);
-   if (State == 'IDLE')
+   if (StrCompare(State, 'IDLE') == 0)
    begin
       report_manual_table_program_error('finish called before report_manual_table_begin.');
    end;
-   if ((State != 'ACTIVE') AND (State != 'CANCELED'))
+   if ((StrCompare(State, 'ACTIVE') <> 0) AND (StrCompare(State, 'CANCELED') <> 0))
    begin
       report_manual_table_program_error('manual table lifecycle state is corrupt.');
    end;

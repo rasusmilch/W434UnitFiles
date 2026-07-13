@@ -55,20 +55,23 @@ calls, then `finish`.
 The exact numeric formatting comes from CEETIS ATS real-to-string conversion.
 Units remain attached to the Min, Max, and Measured cells.
 
-    ----------------------------------------------------------------------------------
-    |                            Insertion Loss Readings                           |
-    | Reading                                  |     Min |   Max | Measured | Result |
-    ----------------------------------------------------------------------------------
-    | C-C Insertion Loss at 850nm              | 0.01 dB |  2 dB |  1.67 dB |  PASS  |
-    | C-C Insertion Loss at 1300nm             | 0.01 dB |  2 dB |  1.80 dB |  PASS  |
-    | D-D Insertion Loss at 850nm              | 0.01 dB |  2 dB |  2.15 dB |  FAIL  |
-    ----------------------------------------------------------------------------------
-    |                              GROUP RESULT: FAIL                              |
-    ----------------------------------------------------------------------------------
+    +------------------------------------------+---------+------+----------+--------+
+    |                            Insertion Loss Readings                            |
+    +------------------------------------------+---------+------+----------+--------+
+    | Reading                                  |     Min |  Max | Measured | Result |
+    +------------------------------------------+---------+------+----------+--------+
+    | C-C Insertion Loss at 850nm              | 0.01 dB | 2 dB |  1.67 dB |  PASS  |
+    | C-C Insertion Loss at 1300nm             | 0.01 dB | 2 dB |  1.80 dB |  PASS  |
+    | D-D Insertion Loss at 850nm              | 0.01 dB | 2 dB |  2.15 dB |  FAIL  |
+    +------------------------------------------+---------+------+----------+--------+
+    |                               GROUP RESULT: FAIL                              |
+    +------------------------------------------+---------+------+----------+--------+
 
-Every physical table line is limited to 86 characters. Long titles and long
-Reading descriptions are wrapped. Long unbroken Reading text is hard-split
-rather than truncated.
+Every physical table line is limited to 86 characters. Borders are segmented so
+each `+` aligns with the corresponding `|` in standard rows. Long titles and
+Reading descriptions wrap at word boundaries. Hard splitting is used only as a
+fallback for an unbroken sequence longer than the available width, and content
+is not truncated.
 
 ## Input behavior
 
