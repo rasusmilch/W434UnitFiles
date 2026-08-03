@@ -53,6 +53,12 @@
   no_conn_hv_list(Description: string; PinList: tpinarray)
   //  Execute a high-voltage "no-connection" (isolation) test across a list of pins.
 
+  no_conn_hv_exclude_pin_name(Name: string; ExcludeKeyword: string): boolean
+  // Test every named pin with HV except pins whose own PIN_Name contains a literal keyword.
+
+  no_conn_hv_exclude_network(Name: string; ExcludeKeyword: string): boolean
+  // Test each allowed modeled electrical network once with HV and exclude networks by PIN_Name.
+
   no_conn_hv_current_populated(Description: string; Tmeas: ttime = 1s)
   //  Run a high-voltage DC dielectric breakdown test on POPULATED and UNPOPULATED contacts (WIRES ONLY!).
 
@@ -61,6 +67,12 @@
 
   no_conn_db_list(Description: string; PinList: tpinarray)
   //  Execute a dielectric-breakdown "no-connection" test for each pin in a list.
+
+  no_conn_db_exclude_pin_name(Name: string; ExcludeKeyword: string): boolean
+  // Test every named pin with DB except pins whose own PIN_Name contains a literal keyword.
+
+  no_conn_db_exclude_network(Name: string; ExcludeKeyword: string): boolean
+  // Test each allowed modeled electrical network once with DB and exclude networks by PIN_Name.
 
   no_conn_db_populated(Description: string; Twait: ttime = 1s, Tmeas: ttime = 1s)
   //  Run a dielectric-breakdown "no-connection" test on POPULATED and shorter duration on UNPOPULATED contacts (WIRES ONLY!).
@@ -598,6 +610,7 @@ end;
 **}
 function get_named_pin_list_all(Debug: boolean = FALSE): string;
 begin
+   Result = '';
    CreatedList = FALSE;            // Flag to indicate the list has been seeded
 
    // Determine total number of pins
@@ -634,9 +647,11 @@ begin
       end;
    end;
 
-   // Convert the collected named pins to a semicolon-delimited string
-   Text = MiscListToString(List, ';');
-   Result = Text;                       // return the final string
+   // Never stringify an uninitialized list when the project has no named test pins.
+   if (CreatedList)
+   begin
+      Result = MiscListToString(List, ';');
+   end;
 end;
 
 {**
@@ -680,6 +695,414 @@ begin
    // Convert the collected named pins to a semicolon-delimited string
    Text = MiscListToString(List, ';');
    Result = Text;
+end;
+
+{**
+  @brief Return TRUE when a pin name contains a keyword as a literal, case-insensitive substring.
+  @details Lowercases both strings and compares every fixed-length substring. This deliberately
+           avoids StrContains because that CEETIS primitive treats '*' as a wildcard. Arithmetic
+           bounds are computed before StrCopy calls for ATS compiler compatibility.
+  @param PinName Pin name to inspect.
+  @param ExcludeKeyword Non-empty literal keyword supplied by a validated caller.
+  @return TRUE for a literal substring match; otherwise FALSE.
+**}
+function pin_name_contains_literal_ci(PinName: string; ExcludeKeyword: string): boolean;
+begin
+   Result = FALSE;
+   LowerPinName = StrLowerCase(PinName);
+   LowerKeyword = StrLowerCase(ExcludeKeyword);
+   PinNameLength = StrLength(LowerPinName);
+   KeywordLength = StrLength(LowerKeyword);
+
+   if ((KeywordLength > 0) AND (KeywordLength <= PinNameLength))
+   begin
+      LastStart = PinNameLength - KeywordLength + 1;
+      for Position = 1 to LastStart do
+      begin
+         CandidateText = StrCopy(LowerPinName, Position, KeywordLength);
+         if (StrCompare(CandidateText, LowerKeyword) == 0)
+         begin
+            Result = TRUE;
+         end;
+      end;
+   end;
+end;
+
+{**
+  @brief Test all named pins individually with HV while excluding matching pin names.
+  @param Name Test name passed unchanged to every NoConnAllHV call.
+  @param ExcludeKeyword Literal case-insensitive substring matched only against PIN_Name.
+  @return TRUE only when at least one NoConnAllHV call was attempted and every call returned TRUE.
+  @details An empty keyword or a selection that attempts no primitive calls is reported with
+           UIWriteError and aborted with MiscAbortTest. Individual failures are aggregated without
+           stopping later eligible pins. This helper does not change measurement parameters or use
+           PIN_IsolationHVAllowed metadata. NoConnAllHV can return FALSE when a grounded network is
+           not executed; the documented boolean cannot distinguish that case, so every FALSE is an
+           aggregate failure and the call count records attempts rather than proven stimulus.
+  @warning Only the candidate's own PIN_Name is filtered. A differently named candidate can cause
+           another excluded-name pin on its modeled HIGH network to become HIGH; use the network
+           variant when network-wide protection is required.
+**}
+function no_conn_hv_exclude_pin_name(Name: string; ExcludeKeyword: string): boolean;
+begin
+   Result = FALSE;
+   AllPassed = TRUE;
+   PrimitiveCallCount = 0;
+
+   if (StrCompare(ExcludeKeyword, '') == 0)
+   begin
+      UIWriteError('HV pin-name exclusion keyword is empty; no HV tests were attempted.');
+      MiscAbortTest();
+   end
+   else
+   begin
+      NamedPinsText = get_named_pin_list_all();
+      CandidateCount = MiscListFromString(NamedPinsText, NamedPins, ';');
+
+      for CandidateIndex = 1 to CandidateCount do
+      begin
+         CandidatePin = NamedPins[CandidateIndex];
+         CandidateName = PinGetData(CandidatePin, PIN_Name);
+         IsExcluded = pin_name_contains_literal_ci(CandidateName, ExcludeKeyword);
+         if (IsExcluded == FALSE)
+         begin
+            PrimitiveCallCount = PrimitiveCallCount + 1;
+            PrimitivePassed = NoConnAllHV(Name, CandidatePin);
+            if (PrimitivePassed == FALSE)
+            begin
+               AllPassed = FALSE;
+            end;
+         end;
+      end;
+
+      if (PrimitiveCallCount == 0)
+      begin
+         UIWriteError('HV pin-name exclusion selected zero tests; no HV tests were attempted.');
+         MiscAbortTest();
+      end
+      else
+      begin
+         Result = AllPassed;
+      end;
+   end;
+end;
+
+{**
+  @brief Test all named pins individually with DB while excluding matching pin names.
+  @param Name Test name passed unchanged to every NoConnAllDB call.
+  @param ExcludeKeyword Literal case-insensitive substring matched only against PIN_Name.
+  @return TRUE only when at least one NoConnAllDB call was attempted and every call returned TRUE.
+  @details Empty keywords and zero-call selections are configuration errors reported and aborted.
+           Individual FALSE results are aggregated while later eligible pins continue. This helper
+           changes no DB parameters and does not gate on PIN_DielectricBreakdownAllowed. A FALSE can
+           also represent a grounded-network non-execution, so the explicit count records attempted
+           primitive calls rather than proof of electrical stimulus.
+  @warning Only the candidate's own PIN_Name is filtered. Another excluded-name pin elsewhere on the
+           primitive HIGH network may become HIGH; use the network variant for network-wide protection.
+**}
+function no_conn_db_exclude_pin_name(Name: string; ExcludeKeyword: string): boolean;
+begin
+   Result = FALSE;
+   AllPassed = TRUE;
+   PrimitiveCallCount = 0;
+
+   if (StrCompare(ExcludeKeyword, '') == 0)
+   begin
+      UIWriteError('DB pin-name exclusion keyword is empty; no DB tests were attempted.');
+      MiscAbortTest();
+   end
+   else
+   begin
+      NamedPinsText = get_named_pin_list_all();
+      CandidateCount = MiscListFromString(NamedPinsText, NamedPins, ';');
+
+      for CandidateIndex = 1 to CandidateCount do
+      begin
+         CandidatePin = NamedPins[CandidateIndex];
+         CandidateName = PinGetData(CandidatePin, PIN_Name);
+         IsExcluded = pin_name_contains_literal_ci(CandidateName, ExcludeKeyword);
+         if (IsExcluded == FALSE)
+         begin
+            PrimitiveCallCount = PrimitiveCallCount + 1;
+            PrimitivePassed = NoConnAllDB(Name, CandidatePin);
+            if (PrimitivePassed == FALSE)
+            begin
+               AllPassed = FALSE;
+            end;
+         end;
+      end;
+
+      if (PrimitiveCallCount == 0)
+      begin
+         UIWriteError('DB pin-name exclusion selected zero tests; no DB tests were attempted.');
+         MiscAbortTest();
+      end
+      else
+      begin
+         Result = AllPassed;
+      end;
+   end;
+end;
+
+{**
+  @brief Test each allowed modeled electrical network once with HV.
+  @param Name Test name passed unchanged to every NoConnAllHV call.
+  @param ExcludeKeyword Literal case-insensitive substring matched against every network PIN_Name.
+  @return TRUE only when at least one NoConnAllHV call was attempted and every call returned TRUE.
+  @details Candidates retain get_named_pin_list_all's established named-real-pin/SystemGround exclusion.
+           NWGetNetworkPins resolves wires, switches, resistors, capacitors, diodes, Z-diodes, CTwist,
+           RLC combinations, attenuators, custom components, and variable resistors using ANY switch
+           state and including splices. Any matching named member excludes and deduplicates the resolved
+           network. An allowed network is called once using the current candidate, then deduplicated even
+           after failure. A zero result or result missing the origin fails open: no network is marked and
+           the candidate is individually filtered/tested. Empty keywords and zero attempted calls abort.
+           No measurement parameters or Allowed metadata are changed. NoConnAllHV FALSE values are
+           aggregated because its boolean API cannot distinguish a grounded-network non-execution.
+  @warning CEETIS documentation does not prove this broad protective closure exactly equals the
+           NoConnAllHV RES_HighPins network. Controlled comparison across every component type and
+           splices is required before production use; stop use if excluded HIGH pins or material
+           suppression differences are observed.
+**}
+function no_conn_hv_exclude_network(Name: string; ExcludeKeyword: string): boolean;
+begin
+   Result = FALSE;
+   AllPassed = TRUE;
+   PrimitiveCallCount = 0;
+
+   if (StrCompare(ExcludeKeyword, '') == 0)
+   begin
+      UIWriteError('HV network exclusion keyword is empty; no HV tests were attempted.');
+      MiscAbortTest();
+   end
+   else
+   begin
+      NamedPinsText = get_named_pin_list_all();
+      CandidateCount = MiscListFromString(NamedPinsText, NamedPins, ';');
+      if (CandidateCount > 0)
+      begin
+         MiscCreateList(ProcessedCandidates, CandidateCount);
+         for CandidateIndex = 1 to CandidateCount do
+         begin
+            ProcessedCandidates[CandidateIndex] = FALSE;
+         end;
+      end;
+
+      for CandidateIndex = 1 to CandidateCount do
+      begin
+         if (ProcessedCandidates[CandidateIndex] == FALSE)
+         begin
+            CandidatePin = NamedPins[CandidateIndex];
+            CandidateName = PinGetData(CandidatePin, PIN_Name);
+            NetworkCount = NWGetNetworkPins(NetworkPins, CandidatePin,
+               [COMPONENT_Wire, COMPONENT_Switch, COMPONENT_Resistor, COMPONENT_Capacitor,
+                COMPONENT_Diode, COMPONENT_ZDiode, COMPONENT_CTwist, COMPONENT_RLCCombination,
+                COMPONENT_Attenuator, COMPONENT_CustomComponent, COMPONENT_VariableResistor],
+               ANY, TRUE);
+
+            OriginFound = FALSE;
+            if (NetworkCount > 0)
+            begin
+               for NetworkIndex = 1 to NetworkCount do
+               begin
+                  if (NetworkPins[NetworkIndex] == CandidatePin)
+                  begin
+                     OriginFound = TRUE;
+                  end;
+               end;
+            end;
+
+            if (OriginFound)
+            begin
+               NetworkExcluded = FALSE;
+               for NetworkIndex = 1 to NetworkCount do
+               begin
+                  NetworkPinName = PinGetData(NetworkPins[NetworkIndex], PIN_Name);
+                  if (StrCompare(NetworkPinName, '') <> 0)
+                  begin
+                     if (pin_name_contains_literal_ci(NetworkPinName, ExcludeKeyword))
+                     begin
+                        NetworkExcluded = TRUE;
+                     end;
+                  end;
+               end;
+
+               // Mark exact pin-address members only after the origin validates the resolution.
+               for MarkIndex = 1 to CandidateCount do
+               begin
+                  for NetworkIndex = 1 to NetworkCount do
+                  begin
+                     if (NamedPins[MarkIndex] == NetworkPins[NetworkIndex])
+                     begin
+                        ProcessedCandidates[MarkIndex] = TRUE;
+                     end;
+                  end;
+               end;
+
+               if (NetworkExcluded == FALSE)
+               begin
+                  PrimitiveCallCount = PrimitiveCallCount + 1;
+                  PrimitivePassed = NoConnAllHV(Name, CandidatePin);
+                  if (PrimitivePassed == FALSE)
+                  begin
+                     AllPassed = FALSE;
+                  end;
+               end;
+            end
+            else
+            begin
+               // Ambiguous discovery marks nothing; preserve coverage with candidate-only handling.
+               IsExcluded = pin_name_contains_literal_ci(CandidateName, ExcludeKeyword);
+               if (IsExcluded == FALSE)
+               begin
+                  PrimitiveCallCount = PrimitiveCallCount + 1;
+                  PrimitivePassed = NoConnAllHV(Name, CandidatePin);
+                  if (PrimitivePassed == FALSE)
+                  begin
+                     AllPassed = FALSE;
+                  end;
+               end;
+            end;
+         end;
+      end;
+
+      if (PrimitiveCallCount == 0)
+      begin
+         UIWriteError('HV network exclusion selected zero tests; no HV tests were attempted.');
+         MiscAbortTest();
+      end
+      else
+      begin
+         Result = AllPassed;
+      end;
+   end;
+end;
+
+{**
+  @brief Test each allowed modeled electrical network once with DB.
+  @param Name Test name passed unchanged to every NoConnAllDB call.
+  @param ExcludeKeyword Literal case-insensitive substring matched against every network PIN_Name.
+  @return TRUE only when at least one NoConnAllDB call was attempted and every call returned TRUE.
+  @details Uses the complete NWGetNetworkPins component set, ANY switches, and splices. A matching
+           network is excluded and deduplicated; an allowed network is attempted once using the current
+           candidate and remains deduplicated after failure. Zero/missing-origin discovery fails open to
+           candidate-only filtering without marking any network. Empty keywords and zero attempted calls
+           are operator-visible configuration aborts. The helper changes no DB parameters or Allowed
+           metadata, continues after FALSE, and treats every FALSE as aggregate failure because grounded
+           non-execution is not distinguishable through the documented boolean return.
+  @warning The protective NWGetNetworkPins closure is not documented as exactly equivalent to
+           NoConnAllDB RES_HighPins. Compare them under controlled non-production conditions for every
+           supported component and splice case before production use, and stop use on a material mismatch.
+**}
+function no_conn_db_exclude_network(Name: string; ExcludeKeyword: string): boolean;
+begin
+   Result = FALSE;
+   AllPassed = TRUE;
+   PrimitiveCallCount = 0;
+
+   if (StrCompare(ExcludeKeyword, '') == 0)
+   begin
+      UIWriteError('DB network exclusion keyword is empty; no DB tests were attempted.');
+      MiscAbortTest();
+   end
+   else
+   begin
+      NamedPinsText = get_named_pin_list_all();
+      CandidateCount = MiscListFromString(NamedPinsText, NamedPins, ';');
+      if (CandidateCount > 0)
+      begin
+         MiscCreateList(ProcessedCandidates, CandidateCount);
+         for CandidateIndex = 1 to CandidateCount do
+         begin
+            ProcessedCandidates[CandidateIndex] = FALSE;
+         end;
+      end;
+
+      for CandidateIndex = 1 to CandidateCount do
+      begin
+         if (ProcessedCandidates[CandidateIndex] == FALSE)
+         begin
+            CandidatePin = NamedPins[CandidateIndex];
+            CandidateName = PinGetData(CandidatePin, PIN_Name);
+            NetworkCount = NWGetNetworkPins(NetworkPins, CandidatePin,
+               [COMPONENT_Wire, COMPONENT_Switch, COMPONENT_Resistor, COMPONENT_Capacitor,
+                COMPONENT_Diode, COMPONENT_ZDiode, COMPONENT_CTwist, COMPONENT_RLCCombination,
+                COMPONENT_Attenuator, COMPONENT_CustomComponent, COMPONENT_VariableResistor],
+               ANY, TRUE);
+
+            OriginFound = FALSE;
+            if (NetworkCount > 0)
+            begin
+               for NetworkIndex = 1 to NetworkCount do
+               begin
+                  if (NetworkPins[NetworkIndex] == CandidatePin)
+                  begin
+                     OriginFound = TRUE;
+                  end;
+               end;
+            end;
+
+            if (OriginFound)
+            begin
+               NetworkExcluded = FALSE;
+               for NetworkIndex = 1 to NetworkCount do
+               begin
+                  NetworkPinName = PinGetData(NetworkPins[NetworkIndex], PIN_Name);
+                  if (StrCompare(NetworkPinName, '') <> 0)
+                  begin
+                     if (pin_name_contains_literal_ci(NetworkPinName, ExcludeKeyword))
+                     begin
+                        NetworkExcluded = TRUE;
+                     end;
+                  end;
+               end;
+
+               for MarkIndex = 1 to CandidateCount do
+               begin
+                  for NetworkIndex = 1 to NetworkCount do
+                  begin
+                     if (NamedPins[MarkIndex] == NetworkPins[NetworkIndex])
+                     begin
+                        ProcessedCandidates[MarkIndex] = TRUE;
+                     end;
+                  end;
+               end;
+
+               if (NetworkExcluded == FALSE)
+               begin
+                  PrimitiveCallCount = PrimitiveCallCount + 1;
+                  PrimitivePassed = NoConnAllDB(Name, CandidatePin);
+                  if (PrimitivePassed == FALSE)
+                  begin
+                     AllPassed = FALSE;
+                  end;
+               end;
+            end
+            else
+            begin
+               IsExcluded = pin_name_contains_literal_ci(CandidateName, ExcludeKeyword);
+               if (IsExcluded == FALSE)
+               begin
+                  PrimitiveCallCount = PrimitiveCallCount + 1;
+                  PrimitivePassed = NoConnAllDB(Name, CandidatePin);
+                  if (PrimitivePassed == FALSE)
+                  begin
+                     AllPassed = FALSE;
+                  end;
+               end;
+            end;
+         end;
+      end;
+
+      if (PrimitiveCallCount == 0)
+      begin
+         UIWriteError('DB network exclusion selected zero tests; no DB tests were attempted.');
+         MiscAbortTest();
+      end
+      else
+      begin
+         Result = AllPassed;
+      end;
+   end;
 end;
 
 // Entry point: marks a guard option as tested, or implicitly required if not already set.
