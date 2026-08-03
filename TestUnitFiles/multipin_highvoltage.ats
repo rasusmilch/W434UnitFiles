@@ -756,21 +756,28 @@ begin
    end
    else
    begin
+      CandidateCount = 0;
       NamedPinsText = get_named_pin_list_all();
-      CandidateCount = MiscListFromString(NamedPinsText, NamedPins, ';');
-
-      for CandidateIndex = 1 to CandidateCount do
+      if (StrCompare(NamedPinsText, '') <> 0)
       begin
-         CandidatePin = NamedPins[CandidateIndex];
-         CandidateName = PinGetData(CandidatePin, PIN_Name);
-         IsExcluded = pin_name_contains_literal_ci(CandidateName, ExcludeKeyword);
-         if (IsExcluded == FALSE)
+         CandidateCount = MiscListFromString(NamedPinsText, NamedPins, ';');
+      end;
+
+      if (CandidateCount > 0)
+      begin
+         for CandidateIndex = 1 to CandidateCount do
          begin
-            PrimitiveCallCount = PrimitiveCallCount + 1;
-            PrimitivePassed = NoConnAllHV(Name, CandidatePin);
-            if (PrimitivePassed == FALSE)
+            CandidatePin = NamedPins[CandidateIndex];
+            CandidateName = PinGetData(CandidatePin, PIN_Name);
+            IsExcluded = pin_name_contains_literal_ci(CandidateName, ExcludeKeyword);
+            if (IsExcluded == FALSE)
             begin
-               AllPassed = FALSE;
+               PrimitiveCallCount = PrimitiveCallCount + 1;
+               PrimitivePassed = NoConnAllHV(Name, CandidatePin);
+               if (PrimitivePassed == FALSE)
+               begin
+                  AllPassed = FALSE;
+               end;
             end;
          end;
       end;
@@ -813,21 +820,28 @@ begin
    end
    else
    begin
+      CandidateCount = 0;
       NamedPinsText = get_named_pin_list_all();
-      CandidateCount = MiscListFromString(NamedPinsText, NamedPins, ';');
-
-      for CandidateIndex = 1 to CandidateCount do
+      if (StrCompare(NamedPinsText, '') <> 0)
       begin
-         CandidatePin = NamedPins[CandidateIndex];
-         CandidateName = PinGetData(CandidatePin, PIN_Name);
-         IsExcluded = pin_name_contains_literal_ci(CandidateName, ExcludeKeyword);
-         if (IsExcluded == FALSE)
+         CandidateCount = MiscListFromString(NamedPinsText, NamedPins, ';');
+      end;
+
+      if (CandidateCount > 0)
+      begin
+         for CandidateIndex = 1 to CandidateCount do
          begin
-            PrimitiveCallCount = PrimitiveCallCount + 1;
-            PrimitivePassed = NoConnAllDB(Name, CandidatePin);
-            if (PrimitivePassed == FALSE)
+            CandidatePin = NamedPins[CandidateIndex];
+            CandidateName = PinGetData(CandidatePin, PIN_Name);
+            IsExcluded = pin_name_contains_literal_ci(CandidateName, ExcludeKeyword);
+            if (IsExcluded == FALSE)
             begin
-               AllPassed = FALSE;
+               PrimitiveCallCount = PrimitiveCallCount + 1;
+               PrimitivePassed = NoConnAllDB(Name, CandidatePin);
+               if (PrimitivePassed == FALSE)
+               begin
+                  AllPassed = FALSE;
+               end;
             end;
          end;
       end;
@@ -876,89 +890,103 @@ begin
    end
    else
    begin
+      CandidateCount = 0;
       NamedPinsText = get_named_pin_list_all();
-      CandidateCount = MiscListFromString(NamedPinsText, NamedPins, ';');
+      if (StrCompare(NamedPinsText, '') <> 0)
+      begin
+         CandidateCount = MiscListFromString(NamedPinsText, NamedPins, ';');
+      end;
+
       if (CandidateCount > 0)
       begin
          MiscCreateList(ProcessedCandidates, CandidateCount);
-         for CandidateIndex = 1 to CandidateCount do
+         ProcessedCandidateSize = MiscGetListSize(ProcessedCandidates);
+         if (ProcessedCandidateSize < CandidateCount)
          begin
-            ProcessedCandidates[CandidateIndex] = FALSE;
-         end;
-      end;
-
-      for CandidateIndex = 1 to CandidateCount do
-      begin
-         if (ProcessedCandidates[CandidateIndex] == FALSE)
+            UIWriteError('HV network bookkeeping allocation failed; no HV tests were attempted.');
+            MiscAbortTest();
+         end
+         else
          begin
-            CandidatePin = NamedPins[CandidateIndex];
-            CandidateName = PinGetData(CandidatePin, PIN_Name);
-            NetworkCount = NWGetNetworkPins(NetworkPins, CandidatePin,
-               [COMPONENT_Wire, COMPONENT_Switch, COMPONENT_Resistor, COMPONENT_Capacitor,
-                COMPONENT_Diode, COMPONENT_ZDiode, COMPONENT_CTwist, COMPONENT_RLCCombination,
-                COMPONENT_Attenuator, COMPONENT_CustomComponent, COMPONENT_VariableResistor],
-               ANY, TRUE);
-
-            OriginFound = FALSE;
-            if (NetworkCount > 0)
+            for CandidateIndex = 1 to CandidateCount do
             begin
-               for NetworkIndex = 1 to NetworkCount do
-               begin
-                  if (NetworkPins[NetworkIndex] == CandidatePin)
-                  begin
-                     OriginFound = TRUE;
-                  end;
-               end;
+               ProcessedCandidates[CandidateIndex] = FALSE;
             end;
 
-            if (OriginFound)
+            for CandidateIndex = 1 to CandidateCount do
             begin
-               NetworkExcluded = FALSE;
-               for NetworkIndex = 1 to NetworkCount do
+               if (ProcessedCandidates[CandidateIndex] == FALSE)
                begin
-                  NetworkPinName = PinGetData(NetworkPins[NetworkIndex], PIN_Name);
-                  if (StrCompare(NetworkPinName, '') <> 0)
+                  CandidatePin = NamedPins[CandidateIndex];
+                  CandidateName = PinGetData(CandidatePin, PIN_Name);
+                  NetworkCount = NWGetNetworkPins(NetworkPins, CandidatePin,
+                     [COMPONENT_Wire, COMPONENT_Switch, COMPONENT_Resistor, COMPONENT_Capacitor,
+                      COMPONENT_Diode, COMPONENT_ZDiode, COMPONENT_CTwist, COMPONENT_RLCCombination,
+                      COMPONENT_Attenuator, COMPONENT_CustomComponent, COMPONENT_VariableResistor],
+                     ANY, TRUE);
+
+                  OriginFound = FALSE;
+                  if (NetworkCount > 0)
                   begin
-                     if (pin_name_contains_literal_ci(NetworkPinName, ExcludeKeyword))
+                     for NetworkIndex = 1 to NetworkCount do
                      begin
-                        NetworkExcluded = TRUE;
+                        if (NetworkPins[NetworkIndex] == CandidatePin)
+                        begin
+                           OriginFound = TRUE;
+                        end;
                      end;
                   end;
-               end;
 
-               // Mark exact pin-address members only after the origin validates the resolution.
-               for MarkIndex = 1 to CandidateCount do
-               begin
-                  for NetworkIndex = 1 to NetworkCount do
+                  if (OriginFound)
                   begin
-                     if (NamedPins[MarkIndex] == NetworkPins[NetworkIndex])
+                     NetworkExcluded = FALSE;
+                     for NetworkIndex = 1 to NetworkCount do
                      begin
-                        ProcessedCandidates[MarkIndex] = TRUE;
+                        NetworkPinName = PinGetData(NetworkPins[NetworkIndex], PIN_Name);
+                        if (StrCompare(NetworkPinName, '') <> 0)
+                        begin
+                           if (pin_name_contains_literal_ci(NetworkPinName, ExcludeKeyword))
+                           begin
+                              NetworkExcluded = TRUE;
+                           end;
+                        end;
                      end;
-                  end;
-               end;
 
-               if (NetworkExcluded == FALSE)
-               begin
-                  PrimitiveCallCount = PrimitiveCallCount + 1;
-                  PrimitivePassed = NoConnAllHV(Name, CandidatePin);
-                  if (PrimitivePassed == FALSE)
+                     // Mark exact pin-address members only after the origin validates the resolution.
+                     for MarkIndex = 1 to CandidateCount do
+                     begin
+                        for NetworkIndex = 1 to NetworkCount do
+                        begin
+                           if (NamedPins[MarkIndex] == NetworkPins[NetworkIndex])
+                           begin
+                              ProcessedCandidates[MarkIndex] = TRUE;
+                           end;
+                        end;
+                     end;
+
+                     if (NetworkExcluded == FALSE)
+                     begin
+                        PrimitiveCallCount = PrimitiveCallCount + 1;
+                        PrimitivePassed = NoConnAllHV(Name, CandidatePin);
+                        if (PrimitivePassed == FALSE)
+                        begin
+                           AllPassed = FALSE;
+                        end;
+                     end;
+                  end
+                  else
                   begin
-                     AllPassed = FALSE;
-                  end;
-               end;
-            end
-            else
-            begin
-               // Ambiguous discovery marks nothing; preserve coverage with candidate-only handling.
-               IsExcluded = pin_name_contains_literal_ci(CandidateName, ExcludeKeyword);
-               if (IsExcluded == FALSE)
-               begin
-                  PrimitiveCallCount = PrimitiveCallCount + 1;
-                  PrimitivePassed = NoConnAllHV(Name, CandidatePin);
-                  if (PrimitivePassed == FALSE)
-                  begin
-                     AllPassed = FALSE;
+                     // Ambiguous discovery marks nothing; preserve coverage with candidate-only handling.
+                     IsExcluded = pin_name_contains_literal_ci(CandidateName, ExcludeKeyword);
+                     if (IsExcluded == FALSE)
+                     begin
+                        PrimitiveCallCount = PrimitiveCallCount + 1;
+                        PrimitivePassed = NoConnAllHV(Name, CandidatePin);
+                        if (PrimitivePassed == FALSE)
+                        begin
+                           AllPassed = FALSE;
+                        end;
+                     end;
                   end;
                end;
             end;
@@ -1006,87 +1034,101 @@ begin
    end
    else
    begin
+      CandidateCount = 0;
       NamedPinsText = get_named_pin_list_all();
-      CandidateCount = MiscListFromString(NamedPinsText, NamedPins, ';');
+      if (StrCompare(NamedPinsText, '') <> 0)
+      begin
+         CandidateCount = MiscListFromString(NamedPinsText, NamedPins, ';');
+      end;
+
       if (CandidateCount > 0)
       begin
          MiscCreateList(ProcessedCandidates, CandidateCount);
-         for CandidateIndex = 1 to CandidateCount do
+         ProcessedCandidateSize = MiscGetListSize(ProcessedCandidates);
+         if (ProcessedCandidateSize < CandidateCount)
          begin
-            ProcessedCandidates[CandidateIndex] = FALSE;
-         end;
-      end;
-
-      for CandidateIndex = 1 to CandidateCount do
-      begin
-         if (ProcessedCandidates[CandidateIndex] == FALSE)
+            UIWriteError('DB network bookkeeping allocation failed; no DB tests were attempted.');
+            MiscAbortTest();
+         end
+         else
          begin
-            CandidatePin = NamedPins[CandidateIndex];
-            CandidateName = PinGetData(CandidatePin, PIN_Name);
-            NetworkCount = NWGetNetworkPins(NetworkPins, CandidatePin,
-               [COMPONENT_Wire, COMPONENT_Switch, COMPONENT_Resistor, COMPONENT_Capacitor,
-                COMPONENT_Diode, COMPONENT_ZDiode, COMPONENT_CTwist, COMPONENT_RLCCombination,
-                COMPONENT_Attenuator, COMPONENT_CustomComponent, COMPONENT_VariableResistor],
-               ANY, TRUE);
-
-            OriginFound = FALSE;
-            if (NetworkCount > 0)
+            for CandidateIndex = 1 to CandidateCount do
             begin
-               for NetworkIndex = 1 to NetworkCount do
-               begin
-                  if (NetworkPins[NetworkIndex] == CandidatePin)
-                  begin
-                     OriginFound = TRUE;
-                  end;
-               end;
+               ProcessedCandidates[CandidateIndex] = FALSE;
             end;
 
-            if (OriginFound)
+            for CandidateIndex = 1 to CandidateCount do
             begin
-               NetworkExcluded = FALSE;
-               for NetworkIndex = 1 to NetworkCount do
+               if (ProcessedCandidates[CandidateIndex] == FALSE)
                begin
-                  NetworkPinName = PinGetData(NetworkPins[NetworkIndex], PIN_Name);
-                  if (StrCompare(NetworkPinName, '') <> 0)
+                  CandidatePin = NamedPins[CandidateIndex];
+                  CandidateName = PinGetData(CandidatePin, PIN_Name);
+                  NetworkCount = NWGetNetworkPins(NetworkPins, CandidatePin,
+                     [COMPONENT_Wire, COMPONENT_Switch, COMPONENT_Resistor, COMPONENT_Capacitor,
+                      COMPONENT_Diode, COMPONENT_ZDiode, COMPONENT_CTwist, COMPONENT_RLCCombination,
+                      COMPONENT_Attenuator, COMPONENT_CustomComponent, COMPONENT_VariableResistor],
+                     ANY, TRUE);
+
+                  OriginFound = FALSE;
+                  if (NetworkCount > 0)
                   begin
-                     if (pin_name_contains_literal_ci(NetworkPinName, ExcludeKeyword))
+                     for NetworkIndex = 1 to NetworkCount do
                      begin
-                        NetworkExcluded = TRUE;
+                        if (NetworkPins[NetworkIndex] == CandidatePin)
+                        begin
+                           OriginFound = TRUE;
+                        end;
                      end;
                   end;
-               end;
 
-               for MarkIndex = 1 to CandidateCount do
-               begin
-                  for NetworkIndex = 1 to NetworkCount do
+                  if (OriginFound)
                   begin
-                     if (NamedPins[MarkIndex] == NetworkPins[NetworkIndex])
+                     NetworkExcluded = FALSE;
+                     for NetworkIndex = 1 to NetworkCount do
                      begin
-                        ProcessedCandidates[MarkIndex] = TRUE;
+                        NetworkPinName = PinGetData(NetworkPins[NetworkIndex], PIN_Name);
+                        if (StrCompare(NetworkPinName, '') <> 0)
+                        begin
+                           if (pin_name_contains_literal_ci(NetworkPinName, ExcludeKeyword))
+                           begin
+                              NetworkExcluded = TRUE;
+                           end;
+                        end;
                      end;
-                  end;
-               end;
 
-               if (NetworkExcluded == FALSE)
-               begin
-                  PrimitiveCallCount = PrimitiveCallCount + 1;
-                  PrimitivePassed = NoConnAllDB(Name, CandidatePin);
-                  if (PrimitivePassed == FALSE)
+                     for MarkIndex = 1 to CandidateCount do
+                     begin
+                        for NetworkIndex = 1 to NetworkCount do
+                        begin
+                           if (NamedPins[MarkIndex] == NetworkPins[NetworkIndex])
+                           begin
+                              ProcessedCandidates[MarkIndex] = TRUE;
+                           end;
+                        end;
+                     end;
+
+                     if (NetworkExcluded == FALSE)
+                     begin
+                        PrimitiveCallCount = PrimitiveCallCount + 1;
+                        PrimitivePassed = NoConnAllDB(Name, CandidatePin);
+                        if (PrimitivePassed == FALSE)
+                        begin
+                           AllPassed = FALSE;
+                        end;
+                     end;
+                  end
+                  else
                   begin
-                     AllPassed = FALSE;
-                  end;
-               end;
-            end
-            else
-            begin
-               IsExcluded = pin_name_contains_literal_ci(CandidateName, ExcludeKeyword);
-               if (IsExcluded == FALSE)
-               begin
-                  PrimitiveCallCount = PrimitiveCallCount + 1;
-                  PrimitivePassed = NoConnAllDB(Name, CandidatePin);
-                  if (PrimitivePassed == FALSE)
-                  begin
-                     AllPassed = FALSE;
+                     IsExcluded = pin_name_contains_literal_ci(CandidateName, ExcludeKeyword);
+                     if (IsExcluded == FALSE)
+                     begin
+                        PrimitiveCallCount = PrimitiveCallCount + 1;
+                        PrimitivePassed = NoConnAllDB(Name, CandidatePin);
+                        if (PrimitivePassed == FALSE)
+                        begin
+                           AllPassed = FALSE;
+                        end;
+                     end;
                   end;
                end;
             end;
