@@ -53,10 +53,10 @@
   no_conn_hv_list(Description: string; PinList: tpinarray)
   //  Execute a high-voltage "no-connection" (isolation) test across a list of pins.
 
-  no_conn_hv_exclude_pin_name(Name: string; ExcludeKeyword: string): boolean
+  no_conn_hv_exclude_pin_name(Name: string; ExcludeKeyword: string; Debug: boolean = FALSE): boolean
   // Test every named pin with HV except pins whose own PIN_Name contains a literal keyword.
 
-  no_conn_hv_exclude_network(Name: string; ExcludeKeyword: string): boolean
+  no_conn_hv_exclude_network(Name: string; ExcludeKeyword: string; Debug: boolean = FALSE): boolean
   // Test each allowed modeled electrical network once with HV and exclude networks by PIN_Name.
 
   no_conn_hv_current_populated(Description: string; Tmeas: ttime = 1s)
@@ -68,10 +68,10 @@
   no_conn_db_list(Description: string; PinList: tpinarray)
   //  Execute a dielectric-breakdown "no-connection" test for each pin in a list.
 
-  no_conn_db_exclude_pin_name(Name: string; ExcludeKeyword: string): boolean
+  no_conn_db_exclude_pin_name(Name: string; ExcludeKeyword: string; Debug: boolean = FALSE): boolean
   // Test every named pin with DB except pins whose own PIN_Name contains a literal keyword.
 
-  no_conn_db_exclude_network(Name: string; ExcludeKeyword: string): boolean
+  no_conn_db_exclude_network(Name: string; ExcludeKeyword: string; Debug: boolean = FALSE): boolean
   // Test each allowed modeled electrical network once with DB and exclude networks by PIN_Name.
 
   no_conn_db_populated(Description: string; Twait: ttime = 1s, Tmeas: ttime = 1s)
@@ -729,25 +729,111 @@ begin
 end;
 
 {**
-  @brief Test all named pins individually with HV while excluding matching pin names.
+  @brief Interpret a raw CEETIS Allowed metadata string.
+  @details Accepts TRUE, ON, and 1 as allowed; FALSE, OFF, and 0 as disabled,
+           case-insensitively. Any other representation returns -1 so the caller can
+           report and abort rather than guess before applying HV or DB.
+  @param RawValue Raw string returned by PinGetData.
+  @return 1 when allowed, 0 when disabled, or -1 when unknown.
+**}
+function pin_native_allowed_state(RawValue: string): integer;
+begin
+   Result = -1;
+   LowerValue = StrLowerCase(RawValue);
+   if ((StrCompare(LowerValue, 'true') == 0) OR
+       (StrCompare(LowerValue, 'on') == 0) OR
+       (StrCompare(LowerValue, '1') == 0))
+   begin
+      Result = 1;
+   end
+   else
+   begin
+      if ((StrCompare(LowerValue, 'false') == 0) OR
+          (StrCompare(LowerValue, 'off') == 0) OR
+          (StrCompare(LowerValue, '0') == 0))
+      begin
+         Result = 0;
+      end;
+   end;
+end;
+
+function hv_db_debug_header(TestType: string; Mode: string; Name: string; ExcludeKeyword: string; Debug: boolean): void;
+begin
+   if (Debug)
+   begin
+      Line = StrAdd('--- ', TestType);
+      Line = StrAdd(Line, ' ');
+      Line = StrAdd(Line, Mode);
+      Line = StrAdd(Line, ' EXCLUSION DEBUG ---');
+      UIWriteWarning(Line);
+      UIWriteNormal(StrAdd('Name: ', Name));
+      UIWriteNormal(StrAdd('ExcludeKeyword: ', ExcludeKeyword));
+   end;
+end;
+
+function hv_db_debug_found(Pin: tpin; PinName: string; AllowedLabel: string; RawAllowed: string; Debug: boolean): void;
+begin
+   if (Debug)
+   begin
+      Line = StrAdd('FOUND: ', PinName);
+      Line = StrAdd(Line, ' [Pin=');
+      Line = StrAdd(Line, Pin);
+      Line = StrAdd(Line, ', ');
+      Line = StrAdd(Line, AllowedLabel);
+      Line = StrAdd(Line, '=');
+      Line = StrAdd(Line, RawAllowed);
+      Line = StrAdd(Line, ']');
+      UIWriteNormal(Line);
+   end;
+end;
+
+function hv_db_debug_summary(Found: integer; Tested: integer; KeywordExcluded: integer;
+   NativeExcluded: integer; Fallbacks: integer; Attempts: integer; Failures: integer;
+   Debug: boolean): void;
+begin
+   if (Debug)
+   begin
+      Line = StrAdd('SUMMARY: found=', Found);
+      Line = StrAdd(Line, ' tested=');
+      Line = StrAdd(Line, Tested);
+      Line = StrAdd(Line, ' keyword_excluded=');
+      Line = StrAdd(Line, KeywordExcluded);
+      Line = StrAdd(Line, ' native_excluded=');
+      Line = StrAdd(Line, NativeExcluded);
+      Line = StrAdd(Line, ' fallbacks=');
+      Line = StrAdd(Line, Fallbacks);
+      Line = StrAdd(Line, ' attempts=');
+      Line = StrAdd(Line, Attempts);
+      Line = StrAdd(Line, ' failures=');
+      Line = StrAdd(Line, Failures);
+      UIWriteWarning(Line);
+   end;
+end;
+
+{**
+  @brief Test all named pins individually with HV while honoring keyword and native exclusions.
   @param Name Test name passed unchanged to every NoConnAllHV call.
   @param ExcludeKeyword Literal case-insensitive substring matched only against PIN_Name.
-  @return TRUE only when at least one NoConnAllHV call was attempted and every call returned TRUE.
-  @details An empty keyword or a selection that attempts no primitive calls is reported with
-           UIWriteError and aborted with MiscAbortTest. Individual failures are aggregated without
-           stopping later eligible pins. This helper does not change measurement parameters or use
-           PIN_IsolationHVAllowed metadata. NoConnAllHV can return FALSE when a grounded network is
-           not executed; the documented boolean cannot distinguish that case, so every FALSE is an
-           aggregate failure and the call count records attempts rather than proven stimulus.
-  @warning Only the candidate's own PIN_Name is filtered. A differently named candidate can cause
-           another excluded-name pin on its modeled HIGH network to become HIGH; use the network
-           variant when network-wide protection is required.
+  @param Debug When TRUE, prints grouped discovery, raw HV Allowed metadata, decisions, and summary.
+  @return TRUE only when at least one primitive call was attempted and every call returned TRUE.
+  @details Existing two-argument callers remain compatible. Every named candidate is excluded when
+           its name matches or PIN_IsolationHVAllowed is disabled. Supported raw Allowed strings are
+           TRUE/ON/1 and FALSE/OFF/0, case-insensitively; unknown values abort before any primitive.
+           Empty keywords and zero-call selections also abort. Failures aggregate without stopping.
+  @warning This mode filters only the candidate itself; use network mode to protect connected members.
 **}
-function no_conn_hv_exclude_pin_name(Name: string; ExcludeKeyword: string): boolean;
+function no_conn_hv_exclude_pin_name(Name: string; ExcludeKeyword: string; Debug: boolean = FALSE): boolean;
 begin
    Result = FALSE;
    AllPassed = TRUE;
    PrimitiveCallCount = 0;
+   PrimitiveFailureCount = 0;
+   TestedCount = 0;
+   KeywordExcludedCount = 0;
+   NativeExcludedCount = 0;
+   FallbackCount = 0;
+   CandidateCount = 0;
+   MetadataValid = TRUE;
 
    if (StrCompare(ExcludeKeyword, '') == 0)
    begin
@@ -756,7 +842,7 @@ begin
    end
    else
    begin
-      CandidateCount = 0;
+      hv_db_debug_header('HV', 'PIN-NAME', Name, ExcludeKeyword, Debug);
       NamedPinsText = get_named_pin_list_all();
       if (StrCompare(NamedPinsText, '') <> 0)
       begin
@@ -765,23 +851,82 @@ begin
 
       if (CandidateCount > 0)
       begin
+         // Validate and audit all native values before the first possible HV call.
          for CandidateIndex = 1 to CandidateCount do
          begin
             CandidatePin = NamedPins[CandidateIndex];
             CandidateName = PinGetData(CandidatePin, PIN_Name);
-            IsExcluded = pin_name_contains_literal_ci(CandidateName, ExcludeKeyword);
-            if (IsExcluded == FALSE)
+            RawAllowed = PinGetData(CandidatePin, PIN_IsolationHVAllowed);
+            AllowedState = pin_native_allowed_state(RawAllowed);
+            hv_db_debug_found(CandidatePin, CandidateName, 'HVAllowed', RawAllowed, Debug);
+            if (AllowedState < 0)
             begin
-               PrimitiveCallCount = PrimitiveCallCount + 1;
-               PrimitivePassed = NoConnAllHV(Name, CandidatePin);
-               if (PrimitivePassed == FALSE)
+               MetadataValid = FALSE;
+               Line = StrAdd('Unknown PIN_IsolationHVAllowed value for ', CandidateName);
+               Line = StrAdd(Line, ': ');
+               Line = StrAdd(Line, RawAllowed);
+               UIWriteError(Line);
+            end;
+         end;
+
+         if (MetadataValid == FALSE)
+         begin
+            UIWriteError('HV Allowed metadata validation failed; no HV tests were attempted.');
+            MiscAbortTest();
+         end
+         else
+         begin
+            for CandidateIndex = 1 to CandidateCount do
+            begin
+               CandidatePin = NamedPins[CandidateIndex];
+               CandidateName = PinGetData(CandidatePin, PIN_Name);
+               RawAllowed = PinGetData(CandidatePin, PIN_IsolationHVAllowed);
+               AllowedState = pin_native_allowed_state(RawAllowed);
+               KeywordExcluded = pin_name_contains_literal_ci(CandidateName, ExcludeKeyword);
+               NativeExcluded = FALSE;
+               if (AllowedState == 0)
                begin
-                  AllPassed = FALSE;
+                  NativeExcluded = TRUE;
+               end;
+
+               if (KeywordExcluded)
+               begin
+                  KeywordExcludedCount = KeywordExcludedCount + 1;
+                  if (Debug)
+                  begin
+                     UIWriteWarning(StrAdd('EXCLUDED - keyword: ', CandidateName));
+                  end;
+               end;
+               if (NativeExcluded)
+               begin
+                  NativeExcludedCount = NativeExcludedCount + 1;
+                  if (Debug)
+                  begin
+                     UIWriteWarning(StrAdd('EXCLUDED - CEETIS HV disabled: ', CandidateName));
+                  end;
+               end;
+
+               if ((KeywordExcluded == FALSE) AND (NativeExcluded == FALSE))
+               begin
+                  if (Debug)
+                  begin
+                     UIWriteNormal(StrAdd('TEST: ', CandidateName));
+                  end;
+                  TestedCount = TestedCount + 1;
+                  PrimitiveCallCount = PrimitiveCallCount + 1;
+                  PrimitivePassed = NoConnAllHV(Name, CandidatePin);
+                  if (PrimitivePassed == FALSE)
+                  begin
+                     AllPassed = FALSE;
+                     PrimitiveFailureCount = PrimitiveFailureCount + 1;
+                  end;
                end;
             end;
          end;
       end;
 
+      hv_db_debug_summary(CandidateCount, TestedCount, KeywordExcludedCount,
+         NativeExcludedCount, FallbackCount, PrimitiveCallCount, PrimitiveFailureCount, Debug);
       if (PrimitiveCallCount == 0)
       begin
          UIWriteError('HV pin-name exclusion selected zero tests; no HV tests were attempted.');
@@ -795,23 +940,26 @@ begin
 end;
 
 {**
-  @brief Test all named pins individually with DB while excluding matching pin names.
+  @brief Test all named pins individually with DB while honoring keyword and native exclusions.
   @param Name Test name passed unchanged to every NoConnAllDB call.
   @param ExcludeKeyword Literal case-insensitive substring matched only against PIN_Name.
-  @return TRUE only when at least one NoConnAllDB call was attempted and every call returned TRUE.
-  @details Empty keywords and zero-call selections are configuration errors reported and aborted.
-           Individual FALSE results are aggregated while later eligible pins continue. This helper
-           changes no DB parameters and does not gate on PIN_DielectricBreakdownAllowed. A FALSE can
-           also represent a grounded-network non-execution, so the explicit count records attempted
-           primitive calls rather than proof of electrical stimulus.
-  @warning Only the candidate's own PIN_Name is filtered. Another excluded-name pin elsewhere on the
-           primitive HIGH network may become HIGH; use the network variant for network-wide protection.
+  @param Debug When TRUE, prints grouped discovery, raw DB Allowed metadata, decisions, and summary.
+  @return TRUE only when at least one primitive call was attempted and every call returned TRUE.
+  @details PIN_DielectricBreakdownAllowed is interpreted centrally as TRUE/ON/1 or FALSE/OFF/0,
+           case-insensitively. Unknown metadata, empty keywords, and zero-call selections abort safely.
 **}
-function no_conn_db_exclude_pin_name(Name: string; ExcludeKeyword: string): boolean;
+function no_conn_db_exclude_pin_name(Name: string; ExcludeKeyword: string; Debug: boolean = FALSE): boolean;
 begin
    Result = FALSE;
    AllPassed = TRUE;
    PrimitiveCallCount = 0;
+   PrimitiveFailureCount = 0;
+   TestedCount = 0;
+   KeywordExcludedCount = 0;
+   NativeExcludedCount = 0;
+   FallbackCount = 0;
+   CandidateCount = 0;
+   MetadataValid = TRUE;
 
    if (StrCompare(ExcludeKeyword, '') == 0)
    begin
@@ -820,7 +968,7 @@ begin
    end
    else
    begin
-      CandidateCount = 0;
+      hv_db_debug_header('DB', 'PIN-NAME', Name, ExcludeKeyword, Debug);
       NamedPinsText = get_named_pin_list_all();
       if (StrCompare(NamedPinsText, '') <> 0)
       begin
@@ -833,19 +981,77 @@ begin
          begin
             CandidatePin = NamedPins[CandidateIndex];
             CandidateName = PinGetData(CandidatePin, PIN_Name);
-            IsExcluded = pin_name_contains_literal_ci(CandidateName, ExcludeKeyword);
-            if (IsExcluded == FALSE)
+            RawAllowed = PinGetData(CandidatePin, PIN_DielectricBreakdownAllowed);
+            AllowedState = pin_native_allowed_state(RawAllowed);
+            hv_db_debug_found(CandidatePin, CandidateName, 'DBAllowed', RawAllowed, Debug);
+            if (AllowedState < 0)
             begin
-               PrimitiveCallCount = PrimitiveCallCount + 1;
-               PrimitivePassed = NoConnAllDB(Name, CandidatePin);
-               if (PrimitivePassed == FALSE)
+               MetadataValid = FALSE;
+               Line = StrAdd('Unknown PIN_DielectricBreakdownAllowed value for ', CandidateName);
+               Line = StrAdd(Line, ': ');
+               Line = StrAdd(Line, RawAllowed);
+               UIWriteError(Line);
+            end;
+         end;
+
+         if (MetadataValid == FALSE)
+         begin
+            UIWriteError('DB Allowed metadata validation failed; no DB tests were attempted.');
+            MiscAbortTest();
+         end
+         else
+         begin
+            for CandidateIndex = 1 to CandidateCount do
+            begin
+               CandidatePin = NamedPins[CandidateIndex];
+               CandidateName = PinGetData(CandidatePin, PIN_Name);
+               RawAllowed = PinGetData(CandidatePin, PIN_DielectricBreakdownAllowed);
+               AllowedState = pin_native_allowed_state(RawAllowed);
+               KeywordExcluded = pin_name_contains_literal_ci(CandidateName, ExcludeKeyword);
+               NativeExcluded = FALSE;
+               if (AllowedState == 0)
                begin
-                  AllPassed = FALSE;
+                  NativeExcluded = TRUE;
+               end;
+
+               if (KeywordExcluded)
+               begin
+                  KeywordExcludedCount = KeywordExcludedCount + 1;
+                  if (Debug)
+                  begin
+                     UIWriteWarning(StrAdd('EXCLUDED - keyword: ', CandidateName));
+                  end;
+               end;
+               if (NativeExcluded)
+               begin
+                  NativeExcludedCount = NativeExcludedCount + 1;
+                  if (Debug)
+                  begin
+                     UIWriteWarning(StrAdd('EXCLUDED - CEETIS DB disabled: ', CandidateName));
+                  end;
+               end;
+
+               if ((KeywordExcluded == FALSE) AND (NativeExcluded == FALSE))
+               begin
+                  if (Debug)
+                  begin
+                     UIWriteNormal(StrAdd('TEST: ', CandidateName));
+                  end;
+                  TestedCount = TestedCount + 1;
+                  PrimitiveCallCount = PrimitiveCallCount + 1;
+                  PrimitivePassed = NoConnAllDB(Name, CandidatePin);
+                  if (PrimitivePassed == FALSE)
+                  begin
+                     AllPassed = FALSE;
+                     PrimitiveFailureCount = PrimitiveFailureCount + 1;
+                  end;
                end;
             end;
          end;
       end;
 
+      hv_db_debug_summary(CandidateCount, TestedCount, KeywordExcludedCount,
+         NativeExcludedCount, FallbackCount, PrimitiveCallCount, PrimitiveFailureCount, Debug);
       if (PrimitiveCallCount == 0)
       begin
          UIWriteError('DB pin-name exclusion selected zero tests; no DB tests were attempted.');
@@ -861,27 +1067,29 @@ end;
 {**
   @brief Test each allowed modeled electrical network once with HV.
   @param Name Test name passed unchanged to every NoConnAllHV call.
-  @param ExcludeKeyword Literal case-insensitive substring matched against every network PIN_Name.
-  @return TRUE only when at least one NoConnAllHV call was attempted and every call returned TRUE.
-  @details Candidates retain get_named_pin_list_all's established named-real-pin/SystemGround exclusion.
-           NWGetNetworkPins resolves wires, switches, resistors, capacitors, diodes, Z-diodes, CTwist,
-           RLC combinations, attenuators, custom components, and variable resistors using ANY switch
-           state and including splices. Any matching named member excludes and deduplicates the resolved
-           network. An allowed network is called once using the current candidate, then deduplicated even
-           after failure. A zero result or result missing the origin fails open: no network is marked and
-           the candidate is individually filtered/tested. Empty keywords and zero attempted calls abort.
-           No measurement parameters or Allowed metadata are changed. NoConnAllHV FALSE values are
-           aggregated because its boolean API cannot distinguish a grounded-network non-execution.
-  @warning CEETIS documentation does not prove this broad protective closure exactly equals the
-           NoConnAllHV RES_HighPins network. Controlled comparison across every component type and
-           splices is required before production use; stop use if excluded HIGH pins or material
-           suppression differences are observed.
+  @param ExcludeKeyword Literal case-insensitive substring matched against every nonempty PIN_Name.
+  @param Debug When TRUE, audits candidates, raw HV Allowed values, networks, reasons, fallbacks, and summary.
+  @return TRUE only when at least one primitive call was attempted and every call returned TRUE.
+  @details The protective closure contains all documented component types, ANY switches, and splices.
+           A keyword match or native HV-disabled named real candidate member excludes the whole resolved
+           network. Native values are prevalidated before testing. Unknown values abort rather than guess.
+           Successfully resolved networks are address-deduplicated even after primitive failure. Discovery
+           failure checks the candidate's own native state before the existing candidate-only fallback.
+  @warning An unresolved candidate could still reach an unknown disabled member. Debug reports every
+           fallback; exact NWGetNetworkPins and RES_HighPins equivalence requires controlled validation.
 **}
-function no_conn_hv_exclude_network(Name: string; ExcludeKeyword: string): boolean;
+function no_conn_hv_exclude_network(Name: string; ExcludeKeyword: string; Debug: boolean = FALSE): boolean;
 begin
    Result = FALSE;
    AllPassed = TRUE;
    PrimitiveCallCount = 0;
+   PrimitiveFailureCount = 0;
+   TestedCount = 0;
+   KeywordExcludedCount = 0;
+   NativeExcludedCount = 0;
+   FallbackCount = 0;
+   CandidateCount = 0;
+   MetadataValid = TRUE;
 
    if (StrCompare(ExcludeKeyword, '') == 0)
    begin
@@ -890,7 +1098,7 @@ begin
    end
    else
    begin
-      CandidateCount = 0;
+      hv_db_debug_header('HV', 'NETWORK', Name, ExcludeKeyword, Debug);
       NamedPinsText = get_named_pin_list_all();
       if (StrCompare(NamedPinsText, '') <> 0)
       begin
@@ -899,92 +1107,235 @@ begin
 
       if (CandidateCount > 0)
       begin
-         MiscCreateList(ProcessedCandidates, CandidateCount);
-         ProcessedCandidateSize = MiscGetListSize(ProcessedCandidates);
-         if (ProcessedCandidateSize < CandidateCount)
+         // Prevalidate all applicable native metadata before any network can be energized.
+         for CandidateIndex = 1 to CandidateCount do
          begin
-            UIWriteError('HV network bookkeeping allocation failed; no HV tests were attempted.');
+            CandidatePin = NamedPins[CandidateIndex];
+            CandidateName = PinGetData(CandidatePin, PIN_Name);
+            RawAllowed = PinGetData(CandidatePin, PIN_IsolationHVAllowed);
+            AllowedState = pin_native_allowed_state(RawAllowed);
+            hv_db_debug_found(CandidatePin, CandidateName, 'HVAllowed', RawAllowed, Debug);
+            if (AllowedState < 0)
+            begin
+               MetadataValid = FALSE;
+               Line = StrAdd('Unknown PIN_IsolationHVAllowed value for ', CandidateName);
+               Line = StrAdd(Line, ': ');
+               Line = StrAdd(Line, RawAllowed);
+               UIWriteError(Line);
+            end;
+         end;
+
+         if (MetadataValid == FALSE)
+         begin
+            UIWriteError('HV Allowed metadata validation failed; no HV tests were attempted.');
             MiscAbortTest();
          end
          else
          begin
-            for CandidateIndex = 1 to CandidateCount do
+            MiscCreateList(ProcessedCandidates, CandidateCount);
+            ProcessedCandidateSize = MiscGetListSize(ProcessedCandidates);
+            if (ProcessedCandidateSize < CandidateCount)
             begin
-               ProcessedCandidates[CandidateIndex] = FALSE;
-            end;
-
-            for CandidateIndex = 1 to CandidateCount do
+               UIWriteError('HV network bookkeeping allocation failed; no HV tests were attempted.');
+               MiscAbortTest();
+            end
+            else
             begin
-               if (ProcessedCandidates[CandidateIndex] == FALSE)
+               for CandidateIndex = 1 to CandidateCount do
                begin
-                  CandidatePin = NamedPins[CandidateIndex];
-                  CandidateName = PinGetData(CandidatePin, PIN_Name);
-                  NetworkCount = NWGetNetworkPins(NetworkPins, CandidatePin,
-                     [COMPONENT_Wire, COMPONENT_Switch, COMPONENT_Resistor, COMPONENT_Capacitor,
-                      COMPONENT_Diode, COMPONENT_ZDiode, COMPONENT_CTwist, COMPONENT_RLCCombination,
-                      COMPONENT_Attenuator, COMPONENT_CustomComponent, COMPONENT_VariableResistor],
-                     ANY, TRUE);
+                  ProcessedCandidates[CandidateIndex] = FALSE;
+               end;
 
-                  OriginFound = FALSE;
-                  if (NetworkCount > 0)
+               for CandidateIndex = 1 to CandidateCount do
+               begin
+                  if (ProcessedCandidates[CandidateIndex] == FALSE)
                   begin
-                     for NetworkIndex = 1 to NetworkCount do
-                     begin
-                        if (NetworkPins[NetworkIndex] == CandidatePin)
-                        begin
-                           OriginFound = TRUE;
-                        end;
-                     end;
-                  end;
+                     CandidatePin = NamedPins[CandidateIndex];
+                     CandidateName = PinGetData(CandidatePin, PIN_Name);
+                     NetworkCount = NWGetNetworkPins(NetworkPins, CandidatePin,
+                        [COMPONENT_Wire, COMPONENT_Switch, COMPONENT_Resistor, COMPONENT_Capacitor,
+                         COMPONENT_Diode, COMPONENT_ZDiode, COMPONENT_CTwist, COMPONENT_RLCCombination,
+                         COMPONENT_Attenuator, COMPONENT_CustomComponent, COMPONENT_VariableResistor],
+                        ANY, TRUE);
 
-                  if (OriginFound)
-                  begin
-                     NetworkExcluded = FALSE;
-                     for NetworkIndex = 1 to NetworkCount do
-                     begin
-                        NetworkPinName = PinGetData(NetworkPins[NetworkIndex], PIN_Name);
-                        if (StrCompare(NetworkPinName, '') <> 0)
-                        begin
-                           if (pin_name_contains_literal_ci(NetworkPinName, ExcludeKeyword))
-                           begin
-                              NetworkExcluded = TRUE;
-                           end;
-                        end;
-                     end;
-
-                     // Mark exact pin-address members only after the origin validates the resolution.
-                     for MarkIndex = 1 to CandidateCount do
+                     OriginFound = FALSE;
+                     if (NetworkCount > 0)
                      begin
                         for NetworkIndex = 1 to NetworkCount do
                         begin
-                           if (NamedPins[MarkIndex] == NetworkPins[NetworkIndex])
+                           if (NetworkPins[NetworkIndex] == CandidatePin)
                            begin
-                              ProcessedCandidates[MarkIndex] = TRUE;
+                              OriginFound = TRUE;
                            end;
                         end;
                      end;
 
-                     if (NetworkExcluded == FALSE)
+                     if (OriginFound)
                      begin
-                        PrimitiveCallCount = PrimitiveCallCount + 1;
-                        PrimitivePassed = NoConnAllHV(Name, CandidatePin);
-                        if (PrimitivePassed == FALSE)
+                        NetworkExcluded = FALSE;
+                        NetworkKeywordExcluded = FALSE;
+                        NetworkNativeExcluded = FALSE;
+                        NetworkText = 'NETWORK: ';
+                        for NetworkIndex = 1 to NetworkCount do
                         begin
-                           AllPassed = FALSE;
+                           NetworkPin = NetworkPins[NetworkIndex];
+                           NetworkPinName = PinGetData(NetworkPin, PIN_Name);
+                           if (NetworkIndex > 1)
+                           begin
+                              NetworkText = StrAdd(NetworkText, ', ');
+                           end;
+                           if (StrCompare(NetworkPinName, '') == 0)
+                           begin
+                              NetworkText = StrAdd(NetworkText, '<unnamed>');
+                           end
+                           else
+                           begin
+                              NetworkText = StrAdd(NetworkText, NetworkPinName);
+                           end;
+                           NetworkText = StrAdd(NetworkText, '[');
+                           NetworkText = StrAdd(NetworkText, NetworkPin);
+                           NetworkText = StrAdd(NetworkText, ']');
+
+                           KeywordExcluded = FALSE;
+                           if (StrCompare(NetworkPinName, '') <> 0)
+                           begin
+                              KeywordExcluded = pin_name_contains_literal_ci(NetworkPinName, ExcludeKeyword);
+                           end;
+                           if (KeywordExcluded)
+                           begin
+                              NetworkExcluded = TRUE;
+                              NetworkKeywordExcluded = TRUE;
+                              if (Debug)
+                              begin
+                                 UIWriteWarning(StrAdd('EXCLUDED NETWORK - keyword member: ', NetworkPinName));
+                              end;
+                           end;
+
+                           // Only initial named real candidates have applicable, prevalidated metadata.
+                           NativeMemberFound = FALSE;
+                           NativeExcluded = FALSE;
+                           for LookupIndex = 1 to CandidateCount do
+                           begin
+                              if (NamedPins[LookupIndex] == NetworkPin)
+                              begin
+                                 NativeMemberFound = TRUE;
+                              end;
+                           end;
+                           if (NativeMemberFound)
+                           begin
+                              RawAllowed = PinGetData(NetworkPin, PIN_IsolationHVAllowed);
+                              AllowedState = pin_native_allowed_state(RawAllowed);
+                              NativeExcluded = FALSE;
+                              if (AllowedState == 0)
+                              begin
+                                 NativeExcluded = TRUE;
+                              end;
+                           end;
+                           if (NativeExcluded)
+                           begin
+                              NetworkExcluded = TRUE;
+                              NetworkNativeExcluded = TRUE;
+                              if (Debug)
+                              begin
+                                 UIWriteWarning(StrAdd('EXCLUDED NETWORK - CEETIS HV-disabled member: ', NetworkPinName));
+                              end;
+                           end;
                         end;
-                     end;
-                  end
-                  else
-                  begin
-                     // Ambiguous discovery marks nothing; preserve coverage with candidate-only handling.
-                     IsExcluded = pin_name_contains_literal_ci(CandidateName, ExcludeKeyword);
-                     if (IsExcluded == FALSE)
-                     begin
-                        PrimitiveCallCount = PrimitiveCallCount + 1;
-                        PrimitivePassed = NoConnAllHV(Name, CandidatePin);
-                        if (PrimitivePassed == FALSE)
+
+                        if (Debug)
                         begin
-                           AllPassed = FALSE;
+                           UIWriteNormal(StrAdd('REPRESENTATIVE: ', CandidateName));
+                           UIWriteNormal(NetworkText);
+                        end;
+                        if (NetworkKeywordExcluded)
+                        begin
+                           KeywordExcludedCount = KeywordExcludedCount + 1;
+                        end;
+                        if (NetworkNativeExcluded)
+                        begin
+                           NativeExcludedCount = NativeExcludedCount + 1;
+                        end;
+
+                        for MarkIndex = 1 to CandidateCount do
+                        begin
+                           for NetworkIndex = 1 to NetworkCount do
+                           begin
+                              if (NamedPins[MarkIndex] == NetworkPins[NetworkIndex])
+                              begin
+                                 ProcessedCandidates[MarkIndex] = TRUE;
+                              end;
+                           end;
+                        end;
+
+                        if (NetworkExcluded)
+                        begin
+                           if (Debug)
+                           begin
+                              UIWriteWarning(StrAdd('EXCLUDED NETWORK: representative ', CandidateName));
+                           end;
+                        end
+                        else
+                        begin
+                           if (Debug)
+                           begin
+                              UIWriteNormal(StrAdd('TEST NETWORK: representative ', CandidateName));
+                           end;
+                           TestedCount = TestedCount + 1;
+                           PrimitiveCallCount = PrimitiveCallCount + 1;
+                           PrimitivePassed = NoConnAllHV(Name, CandidatePin);
+                           if (PrimitivePassed == FALSE)
+                           begin
+                              AllPassed = FALSE;
+                              PrimitiveFailureCount = PrimitiveFailureCount + 1;
+                           end;
+                        end;
+                     end
+                     else
+                     begin
+                        FallbackCount = FallbackCount + 1;
+                        RawAllowed = PinGetData(CandidatePin, PIN_IsolationHVAllowed);
+                        AllowedState = pin_native_allowed_state(RawAllowed);
+                        KeywordExcluded = pin_name_contains_literal_ci(CandidateName, ExcludeKeyword);
+                        NativeExcluded = FALSE;
+                        if (AllowedState == 0)
+                        begin
+                           NativeExcluded = TRUE;
+                        end;
+                        if (Debug)
+                        begin
+                           UIWriteWarning(StrAdd('WARNING: network discovery failed for ', CandidateName));
+                           UIWriteWarning('Network membership could not be proven; applying candidate-only fallback.');
+                        end;
+                        if (KeywordExcluded)
+                        begin
+                           KeywordExcludedCount = KeywordExcludedCount + 1;
+                           if (Debug)
+                           begin
+                              UIWriteWarning(StrAdd('FALLBACK EXCLUDED - keyword: ', CandidateName));
+                           end;
+                        end;
+                        if (NativeExcluded)
+                        begin
+                           NativeExcludedCount = NativeExcludedCount + 1;
+                           if (Debug)
+                           begin
+                              UIWriteWarning(StrAdd('FALLBACK EXCLUDED - CEETIS HV disabled: ', CandidateName));
+                           end;
+                        end;
+                        if ((KeywordExcluded == FALSE) AND (NativeExcluded == FALSE))
+                        begin
+                           if (Debug)
+                           begin
+                              UIWriteWarning(StrAdd('FALLBACK TEST: ', CandidateName));
+                           end;
+                           TestedCount = TestedCount + 1;
+                           PrimitiveCallCount = PrimitiveCallCount + 1;
+                           PrimitivePassed = NoConnAllHV(Name, CandidatePin);
+                           if (PrimitivePassed == FALSE)
+                           begin
+                              AllPassed = FALSE;
+                              PrimitiveFailureCount = PrimitiveFailureCount + 1;
+                           end;
                         end;
                      end;
                   end;
@@ -993,6 +1344,8 @@ begin
          end;
       end;
 
+      hv_db_debug_summary(CandidateCount, TestedCount, KeywordExcludedCount,
+         NativeExcludedCount, FallbackCount, PrimitiveCallCount, PrimitiveFailureCount, Debug);
       if (PrimitiveCallCount == 0)
       begin
          UIWriteError('HV network exclusion selected zero tests; no HV tests were attempted.');
@@ -1008,24 +1361,27 @@ end;
 {**
   @brief Test each allowed modeled electrical network once with DB.
   @param Name Test name passed unchanged to every NoConnAllDB call.
-  @param ExcludeKeyword Literal case-insensitive substring matched against every network PIN_Name.
-  @return TRUE only when at least one NoConnAllDB call was attempted and every call returned TRUE.
-  @details Uses the complete NWGetNetworkPins component set, ANY switches, and splices. A matching
-           network is excluded and deduplicated; an allowed network is attempted once using the current
-           candidate and remains deduplicated after failure. Zero/missing-origin discovery fails open to
-           candidate-only filtering without marking any network. Empty keywords and zero attempted calls
-           are operator-visible configuration aborts. The helper changes no DB parameters or Allowed
-           metadata, continues after FALSE, and treats every FALSE as aggregate failure because grounded
-           non-execution is not distinguishable through the documented boolean return.
-  @warning The protective NWGetNetworkPins closure is not documented as exactly equivalent to
-           NoConnAllDB RES_HighPins. Compare them under controlled non-production conditions for every
-           supported component and splice case before production use, and stop use on a material mismatch.
+  @param ExcludeKeyword Literal case-insensitive substring matched against every nonempty PIN_Name.
+  @param Debug When TRUE, audits candidates, raw DB Allowed values, networks, reasons, fallbacks, and summary.
+  @return TRUE only when at least one primitive call was attempted and every call returned TRUE.
+  @details A keyword match or native DB-disabled named real candidate member excludes the complete
+           resolved network. PIN_DielectricBreakdownAllowed values are prevalidated before testing.
+           Network resolution, exact-address deduplication, component closure, and zero-call safeguards
+           match HV mode. Discovery fallback always checks the candidate's own native DB setting.
+  @warning Debug exposes fallback ambiguity and protective-closure over-exclusion for controlled review.
 **}
-function no_conn_db_exclude_network(Name: string; ExcludeKeyword: string): boolean;
+function no_conn_db_exclude_network(Name: string; ExcludeKeyword: string; Debug: boolean = FALSE): boolean;
 begin
    Result = FALSE;
    AllPassed = TRUE;
    PrimitiveCallCount = 0;
+   PrimitiveFailureCount = 0;
+   TestedCount = 0;
+   KeywordExcludedCount = 0;
+   NativeExcludedCount = 0;
+   FallbackCount = 0;
+   CandidateCount = 0;
+   MetadataValid = TRUE;
 
    if (StrCompare(ExcludeKeyword, '') == 0)
    begin
@@ -1034,7 +1390,7 @@ begin
    end
    else
    begin
-      CandidateCount = 0;
+      hv_db_debug_header('DB', 'NETWORK', Name, ExcludeKeyword, Debug);
       NamedPinsText = get_named_pin_list_all();
       if (StrCompare(NamedPinsText, '') <> 0)
       begin
@@ -1043,90 +1399,233 @@ begin
 
       if (CandidateCount > 0)
       begin
-         MiscCreateList(ProcessedCandidates, CandidateCount);
-         ProcessedCandidateSize = MiscGetListSize(ProcessedCandidates);
-         if (ProcessedCandidateSize < CandidateCount)
+         for CandidateIndex = 1 to CandidateCount do
          begin
-            UIWriteError('DB network bookkeeping allocation failed; no DB tests were attempted.');
+            CandidatePin = NamedPins[CandidateIndex];
+            CandidateName = PinGetData(CandidatePin, PIN_Name);
+            RawAllowed = PinGetData(CandidatePin, PIN_DielectricBreakdownAllowed);
+            AllowedState = pin_native_allowed_state(RawAllowed);
+            hv_db_debug_found(CandidatePin, CandidateName, 'DBAllowed', RawAllowed, Debug);
+            if (AllowedState < 0)
+            begin
+               MetadataValid = FALSE;
+               Line = StrAdd('Unknown PIN_DielectricBreakdownAllowed value for ', CandidateName);
+               Line = StrAdd(Line, ': ');
+               Line = StrAdd(Line, RawAllowed);
+               UIWriteError(Line);
+            end;
+         end;
+
+         if (MetadataValid == FALSE)
+         begin
+            UIWriteError('DB Allowed metadata validation failed; no DB tests were attempted.');
             MiscAbortTest();
          end
          else
          begin
-            for CandidateIndex = 1 to CandidateCount do
+            MiscCreateList(ProcessedCandidates, CandidateCount);
+            ProcessedCandidateSize = MiscGetListSize(ProcessedCandidates);
+            if (ProcessedCandidateSize < CandidateCount)
             begin
-               ProcessedCandidates[CandidateIndex] = FALSE;
-            end;
-
-            for CandidateIndex = 1 to CandidateCount do
+               UIWriteError('DB network bookkeeping allocation failed; no DB tests were attempted.');
+               MiscAbortTest();
+            end
+            else
             begin
-               if (ProcessedCandidates[CandidateIndex] == FALSE)
+               for CandidateIndex = 1 to CandidateCount do
                begin
-                  CandidatePin = NamedPins[CandidateIndex];
-                  CandidateName = PinGetData(CandidatePin, PIN_Name);
-                  NetworkCount = NWGetNetworkPins(NetworkPins, CandidatePin,
-                     [COMPONENT_Wire, COMPONENT_Switch, COMPONENT_Resistor, COMPONENT_Capacitor,
-                      COMPONENT_Diode, COMPONENT_ZDiode, COMPONENT_CTwist, COMPONENT_RLCCombination,
-                      COMPONENT_Attenuator, COMPONENT_CustomComponent, COMPONENT_VariableResistor],
-                     ANY, TRUE);
+                  ProcessedCandidates[CandidateIndex] = FALSE;
+               end;
 
-                  OriginFound = FALSE;
-                  if (NetworkCount > 0)
+               for CandidateIndex = 1 to CandidateCount do
+               begin
+                  if (ProcessedCandidates[CandidateIndex] == FALSE)
                   begin
-                     for NetworkIndex = 1 to NetworkCount do
-                     begin
-                        if (NetworkPins[NetworkIndex] == CandidatePin)
-                        begin
-                           OriginFound = TRUE;
-                        end;
-                     end;
-                  end;
+                     CandidatePin = NamedPins[CandidateIndex];
+                     CandidateName = PinGetData(CandidatePin, PIN_Name);
+                     NetworkCount = NWGetNetworkPins(NetworkPins, CandidatePin,
+                        [COMPONENT_Wire, COMPONENT_Switch, COMPONENT_Resistor, COMPONENT_Capacitor,
+                         COMPONENT_Diode, COMPONENT_ZDiode, COMPONENT_CTwist, COMPONENT_RLCCombination,
+                         COMPONENT_Attenuator, COMPONENT_CustomComponent, COMPONENT_VariableResistor],
+                        ANY, TRUE);
 
-                  if (OriginFound)
-                  begin
-                     NetworkExcluded = FALSE;
-                     for NetworkIndex = 1 to NetworkCount do
-                     begin
-                        NetworkPinName = PinGetData(NetworkPins[NetworkIndex], PIN_Name);
-                        if (StrCompare(NetworkPinName, '') <> 0)
-                        begin
-                           if (pin_name_contains_literal_ci(NetworkPinName, ExcludeKeyword))
-                           begin
-                              NetworkExcluded = TRUE;
-                           end;
-                        end;
-                     end;
-
-                     for MarkIndex = 1 to CandidateCount do
+                     OriginFound = FALSE;
+                     if (NetworkCount > 0)
                      begin
                         for NetworkIndex = 1 to NetworkCount do
                         begin
-                           if (NamedPins[MarkIndex] == NetworkPins[NetworkIndex])
+                           if (NetworkPins[NetworkIndex] == CandidatePin)
                            begin
-                              ProcessedCandidates[MarkIndex] = TRUE;
+                              OriginFound = TRUE;
                            end;
                         end;
                      end;
 
-                     if (NetworkExcluded == FALSE)
+                     if (OriginFound)
                      begin
-                        PrimitiveCallCount = PrimitiveCallCount + 1;
-                        PrimitivePassed = NoConnAllDB(Name, CandidatePin);
-                        if (PrimitivePassed == FALSE)
+                        NetworkExcluded = FALSE;
+                        NetworkKeywordExcluded = FALSE;
+                        NetworkNativeExcluded = FALSE;
+                        NetworkText = 'NETWORK: ';
+                        for NetworkIndex = 1 to NetworkCount do
                         begin
-                           AllPassed = FALSE;
+                           NetworkPin = NetworkPins[NetworkIndex];
+                           NetworkPinName = PinGetData(NetworkPin, PIN_Name);
+                           if (NetworkIndex > 1)
+                           begin
+                              NetworkText = StrAdd(NetworkText, ', ');
+                           end;
+                           if (StrCompare(NetworkPinName, '') == 0)
+                           begin
+                              NetworkText = StrAdd(NetworkText, '<unnamed>');
+                           end
+                           else
+                           begin
+                              NetworkText = StrAdd(NetworkText, NetworkPinName);
+                           end;
+                           NetworkText = StrAdd(NetworkText, '[');
+                           NetworkText = StrAdd(NetworkText, NetworkPin);
+                           NetworkText = StrAdd(NetworkText, ']');
+
+                           KeywordExcluded = FALSE;
+                           if (StrCompare(NetworkPinName, '') <> 0)
+                           begin
+                              KeywordExcluded = pin_name_contains_literal_ci(NetworkPinName, ExcludeKeyword);
+                           end;
+                           if (KeywordExcluded)
+                           begin
+                              NetworkExcluded = TRUE;
+                              NetworkKeywordExcluded = TRUE;
+                              if (Debug)
+                              begin
+                                 UIWriteWarning(StrAdd('EXCLUDED NETWORK - keyword member: ', NetworkPinName));
+                              end;
+                           end;
+
+                           NativeMemberFound = FALSE;
+                           NativeExcluded = FALSE;
+                           for LookupIndex = 1 to CandidateCount do
+                           begin
+                              if (NamedPins[LookupIndex] == NetworkPin)
+                              begin
+                                 NativeMemberFound = TRUE;
+                              end;
+                           end;
+                           if (NativeMemberFound)
+                           begin
+                              RawAllowed = PinGetData(NetworkPin, PIN_DielectricBreakdownAllowed);
+                              AllowedState = pin_native_allowed_state(RawAllowed);
+                              NativeExcluded = FALSE;
+                              if (AllowedState == 0)
+                              begin
+                                 NativeExcluded = TRUE;
+                              end;
+                           end;
+                           if (NativeExcluded)
+                           begin
+                              NetworkExcluded = TRUE;
+                              NetworkNativeExcluded = TRUE;
+                              if (Debug)
+                              begin
+                                 UIWriteWarning(StrAdd('EXCLUDED NETWORK - CEETIS DB-disabled member: ', NetworkPinName));
+                              end;
+                           end;
                         end;
-                     end;
-                  end
-                  else
-                  begin
-                     IsExcluded = pin_name_contains_literal_ci(CandidateName, ExcludeKeyword);
-                     if (IsExcluded == FALSE)
-                     begin
-                        PrimitiveCallCount = PrimitiveCallCount + 1;
-                        PrimitivePassed = NoConnAllDB(Name, CandidatePin);
-                        if (PrimitivePassed == FALSE)
+
+                        if (Debug)
                         begin
-                           AllPassed = FALSE;
+                           UIWriteNormal(StrAdd('REPRESENTATIVE: ', CandidateName));
+                           UIWriteNormal(NetworkText);
+                        end;
+                        if (NetworkKeywordExcluded)
+                        begin
+                           KeywordExcludedCount = KeywordExcludedCount + 1;
+                        end;
+                        if (NetworkNativeExcluded)
+                        begin
+                           NativeExcludedCount = NativeExcludedCount + 1;
+                        end;
+
+                        for MarkIndex = 1 to CandidateCount do
+                        begin
+                           for NetworkIndex = 1 to NetworkCount do
+                           begin
+                              if (NamedPins[MarkIndex] == NetworkPins[NetworkIndex])
+                              begin
+                                 ProcessedCandidates[MarkIndex] = TRUE;
+                              end;
+                           end;
+                        end;
+
+                        if (NetworkExcluded)
+                        begin
+                           if (Debug)
+                           begin
+                              UIWriteWarning(StrAdd('EXCLUDED NETWORK: representative ', CandidateName));
+                           end;
+                        end
+                        else
+                        begin
+                           if (Debug)
+                           begin
+                              UIWriteNormal(StrAdd('TEST NETWORK: representative ', CandidateName));
+                           end;
+                           TestedCount = TestedCount + 1;
+                           PrimitiveCallCount = PrimitiveCallCount + 1;
+                           PrimitivePassed = NoConnAllDB(Name, CandidatePin);
+                           if (PrimitivePassed == FALSE)
+                           begin
+                              AllPassed = FALSE;
+                              PrimitiveFailureCount = PrimitiveFailureCount + 1;
+                           end;
+                        end;
+                     end
+                     else
+                     begin
+                        FallbackCount = FallbackCount + 1;
+                        RawAllowed = PinGetData(CandidatePin, PIN_DielectricBreakdownAllowed);
+                        AllowedState = pin_native_allowed_state(RawAllowed);
+                        KeywordExcluded = pin_name_contains_literal_ci(CandidateName, ExcludeKeyword);
+                        NativeExcluded = FALSE;
+                        if (AllowedState == 0)
+                        begin
+                           NativeExcluded = TRUE;
+                        end;
+                        if (Debug)
+                        begin
+                           UIWriteWarning(StrAdd('WARNING: network discovery failed for ', CandidateName));
+                           UIWriteWarning('Network membership could not be proven; applying candidate-only fallback.');
+                        end;
+                        if (KeywordExcluded)
+                        begin
+                           KeywordExcludedCount = KeywordExcludedCount + 1;
+                           if (Debug)
+                           begin
+                              UIWriteWarning(StrAdd('FALLBACK EXCLUDED - keyword: ', CandidateName));
+                           end;
+                        end;
+                        if (NativeExcluded)
+                        begin
+                           NativeExcludedCount = NativeExcludedCount + 1;
+                           if (Debug)
+                           begin
+                              UIWriteWarning(StrAdd('FALLBACK EXCLUDED - CEETIS DB disabled: ', CandidateName));
+                           end;
+                        end;
+                        if ((KeywordExcluded == FALSE) AND (NativeExcluded == FALSE))
+                        begin
+                           if (Debug)
+                           begin
+                              UIWriteWarning(StrAdd('FALLBACK TEST: ', CandidateName));
+                           end;
+                           TestedCount = TestedCount + 1;
+                           PrimitiveCallCount = PrimitiveCallCount + 1;
+                           PrimitivePassed = NoConnAllDB(Name, CandidatePin);
+                           if (PrimitivePassed == FALSE)
+                           begin
+                              AllPassed = FALSE;
+                              PrimitiveFailureCount = PrimitiveFailureCount + 1;
+                           end;
                         end;
                      end;
                   end;
@@ -1135,6 +1634,8 @@ begin
          end;
       end;
 
+      hv_db_debug_summary(CandidateCount, TestedCount, KeywordExcludedCount,
+         NativeExcludedCount, FallbackCount, PrimitiveCallCount, PrimitiveFailureCount, Debug);
       if (PrimitiveCallCount == 0)
       begin
          UIWriteError('DB network exclusion selected zero tests; no DB tests were attempted.');
