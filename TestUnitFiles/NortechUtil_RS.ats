@@ -107,6 +107,12 @@
   rcl_test_cap(Name: string; FromPin: tpin; ToPin: tpin; CapAvg: real; TolPercent: integer; ReportTol: boolean = FALSE): boolean
   //   Verify the electrical components group is active, optionally report tolerances, and execute an RLC capacitance test.
 
+  resistor_test_report(ResAvg: real; TolPercent: integer): void;
+  // Calculate and display the resistance tolerance range.
+
+  resistor_test(Name: string; Pin1: tpin; Pin2: tpin; ResAvg: real; TolPercent: integer; ReportTol: boolean = FALSE): boolean; tests resistors;
+  // Perform a resistor test on specified pins with tolerance checking.
+
   operator_name_from_id(): string
   //   Lookup and return the operator's name based on the current operator ID from FILE_OPERATOR_ID_MAP, aborting on error.
 
@@ -2425,6 +2431,95 @@ begin
 
       // Execute the actual RLC parallel capacitance test
       Result = RLCParallelCapacitanceTest(Name, Pin1, Pin2, LowerTol, UpperTol);
+   end
+   else
+   begin
+      // Command group inactive ? report error and abort test
+      ui_report_error('Electrical Components command group NOT ACTIVE! ABORTING TEST! Contact test department.');
+      MiscAbortTest();
+   end;
+
+//   blank_line(TRUE);  // spacing after test
+end;
+
+{**
+  @brief   Calculate and display the resistance tolerance range.
+  @details Computes the upper and lower tolerance limits from the average
+           (@p ResAvg) and a percentage tolerance (@p TolPercent), then reports the
+           formatted range.
+  @param   ResAvg      Average resistance in Ohms (e.g., 1.0E3 for 1kOhm).
+  @param   TolPercent  Integer percentage tolerance (e.g., 10 for 10%).
+  @return  void
+**}
+function resistor_test_report(ResAvg: real; TolPercent: integer): void;
+begin
+   // Print out tolerances for resistance testing.
+   // ResAvg: Specify as unitless float in Ohms. 1.0E3 for 1kOhm
+   // TolPercent: Integer percentage tolerance.
+
+   UpperTol = ResAvg * (1 + (TolPercent / 100)); // calculate upper tolerance limit
+   LowerTol = ResAvg * (1 - (TolPercent / 100)); // calculate lower tolerance limit
+
+   blank_line(TRUE);                             // insert blank line before report
+
+   ui_report_normal('Resistance parameters');   // header for report
+   String = StrAdd('Average: ', FormatResistance(ResAvg)); // add average value
+   String = StrAdd(String, ', Tolerance: ');
+   String = StrAdd(String, TolPercent);          // add tolerance percentage
+   String = StrAdd(String, '%  ->  [');
+   String = StrAdd(String, FormatResistance(LowerTol)); // add lower bound
+   String = StrAdd(String, ' - ');
+   String = StrAdd(String, FormatResistance(UpperTol)); // add upper bound
+   String = StrAdd(String, ']');
+
+   ui_report_normal(String);                     // display the full tolerance range
+
+   blank_line(TRUE);                             // insert blank line after report
+end;
+
+{**
+  @brief   Perform a resistor test on specified pins with tolerance checking.
+  @details
+    Checks that the Electrical Components command group is active before testing.
+    Computes upper and lower tolerance limits from the average (@p ResAvg)
+    and percentage tolerance (@p TolPercent).  If @p ReportTol is TRUE, reports the
+    tolerance parameters before running the test.  Adds and executes a resistor
+    test and returns its result.  Aborts the test with an error if the command group
+    is not active.
+
+    NOTE: Removes and adds the resistor to the NetList as populated parameters will not be
+    overidden by NWAddResistor from the calculated values.
+
+  @param   Name        Descriptive name for the device under test.
+  @param   FromPin     Starting terminal pin for the measurement.
+  @param   ToPin       Ending terminal pin for the measurement.
+  @param   ResAvg      Average resistance in unitless ohms (e.g., 1.0E3 for 1 kOhm).
+  @param   TolPercent  Integer percentage tolerance (e.g., 10 for 10%).
+  @param   ReportTol   Optional flag to display tolerance info before testing (default FALSE).
+  @return  TRUE if the resistance falls within tolerance, FALSE otherwise.
+**}
+function resistor_test(Name: string; Pin1: tpin; Pin2: tpin; ResAvg: real; TolPercent: integer; ReportTol: boolean = FALSE): boolean; tests resistors;
+begin
+   Result = FALSE;  // default to failure
+
+   // Verify electrical components support is available
+   if (ParamIsCommandGroupActive(CMDGRP_ElectricalComponents))
+   begin
+      // Calculate tolerance bounds based on average and percentage
+      UpperTol = ResAvg * (1 + (TolPercent / 100));  // upper limit
+      LowerTol = ResAvg * (1 - (TolPercent / 100));  // lower limit
+      TolOhms = ResAvg * (TolPercent / 100);         // Tolerance in Ohms
+
+      if (ReportTol)
+      begin
+         // Optionally display tolerance parameters in report
+         resistor_test_report(ResAvg, TolPercent);
+      end;
+
+      // Execute the actual RLC parallel capacitance test
+      NWRemoveResistor(Name, Pin1, Pin2);
+      NWAddResistor(Name, Pin1, Pin2, ResAvg, TolOhms, TolOhms);
+      Result = ResistorTest(Name, Pin1, Pin2);
    end
    else
    begin
